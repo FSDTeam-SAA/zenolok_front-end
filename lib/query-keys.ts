@@ -1,0 +1,13 @@
+export const queryKeys = {
+  profile: ["profile"] as const,
+  bricks: ["bricks"] as const,
+  categories: ["categories"] as const,
+  categoryItems: (categoryId: string) => ["category-items", categoryId] as const,
+  categoriesWithItems: ["categories-with-items"] as const,
+  scheduledTodos: (params: Record<string, string | number | undefined>) => ["scheduled-todos", params] as const,
+  events: (params: Record<string, string | number | undefined>) => ["events", params] as const,
+  event: (id: string) => ["event", id] as const,
+  eventTodos: (eventId: string) => ["event-todos", eventId] as const,
+  jamMessages: (eventId: string) => ["jam-messages", eventId] as const,
+  userSearch: (query: string) => ["user-search", query] as const,
+};
