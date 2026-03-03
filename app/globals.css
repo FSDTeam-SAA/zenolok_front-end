@@ -22,11 +22,11 @@ html {
 body {
   background: radial-gradient(1200px 700px at 50% -250px, #fefeff 0%, var(--background) 70%);
   color: var(--foreground);
-  font-family: var(--font-dongle), system-ui, sans-serif;
+  font-family: var(--font-poppins), system-ui, sans-serif;
   font-weight: 400;
-  font-size: 22px;
+  font-size: 20px;
   min-height: 100vh;
-  line-height: 53%;
+  line-height: 120%;
   letter-spacing: 0;
 }
 
@@ -122,9 +122,25 @@ body.theme-dark .brick-icons-box {
 h1,
 h2,
 h3,
-h4 {
-  font-family: var(--font-dongle), system-ui, sans-serif;
-  line-height: 53%;
+h4,
+h5,
+h6 {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  line-height: 120%;
+  letter-spacing: 0;
+}
+
+p,
+span,
+label,
+a,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-poppins), system-ui, sans-serif;
+  line-height: 120%;
+  letter-spacing: 0;
 }
 
 .font-poppins {

@@ -96,7 +96,7 @@ export default function LoginPage() {
               <form className="space-y-[18px]" onSubmit={form.handleSubmit(onSubmit)}>
                 <div>
                   <div className="relative">
-                    <Input placeholder="Username" {...form.register("email")} className="h-[56px] rounded-[4px] border-[#8f9399] bg-transparent pr-12 font-poppins text-[16px] text-[#2f323a] placeholder:text-[16px] placeholder:text-[#666]" />
+                    <Input placeholder="User Email" {...form.register("email")} className="h-[56px] rounded-[4px] border-[#8f9399] bg-transparent pr-12 font-poppins text-[16px] text-[#2f323a] placeholder:text-[16px] placeholder:text-[#666]" />
                     <UserRound className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#666]" />
                   </div>
                   {form.formState.errors.email ? <p className="mt-1 text-xs text-red-500">{form.formState.errors.email.message}</p> : null}

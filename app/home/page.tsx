@@ -35,7 +35,6 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { brickApi, eventApi, type EventData } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
-import { defaultBricks } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
 
 type CalendarEvent = {
@@ -115,13 +114,20 @@ function clampDate(date: Date, min: Date, max: Date) {
   return date;
 }
 
-function buildWeekSegments(week: Date[], events: CalendarEvent[]): { segments: WeekSegment[]; laneCount: number } {
+function buildWeekSegments(
+  week: Date[],
+  events: CalendarEvent[],
+): { segments: WeekSegment[]; laneCount: number } {
   const weekStart = startOfDay(week[0]);
   const weekEnd = startOfDay(week[6]);
 
   const relevant = events
     .filter((event) => intersectsWeek(event, weekStart, weekEnd))
-    .sort((a, b) => a.start.getTime() - b.start.getTime() || a.end.getTime() - b.end.getTime());
+    .sort(
+      (a, b) =>
+        a.start.getTime() - b.start.getTime() ||
+        a.end.getTime() - b.end.getTime(),
+    );
 
   const laneEnds: Date[] = [];
   const segments: WeekSegment[] = [];
@@ -183,7 +189,8 @@ function toLocalDateTimeInputValue(date: Date) {
 export default function HomePage() {
   const queryClient = useQueryClient();
   const [selectedBrick, setSelectedBrick] = React.useState("all");
-  const { monthCursor, selectedDate, setSelectedDate, preferences } = useAppState();
+  const { monthCursor, selectedDate, setSelectedDate, preferences } =
+    useAppState();
   const [createBrickOpen, setCreateBrickOpen] = React.useState(false);
   const [brickName, setBrickName] = React.useState("");
   const [brickColor, setBrickColor] = React.useState("#36A9E1");
@@ -197,10 +204,19 @@ export default function HomePage() {
   const [newEventBrick, setNewEventBrick] = React.useState("");
 
   const weekStartsOn = weekStartsOnMap[preferences.weekStartDay] ?? 1;
-  const monthStart = React.useMemo(() => startOfMonth(monthCursor), [monthCursor]);
+  const monthStart = React.useMemo(
+    () => startOfMonth(monthCursor),
+    [monthCursor],
+  );
   const monthEnd = React.useMemo(() => endOfMonth(monthCursor), [monthCursor]);
-  const calendarStart = React.useMemo(() => startOfWeek(monthStart, { weekStartsOn }), [monthStart, weekStartsOn]);
-  const calendarEnd = React.useMemo(() => endOfWeek(monthEnd, { weekStartsOn }), [monthEnd, weekStartsOn]);
+  const calendarStart = React.useMemo(
+    () => startOfWeek(monthStart, { weekStartsOn }),
+    [monthStart, weekStartsOn],
+  );
+  const calendarEnd = React.useMemo(
+    () => endOfWeek(monthEnd, { weekStartsOn }),
+    [monthEnd, weekStartsOn],
+  );
   const calendarStartParam = format(calendarStart, "yyyy-MM-dd");
   const calendarEndParam = format(calendarEnd, "yyyy-MM-dd");
 
@@ -223,18 +239,10 @@ export default function HomePage() {
       }),
   });
 
-  const bricks = React.useMemo(() => {
-    if (bricksQuery.data?.length) {
-      return bricksQuery.data;
-    }
-
-    return defaultBricks.map((brick, index) => ({
-      ...brick,
-      _id: `default-${index}`,
-      participants: [],
-      createdBy: "",
-    }));
-  }, [bricksQuery.data]);
+  const bricks = React.useMemo(
+    () => bricksQuery.data ?? [],
+    [bricksQuery.data],
+  );
 
   const normalizedEvents = React.useMemo<CalendarEvent[]>(() => {
     return (eventsQuery.data || []).map((event: EventData) => {
@@ -271,8 +279,7 @@ export default function HomePage() {
     }
 
     return normalizedEvents.filter(
-      (event) =>
-        event.brickName?.toLowerCase() === selected.name.toLowerCase()
+      (event) => event.brickName?.toLowerCase() === selected.name.toLowerCase(),
     );
   }, [selectedBrick, normalizedEvents, bricks]);
 
@@ -280,13 +287,22 @@ export default function HomePage() {
   const weeks = splitIntoWeeks(days);
 
   const weekdayLabels = React.useMemo(
-    () => Array.from({ length: 7 }, (_, index) => format(addDays(startOfWeek(new Date(), { weekStartsOn }), index), "EEE")),
-    [weekStartsOn]
+    () =>
+      Array.from({ length: 7 }, (_, index) =>
+        format(
+          addDays(startOfWeek(new Date(), { weekStartsOn }), index),
+          "EEE",
+        ),
+      ),
+    [weekStartsOn],
   );
 
   const selectedDateEvents = React.useMemo(
-    () => filteredEvents.filter((event) => event.start <= selectedDate && event.end >= selectedDate),
-    [filteredEvents, selectedDate]
+    () =>
+      filteredEvents.filter(
+        (event) => event.start <= selectedDate && event.end >= selectedDate,
+      ),
+    [filteredEvents, selectedDate],
   );
 
   const createBrickMutation = useMutation({
@@ -310,7 +326,8 @@ export default function HomePage() {
       setBrickColor("#36A9E1");
       setBrickIcon("home");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to create brick"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create brick"),
   });
 
   const createEventMutation = useMutation({
@@ -342,7 +359,8 @@ export default function HomePage() {
       setEventStart("");
       setEventEnd("");
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to create event"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create event"),
   });
 
   React.useEffect(() => {
@@ -362,9 +380,16 @@ export default function HomePage() {
 
   return (
     <div className="space-y-4">
-      <section className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setSelectedBrick("all")}>
-          <Badge variant={selectedBrick === "all" ? "neutral" : "neutral"} className="rounded-full px-4 py-2">
+      <section className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+        <button
+          type="button"
+          className="shrink-0"
+          onClick={() => setSelectedBrick("all")}
+        >
+          <Badge
+            variant={selectedBrick === "all" ? "neutral" : "neutral"}
+            className="rounded-full px-4 py-2"
+          >
             <CalendarClock className="size-4" />
             All
           </Badge>
@@ -372,14 +397,23 @@ export default function HomePage() {
         {bricks.map((brick) => {
           const active = selectedBrick === brick._id;
           return (
-            <button key={brick._id} type="button" onClick={() => setSelectedBrick(brick._id)}>
+            <button
+              key={brick._id}
+              type="button"
+              className="shrink-0"
+              onClick={() => setSelectedBrick(brick._id)}
+            >
               <Badge
                 variant={active ? "blue" : "neutral"}
                 className="rounded-full px-4 py-2"
                 style={
                   active
                     ? { backgroundColor: brick.color, color: "white" }
-                    : { color: brick.color, borderColor: brick.color, backgroundColor: "white" }
+                    : {
+                        color: brick.color,
+                        borderColor: brick.color,
+                        backgroundColor: "white",
+                      }
                 }
               >
                 <BrickIcon name={brick.icon} className="size-4" />
@@ -390,10 +424,13 @@ export default function HomePage() {
         })}
         <button
           type="button"
+          className="shrink-0"
           onClick={() => setCreateBrickOpen(true)}
-          className="flex size-8 items-center justify-center rounded-full border border-[#B9BFCA] bg-white text-[#7D8597]"
+          aria-label="Create brick"
         >
-          <Plus className="size-4" />
+          <span className="flex size-8 items-center justify-center rounded-full border border-[#B9BFCA] bg-white text-[#7D8597]">
+            <Plus className="size-4" />
+          </span>
         </button>
       </section>
 
@@ -404,7 +441,9 @@ export default function HomePage() {
           <div className="grid gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
             <aside className="rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-poppins text-[20px] leading-[120%] font-medium text-[#2C323E]">Scheduled</h2>
+                <h2 className="font-poppins text-[20px] leading-[120%] font-medium text-[#2C323E]">
+                  Scheduled
+                </h2>
                 <button
                   type="button"
                   onClick={() => setCreateEventOpen(true)}
@@ -417,10 +456,18 @@ export default function HomePage() {
               {selectedDateEvents.length ? (
                 <div className="space-y-2">
                   {selectedDateEvents.slice(0, 5).map((event) => (
-                    <div key={event.id} className="rounded-xl border border-[#D3DAE8] bg-white px-2 py-2">
+                    <div
+                      key={event.id}
+                      className="rounded-xl border border-[#D3DAE8] bg-white px-2 py-2"
+                    >
                       <div className="flex items-center gap-2">
-                        <span className="h-6 w-1.5 rounded-full" style={{ backgroundColor: event.color }} />
-                        <p className="font-poppins truncate text-[20px] leading-[120%] font-medium text-[#2E3542]">{event.title}</p>
+                        <span
+                          className="h-6 w-1.5 rounded-full"
+                          style={{ backgroundColor: event.color }}
+                        />
+                        <p className="font-poppins truncate text-[20px] leading-[120%] font-medium text-[#2E3542]">
+                          {event.title}
+                        </p>
                       </div>
                       <p className="font-poppins mt-1 flex items-center gap-1 text-[14px] leading-[120%] text-[#7A8396]">
                         <MapPin className="size-3.5" />
@@ -430,7 +477,10 @@ export default function HomePage() {
                   ))}
                 </div>
               ) : (
-                <EmptyState title="No events" description="No events on selected day." />
+                <EmptyState
+                  title="No events"
+                  description="No events on selected day."
+                />
               )}
             </aside>
 
@@ -441,7 +491,9 @@ export default function HomePage() {
                     <div key={label} className="px-2 py-1 text-center">
                       <p
                         className={`font-poppins text-[16px] leading-[120%] font-medium ${
-                          label.startsWith("Sun") ? "text-[#FF3B30]" : "text-[#3A4150]"
+                          label.startsWith("Sun")
+                            ? "text-[#FF3B30]"
+                            : "text-[#3A4150]"
                         }`}
                       >
                         {label}
@@ -453,7 +505,9 @@ export default function HomePage() {
                 <div className="space-y-0 rounded-[18px] border border-[#D7DCE6] bg-white">
                   {weeks.map((week, weekIndex) => {
                     const weekInfo = buildWeekSegments(week, filteredEvents);
-                    const visibleSegments = weekInfo.segments.filter((segment) => segment.lane < 3);
+                    const visibleSegments = weekInfo.segments.filter(
+                      (segment) => segment.lane < 3,
+                    );
 
                     return (
                       <div
@@ -494,14 +548,20 @@ export default function HomePage() {
                                 style={{
                                   gridColumn: `${segment.startCol} / ${segment.endCol + 1}`,
                                   gridRow: segment.lane + 1,
-                                  backgroundColor: hexToRgba(segment.color, 0.45),
+                                  backgroundColor: hexToRgba(
+                                    segment.color,
+                                    0.45,
+                                  ),
                                   color: getSegmentTextColor(segment.color),
                                 }}
                                 className="mx-[1px] flex h-[18px] items-center overflow-hidden rounded-[1px] mt-14"
                               >
                                 {segment.isStart ? (
                                   <>
-                                    <span className="h-full w-1.5 shrink-0 " style={{ backgroundColor: segment.color }} />
+                                    <span
+                                      className="h-full w-1.5 shrink-0 "
+                                      style={{ backgroundColor: segment.color }}
+                                    />
                                     <span className="truncate pl-1 font-poppins text-[14px] leading-[120%] font-medium">
                                       {segment.title}
                                     </span>
@@ -528,14 +588,21 @@ export default function HomePage() {
       </section>
 
       <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
-        <DialogContent className="max-w-md rounded-2xl">
+        <DialogContent className="max-w-md rounded-2xl space-y-4">
           <DialogHeader>
-            <DialogTitle  className="mb-10 text-3xl">Create Brick</DialogTitle>
+            <DialogTitle className="text-3xl">Create Brick</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
+            <Input
+              placeholder="Brick name"
+              value={brickName}
+              onChange={(event) => setBrickName(event.target.value)}
+            />
             <div className="grid grid-cols-[1fr_auto] items-center gap-3">
-              <Input value={brickColor} onChange={(event) => setBrickColor(event.target.value)} />
+              <Input
+                value={brickColor}
+                onChange={(event) => setBrickColor(event.target.value)}
+              />
               <Input
                 type="color"
                 value={brickColor}
@@ -543,25 +610,42 @@ export default function HomePage() {
                 className="h-10 w-14 cursor-pointer p-1"
               />
             </div>
-            <select
-              value={brickIcon}
-              onChange={(event) => setBrickIcon(event.target.value)}
-              className="h-10 w-full rounded-md border border-[#D6DCE8] bg-white px-3 text-sm text-[#2F3542]"
-            >
-              {brickIconOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+
+            <div className="space-y-2">
+              <div className="space-y-2">
+                <div>
+                  <p className="text-sm">Brick Icon</p>
+                </div>
+                <select
+                  value={brickIcon}
+                  onChange={(event) => setBrickIcon(event.target.value)}
+                  className="h-10 w-full rounded-md border border-[#D6DCE8] bg-white px-3 text-sm text-[#2F3542]"
+                >
+                  {brickIconOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2 rounded-xl border border-[#D6DCE8] bg-[#F5F7FB] px-3 py-2">
-              <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
+              <span
+                className="h-5 w-5 rounded-full"
+                style={{ backgroundColor: brickColor }}
+              />
               <BrickIcon name={brickIcon} className="size-4" />
-              <span className="font-poppins text-[14px] font-medium text-[#2E3542]">{brickName.trim() || "Preview"}</span>
+              <span className="font-poppins text-[14px] font-medium text-[#2E3542]">
+                {brickName.trim() || "Preview"}
+              </span>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => createBrickMutation.mutate()} disabled={createBrickMutation.isPending}>
+            <Button
+              onClick={() => createBrickMutation.mutate()}
+              disabled={createBrickMutation.isPending}
+            >
               {createBrickMutation.isPending ? "Creating..." : "Create Brick"}
             </Button>
           </DialogFooter>
@@ -569,24 +653,48 @@ export default function HomePage() {
       </Dialog>
 
       <Dialog open={createEventOpen} onOpenChange={setCreateEventOpen}>
-        <DialogContent className="max-w-2xl rounded-[26px]">
+        <DialogContent className="max-w-2xl rounded-[26px] space-y-4">
           <DialogHeader>
-            <DialogTitle className="mb-10 text-4xl">Create event</DialogTitle>
+            <DialogTitle className="text-3xl">Create event</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="Title" value={eventTitle} onChange={(event) => setEventTitle(event.target.value)} />
-            <Input placeholder="Location" value={eventLocation} onChange={(event) => setEventLocation(event.target.value)} />
+            <Input
+              placeholder="Title"
+              value={eventTitle}
+              onChange={(event) => setEventTitle(event.target.value)}
+            />
+            <Input
+              placeholder="Location"
+              value={eventLocation}
+              onChange={(event) => setEventLocation(event.target.value)}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
-              <Input type="datetime-local" value={eventStart} onChange={(event) => setEventStart(event.target.value)} />
-              <Input type="datetime-local" value={eventEnd} onChange={(event) => setEventEnd(event.target.value)} />
+              <Input
+                type="datetime-local"
+                value={eventStart}
+                onChange={(event) => setEventStart(event.target.value)}
+              />
+              <Input
+                type="datetime-local"
+                value={eventEnd}
+                onChange={(event) => setEventEnd(event.target.value)}
+              />
             </div>
             <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
               <p className="font-medium text-[#3A404D]">All day</p>
-              <Switch checked={eventIsAllDay} onCheckedChange={setEventIsAllDay} />
+              <Switch
+                checked={eventIsAllDay}
+                onCheckedChange={setEventIsAllDay}
+              />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
               {bricks.map((brick) => (
-                <button key={brick._id} type="button" onClick={() => setNewEventBrick(brick._id)}>
+                <button
+                  key={brick._id}
+                  type="button"
+                  className="shrink-0"
+                  onClick={() => setNewEventBrick(brick._id)}
+                >
                   <Badge
                     variant={newEventBrick === brick._id ? "blue" : "neutral"}
                     style={
@@ -595,14 +703,18 @@ export default function HomePage() {
                         : { color: brick.color, borderColor: brick.color }
                     }
                   >
-                    <BrickIcon name={brick.icon} className="size-4" /> {brick.name}
+                    <BrickIcon name={brick.icon} className="size-4" />{" "}
+                    {brick.name}
                   </Badge>
                 </button>
               ))}
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => createEventMutation.mutate()} disabled={createEventMutation.isPending}>
+            <Button
+              onClick={() => createEventMutation.mutate()}
+              disabled={createEventMutation.isPending}
+            >
               {createEventMutation.isPending ? "Creating..." : "Create event"}
             </Button>
           </DialogFooter>

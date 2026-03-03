@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -13,14 +14,16 @@ import {
   Search,
   Settings,
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppState } from "@/components/providers/app-state-provider";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 const navItems = [
   { href: "/home", label: "Home", icon: CalendarDays, iconName: "home", activeColor: "blue" as const },
@@ -32,6 +35,9 @@ export function AppTopNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const [viewMenuOpen, setViewMenuOpen] = React.useState(false);
+  const [calendarView, setCalendarView] = React.useState<"day" | "week" | "month" | "year">("month");
+  const [logoFailed, setLogoFailed] = React.useState(false);
   const {
     monthCursor,
     goToToday,
@@ -39,15 +45,34 @@ export function AppTopNav() {
     goToNextMonth,
   } = useAppState();
 
+  const viewOptions: Array<{ value: "day" | "week" | "month" | "year"; label: string; short: string }> = [
+    { value: "day", label: "Day", short: "D" },
+    { value: "week", label: "Week", short: "W" },
+    { value: "month", label: "Month", short: "M" },
+    { value: "year", label: "Year", short: "Y" },
+  ];
+
   return (
     <header className="sticky top-0 z-40 border-b border-[#E2E6EE] bg-[#F2F5FA]/90 backdrop-blur">
       <div className="mx-auto flex h-[76px] w-full max-w-[1180px] items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-3">
-          <div className="flex size-13 items-center justify-center rounded-2xl border border-[#D1D6DF] bg-white">
-            <CalendarDays className="size-7 text-[#2A2E36]" />
+          <div className="flex size-[52px] items-center justify-center rounded-2xl border border-[#D1D6DF] bg-white">
+            {logoFailed ? (
+              <CalendarDays className="size-7 text-[#2A2E36]" />
+            ) : (
+              <Image
+                src="/logo.png"
+                alt="Zenolok Logo"
+                width={34}
+                height={34}
+                className="size-[34px] object-contain"
+                onError={() => setLogoFailed(true)}
+                priority
+              />
+            )}
           </div>
           <Button
-            className="font-poppins rounded-full border border-[#7A8F64] bg-[#A7C58D] px-7 text-[20px] leading-[120%] font-medium text-[#2A2E36] hover:bg-[#97ba79]"
+            className="fs-pop-20-medium-center rounded-full border border-[#7A8F64] bg-[#A7C58D] px-7 text-[#2A2E36] hover:bg-[#97ba79]"
             onClick={() => {
               goToToday();
               router.push("/home");
@@ -73,7 +98,7 @@ export function AppTopNav() {
           >
             <ChevronRight className="size-5" />
           </Button>
-          <div className="font-poppins hidden text-[20px] leading-[120%] font-medium md:block">{format(monthCursor, "MMMM yyyy")}</div>
+          <div className="fs-pop-20-medium-center hidden md:block">{format(monthCursor, "MMMM yyyy")}</div>
         </div>
 
         <nav className="mx-auto hidden items-center gap-2 md:flex">
@@ -84,7 +109,7 @@ export function AppTopNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "font-poppins inline-flex items-center gap-2 rounded-full px-4 py-2 text-[20px] leading-[120%] font-medium transition",
+                  "fs-pop-20-medium-center inline-flex items-center gap-2 rounded-full px-4 py-2 transition",
                   active ? "bg-[#DDE9FF] text-[#2C5CA8]" : "text-[#5E6577] hover:bg-[#E9EEF7]"
                 )}
               >
@@ -96,9 +121,39 @@ export function AppTopNav() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <Badge variant="neutral" className="hidden h-11 items-center gap-2 px-4 md:inline-flex">
-            Month <ChevronDown className="size-4" />
-          </Badge>
+          <Popover open={viewMenuOpen} onOpenChange={setViewMenuOpen}>
+            <PopoverTrigger asChild>
+              <button type="button" className="hidden md:inline-flex" aria-label="Open calendar view filter">
+                <Badge variant="neutral" className="h-11 items-center gap-2 px-4">
+                  {viewOptions.find((option) => option.value === calendarView)?.label || "Month"} <ChevronDown className="size-4" />
+                </Badge>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[270px] rounded-2xl border border-[#D6DDE8] bg-[#ECEFF4] p-3">
+              <div className="space-y-1">
+                {viewOptions.map((option) => {
+                  const active = option.value === calendarView;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setCalendarView(option.value);
+                        setViewMenuOpen(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition",
+                        active ? "bg-white text-[#2E333B]" : "text-[#707780] hover:bg-white/70"
+                      )}
+                    >
+                      <span className="fs-pop-20-medium-center">{option.label}</span>
+                      <span className="fs-pop-20-medium-center">{option.short}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push("/search")}> 
             <Search className="size-5" />
           </Button>
@@ -116,7 +171,6 @@ export function AppTopNav() {
           </Button>
           <button
             type="button"
-            onClick={() => signOut({ callbackUrl: "/auth/login" })}
             className="rounded-full border border-transparent transition hover:border-[#D5DAE5]"
             title="Sign out"
           >

@@ -12,7 +12,7 @@ function Label({
   return (
     <LabelPrimitive.Root
       data-slot="label"
-      className={cn("font-poppins text-[16px] leading-[120%] font-normal text-[#4B4F59]", className)}
+      className={cn("fs-pop-16-regular text-[#4B4F59]", className)}
       {...props}
     />
   );

@@ -20,6 +20,11 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Zenolok",
   description: "Zenolok task and event manager",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

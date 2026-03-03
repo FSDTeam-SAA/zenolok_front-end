@@ -11,12 +11,14 @@ import {
   CheckCircle2,
   CircleUserRound,
   Clock3,
+  Menu,
   LockKeyhole,
   LogOut,
   MessageSquare,
   Moon,
   Save,
   Upload,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -66,8 +68,7 @@ interface SidebarSection {
 }
 
 const sections: SidebarSection[] = [
-  { id: "profile", label: "New Profile", icon: CircleUserRound },
-  { id: "password", label: "Change Password", icon: LockKeyhole },
+  
   { id: "bricksManage", label: "Bricks Manage", icon: BadgeCheck },
   { id: "weekStartDay", label: "Manage weeks start day", icon: Bell },
   { id: "switchTimeFormat", label: "Switch time format", icon: Clock3 },
@@ -75,6 +76,8 @@ const sections: SidebarSection[] = [
   { id: "darkMode", label: "Dark Mode", icon: Moon },
   { id: "notificationsReminders", label: "Notifications & Reminders", icon: BellPlus },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
+  { id: "profile", label: "Profile", icon: CircleUserRound },
+  { id: "password", label: "Change Password", icon: LockKeyhole },
   { id: "feedback", label: "Feedback", icon: MessageSquare, support: true },
   { id: "logout", label: "Logout", icon: LogOut, support: true },
 ];
@@ -100,6 +103,7 @@ export default function SettingsPage() {
 
   const [alarmPreset, setAlarmPreset] = React.useState<AlarmPreset>("none");
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
+  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = React.useState(false);
   const [bricksManageModalOpen, setBricksManageModalOpen] = React.useState(false);
   const [weekStartModalOpen, setWeekStartModalOpen] = React.useState(false);
@@ -236,11 +240,31 @@ export default function SettingsPage() {
   const supportSections = sections.filter((section) => section.support);
   const currentWeekStartLabel =
     weekStartDayOptions.find((option) => option.key === preferences.weekStartDay)?.label || "Monday";
+  const handleSectionSelect = (section: SettingsSection) => {
+    setActiveSection(section);
+    setMobileSidebarOpen(false);
+  };
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className="rounded-[30px] border border-[#E0E5EE] bg-[#F5F7FC] p-4 shadow-[0_16px_44px_rgba(17,24,37,0.12)] sm:p-6 xl:sticky xl:top-24 xl:h-[calc(100vh-130px)] xl:overflow-auto xl:p-8">
+      <div className="font-poppins mb-3 flex items-center justify-between rounded-2xl border border-[#E0E5EE] bg-[#F5F7FC] p-3 shadow-[0_12px_30px_rgba(17,24,37,0.10)] xl:hidden">
+        <div>
+          <h1 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">Settings</h1>
+          <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-11 rounded-xl p-0"
+          onClick={() => setMobileSidebarOpen(true)}
+          aria-label="Open settings menu"
+        >
+          <Menu className="size-5" />
+        </Button>
+      </div>
+
+      <div className="font-poppins grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+        <aside className="hidden rounded-[30px] border border-[#E0E5EE] bg-[#F5F7FC] p-4 shadow-[0_16px_44px_rgba(17,24,37,0.12)] sm:p-6 xl:sticky xl:top-24 xl:block xl:h-[calc(100vh-130px)] xl:overflow-auto xl:p-8">
           <h1 className="font-poppins mb-3 text-[28px] leading-[120%] font-semibold text-[#202531] sm:mb-4 sm:text-[30px]">Settings</h1>
           <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
 
@@ -253,7 +277,7 @@ export default function SettingsPage() {
                 <button
                   key={section.id}
                   type="button"
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => handleSectionSelect(section.id)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
                     active ? "bg-[#DCE9FF] text-[#2C5DA9]" : "text-[#4C5668] hover:bg-[#ECF1FA]"
                   }`}
@@ -278,7 +302,7 @@ export default function SettingsPage() {
                   <button
                     key={section.id}
                     type="button"
-                    onClick={() => setActiveSection(section.id)}
+                    onClick={() => handleSectionSelect(section.id)}
                     className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
                       active ? "bg-[#DCE9FF] text-[#2C5DA9]" : "text-[#4C5668] hover:bg-[#ECF1FA]"
                     }`}
@@ -361,7 +385,7 @@ export default function SettingsPage() {
           {activeSection === "password" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Change Password</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Change Password</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Use your current password and set a strong new password.
                 </p>
@@ -403,7 +427,7 @@ export default function SettingsPage() {
           {activeSection === "bricksManage" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Bricks Manage</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Bricks Manage</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Manage brick name, icon, and color.
                 </p>
@@ -427,7 +451,7 @@ export default function SettingsPage() {
           {activeSection === "weekStartDay" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Manage weeks start day</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Manage weeks start day</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Choose the first day of your week calendar.
                 </p>
@@ -451,7 +475,7 @@ export default function SettingsPage() {
           {activeSection === "switchTimeFormat" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Switch time format</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Switch time format</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Use 24-hour time in all pages.
                 </p>
@@ -474,7 +498,7 @@ export default function SettingsPage() {
           {activeSection === "alarmPreset" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Alarm preset</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Alarm preset</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Select your default reminder pattern.
                 </p>
@@ -511,7 +535,7 @@ export default function SettingsPage() {
           {activeSection === "darkMode" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Dark Mode</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Dark Mode</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Toggle dark mode preference.
                 </p>
@@ -520,7 +544,7 @@ export default function SettingsPage() {
               <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-white p-4 sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">Enable dark mode</p>
+                    <p className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">Enable dark mode</p>
                     <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                       {preferences.darkMode ? "Enabled" : "Disabled"}
                     </p>
@@ -534,7 +558,7 @@ export default function SettingsPage() {
           {activeSection === "notificationsReminders" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Notifications & Reminders</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Notifications & Reminders</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Configure which alerts you want to receive.
                 </p>
@@ -564,7 +588,7 @@ export default function SettingsPage() {
           {activeSection === "calendar" ? (
             <section className="space-y-5">
               <div>
-                <h2 className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">Calendar</h2>
+                <h2 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531] mb-4">Calendar</h2>
                 <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
                   Manage calendar-related settings.
                 </p>
@@ -655,6 +679,83 @@ export default function SettingsPage() {
           ) : null}
         </main>
       </div>
+
+      {mobileSidebarOpen ? (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/35"
+            onClick={() => setMobileSidebarOpen(false)}
+            aria-label="Close settings menu overlay"
+          />
+          <aside className="absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[#E0E5EE] bg-[#F5F7FC] p-5 shadow-[0_16px_44px_rgba(17,24,37,0.20)]">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-poppins text-[26px] leading-[120%] font-semibold text-[#202531]">Settings</h2>
+                <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-10 rounded-xl p-0"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close settings menu"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+
+            <div className="grid gap-2">
+              {primarySections.map((section) => {
+                const Icon = section.icon;
+                const active = activeSection === section.id;
+
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => handleSectionSelect(section.id)}
+                    className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                      active ? "bg-[#DCE9FF] text-[#2C5DA9]" : "text-[#4C5668] hover:bg-[#ECF1FA]"
+                    }`}
+                  >
+                    <span className={`flex size-10 items-center justify-center rounded-xl ${active ? "bg-[#BFD7FF]" : "bg-[#E9EEF6]"}`}>
+                      <Icon className="size-5" />
+                    </span>
+                    <span className="font-poppins text-[16px] leading-[120%] font-medium">{section.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 border-t border-[#DFE4EE] pt-4">
+              <p className="font-poppins mb-2 text-[18px] leading-[120%] font-semibold text-[#212734]">Support</p>
+              <div className="grid gap-2">
+                {supportSections.map((section) => {
+                  const Icon = section.icon;
+                  const active = activeSection === section.id;
+
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      onClick={() => handleSectionSelect(section.id)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
+                        active ? "bg-[#DCE9FF] text-[#2C5DA9]" : "text-[#4C5668] hover:bg-[#ECF1FA]"
+                      }`}
+                    >
+                      <span className={`flex size-10 items-center justify-center rounded-xl ${active ? "bg-[#BFD7FF]" : "bg-[#E9EEF6]"}`}>
+                        <Icon className="size-5" />
+                      </span>
+                      <span className="font-poppins text-[16px] leading-[120%] font-medium">{section.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+        </div>
+      ) : null}
 
       <Dialog open={bricksManageModalOpen} onOpenChange={setBricksManageModalOpen}>
         <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[#DDE3EE] bg-[#F5F7FC] p-4 sm:p-6">

@@ -35,7 +35,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { eventApi, brickApi, paginateArray } from "@/lib/api";
-import { defaultBricks } from "@/lib/presets";
+import { brickIconOptions } from "@/lib/brick-icons";
 import { queryKeys } from "@/lib/query-keys";
 
 const eventFilters = [
@@ -52,7 +52,8 @@ export default function EventsPage() {
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
 
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createEventOpen, setCreateEventOpen] = useState(false);
+  const [createBrickOpen, setCreateBrickOpen] = useState(false);
 
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -60,6 +61,9 @@ export default function EventsPage() {
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
   const [newEventBrick, setNewEventBrick] = useState<string>("");
+  const [brickName, setBrickName] = useState("");
+  const [brickColor, setBrickColor] = useState("#36A9E1");
+  const [brickIcon, setBrickIcon] = useState("home");
   const monthStart = useMemo(() => format(startOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
   const monthEnd = useMemo(() => format(endOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
 
@@ -84,7 +88,7 @@ export default function EventsPage() {
       }),
   });
 
-  const createMutation = useMutation({
+  const createEventMutation = useMutation({
     mutationFn: () => {
       if (!title.trim()) {
         throw new Error("Title is required");
@@ -94,9 +98,13 @@ export default function EventsPage() {
         throw new Error("Start and end date/time are required");
       }
 
+      if (new Date(startDateTime) > new Date(endDateTime)) {
+        throw new Error("End date/time must be after start date/time");
+      }
+
       return eventApi.create({
-        title,
-        location,
+        title: title.trim(),
+        location: location.trim() || undefined,
         brick: newEventBrick || undefined,
         startTime: new Date(startDateTime).toISOString(),
         endTime: new Date(endDateTime).toISOString(),
@@ -105,28 +113,43 @@ export default function EventsPage() {
     },
     onSuccess: () => {
       toast.success("Event created");
-      setCreateOpen(false);
+      setCreateEventOpen(false);
       setTitle("");
       setLocation("");
+      setIsAllDay(false);
       setStartDateTime("");
       setEndDateTime("");
+      setNewEventBrick("");
       queryClient.invalidateQueries({ queryKey: ["events"] });
     },
     onError: (error: Error) => toast.error(error.message || "Failed to create event"),
   });
 
-  const bricks = useMemo(() => {
-    if (bricksQuery.data?.length) {
-      return bricksQuery.data;
-    }
+  const createBrickMutation = useMutation({
+    mutationFn: () => {
+      if (!brickName.trim()) {
+        throw new Error("Brick name is required");
+      }
 
-    return defaultBricks.map((brick, index) => ({
-      ...brick,
-      _id: `default-${index}`,
-      participants: [],
-      createdBy: "",
-    }));
-  }, [bricksQuery.data]);
+      return brickApi.create({
+        name: brickName.trim(),
+        color: brickColor,
+        icon: brickIcon,
+      });
+    },
+    onSuccess: (createdBrick) => {
+      toast.success("Brick created");
+      setCreateBrickOpen(false);
+      setBrickName("");
+      setBrickColor("#36A9E1");
+      setBrickIcon("home");
+      setSelectedBrick(createdBrick._id);
+      queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
+    },
+    onError: (error: Error) => toast.error(error.message || "Failed to create brick"),
+  });
+
+  const bricks = useMemo(() => bricksQuery.data ?? [], [bricksQuery.data]);
 
   const filteredEvents = useMemo(() => {
     const all = eventsQuery.data || [];
@@ -153,8 +176,8 @@ export default function EventsPage() {
   return (
     <div className="space-y-4">
       <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="neutral" className="rounded-full px-4 py-2">
+        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+          <Badge variant="neutral" className="shrink-0 rounded-full px-4 py-2">
             <ListFilter className="size-4" /> All
           </Badge>
           {bricks.map((brick) => {
@@ -164,7 +187,7 @@ export default function EventsPage() {
               <button
                 type="button"
                 key={brick._id}
-                className="rounded-full"
+                className="shrink-0 rounded-full"
                 onClick={() => setSelectedBrick(active ? "all" : brick._id)}
               >
                 <Badge
@@ -182,47 +205,52 @@ export default function EventsPage() {
             );
           })}
 
-          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
             <DialogTrigger asChild>
-              <button className="flex size-9 items-center justify-center rounded-full border border-[#B2B8C6] text-[#7B8395] hover:bg-[#ECF0F7]">
+              <button className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#B2B8C6] text-[#7B8395] hover:bg-[#ECF0F7]">
                 <Plus className="size-4" />
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl rounded-[26px]">
+            <DialogContent className="max-w-md rounded-2xl space-y-3">
               <DialogHeader>
-                <DialogTitle>Create event</DialogTitle>
+                <DialogTitle>Create Brick</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <Input placeholder="Title" value={title} onChange={(event) => setTitle(event.target.value)} />
-                <Input placeholder="Location" value={location} onChange={(event) => setLocation(event.target.value)} />
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Input type="datetime-local" value={startDateTime} onChange={(event) => setStartDateTime(event.target.value)} />
-                  <Input type="datetime-local" value={endDateTime} onChange={(event) => setEndDateTime(event.target.value)} />
+                <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
+                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
+                  <Input value={brickColor} onChange={(event) => setBrickColor(event.target.value)} />
+                  <Input
+                    type="color"
+                    value={brickColor}
+                    onChange={(event) => setBrickColor(event.target.value)}
+                    className="h-10 w-14 cursor-pointer p-1"
+                  />
                 </div>
-                <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
-                  <p className="font-medium text-[#3A404D]">All day</p>
-                  <Switch checked={isAllDay} onCheckedChange={setIsAllDay} />
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-sm">Brick Icon</p>
+                  </div>
+                  <select
+                    value={brickIcon}
+                    onChange={(event) => setBrickIcon(event.target.value)}
+                    className="h-10 w-full rounded-md border border-[#D6DCE8] bg-white px-3 text-sm text-[#2F3542]"
+                  >
+                    {brickIconOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {bricks.map((brick) => (
-                    <button key={brick._id} type="button" onClick={() => setNewEventBrick(brick._id)}>
-                      <Badge
-                        variant={newEventBrick === brick._id ? "blue" : "neutral"}
-                        style={
-                          newEventBrick === brick._id
-                            ? { backgroundColor: brick.color }
-                            : { color: brick.color, borderColor: brick.color }
-                        }
-                      >
-                        <BrickIcon name={brick.icon} className="size-4" /> {brick.name}
-                      </Badge>
-                    </button>
-                  ))}
+                <div className="flex items-center gap-2 rounded-xl border border-[#D6DCE8] bg-[#F5F7FB] px-3 py-2">
+                  <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
+                  <BrickIcon name={brickIcon} className="size-4" />
+                  <span className="fs-pop-14-regular-right text-left text-[#2E3542]">{brickName.trim() || "Preview"}</span>
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
-                  {createMutation.isPending ? "Creating..." : "Create event"}
+                <Button onClick={() => createBrickMutation.mutate()} disabled={createBrickMutation.isPending}>
+                  {createBrickMutation.isPending ? "Creating..." : "Create Brick"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -261,7 +289,7 @@ export default function EventsPage() {
           <p className="font-poppins text-[32px] leading-[120%] font-semibold text-[#3D414A]">Events</p>
           <button
             type="button"
-            onClick={() => setCreateOpen(true)}
+            onClick={() => setCreateEventOpen(true)}
             className="flex size-9 items-center justify-center rounded-full border border-[#B2B8C6] bg-white text-[#7B8395] hover:bg-[#ECF0F7]"
             aria-label="Create event"
           >
@@ -319,6 +347,47 @@ export default function EventsPage() {
           />
         )}
       </section>
+
+      <Dialog open={createEventOpen} onOpenChange={setCreateEventOpen}>
+        <DialogContent className="max-w-2xl rounded-[26px] space-y-3">
+          <DialogHeader>
+            <DialogTitle>Create event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Title" value={title} onChange={(event) => setTitle(event.target.value)} />
+            <Input placeholder="Location" value={location} onChange={(event) => setLocation(event.target.value)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input type="datetime-local" value={startDateTime} onChange={(event) => setStartDateTime(event.target.value)} />
+              <Input type="datetime-local" value={endDateTime} onChange={(event) => setEndDateTime(event.target.value)} />
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
+              <p className="fs-pop-16-regular text-[#3A404D]">All day</p>
+              <Switch checked={isAllDay} onCheckedChange={setIsAllDay} />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+              {bricks.map((brick) => (
+                <button key={brick._id} type="button" className="shrink-0" onClick={() => setNewEventBrick(brick._id)}>
+                  <Badge
+                    variant={newEventBrick === brick._id ? "blue" : "neutral"}
+                    style={
+                      newEventBrick === brick._id
+                        ? { backgroundColor: brick.color }
+                        : { color: brick.color, borderColor: brick.color }
+                    }
+                  >
+                    <BrickIcon name={brick.icon} className="size-4" /> {brick.name}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => createEventMutation.mutate()} disabled={createEventMutation.isPending}>
+              {createEventMutation.isPending ? "Creating..." : "Create event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

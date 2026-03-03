@@ -75,11 +75,11 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("font-poppins text-[40px] leading-[120%] font-semibold text-[#23262E]", className)} {...props} />;
+  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("fs-pop-40-semibold text-[#23262E]", className)} {...props} />;
 }
 
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("font-poppins text-[16px] leading-[120%] text-[#6E7585]", className)} {...props} />;
+  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("fs-pop-16-regular text-[#6E7585]", className)} {...props} />;
 }
 
 export {
