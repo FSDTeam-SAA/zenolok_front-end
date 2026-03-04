@@ -13,7 +13,7 @@ import {
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
-import { endOfMonth, format, startOfMonth } from "date-fns";
+import { endOfDay, endOfMonth, format, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -36,6 +36,7 @@ import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { eventApi, brickApi, paginateArray } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
+import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
 
 const eventFilters = [
@@ -98,7 +99,17 @@ export default function EventsPage() {
         throw new Error("Start and end date/time are required");
       }
 
-      if (new Date(startDateTime) > new Date(endDateTime)) {
+      const startDate = new Date(startDateTime);
+      const endDate = new Date(endDateTime);
+
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        throw new Error("Invalid start or end date/time");
+      }
+
+      const normalizedStart = isAllDay ? startOfDay(startDate) : startDate;
+      const normalizedEnd = isAllDay ? endOfDay(endDate) : endDate;
+
+      if (normalizedEnd.getTime() <= normalizedStart.getTime()) {
         throw new Error("End date/time must be after start date/time");
       }
 
@@ -106,8 +117,8 @@ export default function EventsPage() {
         title: title.trim(),
         location: location.trim() || undefined,
         brick: newEventBrick || undefined,
-        startTime: new Date(startDateTime).toISOString(),
-        endTime: new Date(endDateTime).toISOString(),
+        startTime: normalizedStart.toISOString(),
+        endTime: normalizedEnd.toISOString(),
         isAllDay,
       });
     },
@@ -211,36 +222,52 @@ export default function EventsPage() {
                 <Plus className="size-4" />
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-md rounded-2xl space-y-3">
+            <DialogContent className="max-w-5xl rounded-[28px] border border-[#DCE2ED] bg-[#F5F7FB] p-4 sm:p-6 space-y-2">
               <DialogHeader>
                 <DialogTitle>Create Brick</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
-                <div className="grid grid-cols-[1fr_auto] items-center gap-3">
-                  <Input value={brickColor} onChange={(event) => setBrickColor(event.target.value)} />
-                  <Input
-                    type="color"
-                    value={brickColor}
-                    onChange={(event) => setBrickColor(event.target.value)}
-                    className="h-10 w-14 cursor-pointer p-1"
-                  />
+                <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+                  <div className="grid grid-cols-10 gap-2 sm:gap-3">
+                    {colorPalette.map((color) => (
+                      <button
+                        type="button"
+                        key={color}
+                        onClick={() => setBrickColor(color)}
+                        className={`size-8 rounded-full border-2 transition sm:size-10 ${
+                          brickColor === color ? "border-[#283040] scale-[1.05]" : "border-transparent"
+                        }`}
+                        style={{ backgroundColor: color }}
+                        aria-label={`Select ${color} color`}
+                      />
+                    ))}
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <div>
                     <p className="text-sm">Brick Icon</p>
                   </div>
-                  <select
-                    value={brickIcon}
-                    onChange={(event) => setBrickIcon(event.target.value)}
-                    className="h-10 w-full rounded-md border border-[#D6DCE8] bg-white px-3 text-sm text-[#2F3542]"
-                  >
+                  <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5 md:grid-cols-10">
                     {brickIconOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setBrickIcon(option.value)}
+                        className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
+                          brickIcon === option.value
+                            ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
+                            : "border-transparent bg-white text-[#5A6070] hover:border-[#C8D0E0]"
+                        }`}
+                        aria-label={option.label}
+                        title={option.label}
+                      >
+                        <option.Icon className="size-4 sm:size-5" />
+                      </button>
                     ))}
-                  </select>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 rounded-xl border border-[#D6DCE8] bg-[#F5F7FB] px-3 py-2">
                   <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
@@ -257,7 +284,7 @@ export default function EventsPage() {
           </Dialog>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-end gap-2">
           <Input
             className="h-10 w-full min-w-[220px] rounded-xl bg-white sm:w-[260px]"
             placeholder="Search events..."

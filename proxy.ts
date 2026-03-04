@@ -11,7 +11,7 @@ const publicRoutes = [
   "/auth/reset-password",
 ];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isPublic = publicRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = pathname.startsWith("/api/auth");
@@ -34,5 +34,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)"],
 };
