@@ -79,7 +79,7 @@ export function AppTopNav() {
     <header className="sticky top-0 z-40 border-b border-[#E2E6EE] bg-[#F2F5FA]/90 backdrop-blur">
       <div className="mx-auto flex h-[76px] w-full max-w-[1180px] items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-3">
-          <div className="">
+          <Link href="/home" className="flex items-center gap-2">
             <Image
               src="/logo.png"
               alt="Zenolok Logo"
@@ -88,7 +88,7 @@ export function AppTopNav() {
               className="w-[50px] h-[50px] object-contain"
               priority
             />
-          </div>
+          </Link>
           <Button
             className="fs-pop-20-medium-center rounded-full border border-[#7A8F64] bg-[#A7C58D] px-7 text-[#2A2E36] hover:bg-[#97ba79]"
             onClick={() => {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  
   addDays,
   differenceInCalendarDays,
   eachDayOfInterval,
@@ -15,7 +16,16 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { CalendarClock, MapPin, Plus } from "lucide-react";
+import {
+  CalendarClock,
+  ChevronDown,
+  ChevronUp,
+  ListTodo,
+  MapPin,
+  Plus,
+  RefreshCw,
+  Bell,
+} from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -34,7 +44,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { brickApi, eventApi, type EventData } from "@/lib/api";
+import {
+  brickApi,
+  eventApi,
+  eventTodoApi,
+  type EventData,
+} from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -48,6 +63,12 @@ type CalendarEvent = {
   location: string;
   brickName?: string;
   icon?: string;
+  isAllDay: boolean;
+  todos: Array<{
+    id: string;
+    text: string;
+    isCompleted: boolean;
+  }>;
 };
 
 type WeekSegment = {
@@ -204,6 +225,12 @@ export default function HomePage() {
   const [eventStart, setEventStart] = React.useState("");
   const [eventEnd, setEventEnd] = React.useState("");
   const [newEventBrick, setNewEventBrick] = React.useState("");
+  const [expandedEventId, setExpandedEventId] = React.useState<string | null>(
+    null,
+  );
+  const [newTodoByEvent, setNewTodoByEvent] = React.useState<
+    Record<string, string>
+  >({});
 
   const weekStartsOn = weekStartsOnMap[preferences.weekStartDay] ?? 1;
   const monthStart = React.useMemo(
@@ -266,6 +293,12 @@ export default function HomePage() {
         location: event.location || "No location",
         brickName: event.brick?.name,
         icon: event.brick?.icon,
+        isAllDay: event.isAllDay,
+        todos: (event.todos || []).map((todo) => ({
+          id: todo._id,
+          text: todo.text,
+          isCompleted: todo.isCompleted,
+        })),
       };
     });
   }, [eventsQuery.data]);
@@ -300,10 +333,18 @@ export default function HomePage() {
   );
 
   const selectedDateEvents = React.useMemo(
-    () =>
-      filteredEvents.filter(
+    () => {
+      const dayEvents = filteredEvents.filter(
         (event) => event.start <= selectedDate && event.end >= selectedDate,
-      ),
+      );
+
+      return dayEvents.sort((a, b) => {
+        if (a.isAllDay !== b.isAllDay) {
+          return a.isAllDay ? -1 : 1;
+        }
+        return a.start.getTime() - b.start.getTime();
+      });
+    },
     [filteredEvents, selectedDate],
   );
 
@@ -379,6 +420,33 @@ export default function HomePage() {
       toast.error(error.message || "Failed to create event"),
   });
 
+  const createEventTodoMutation = useMutation({
+    mutationFn: ({ eventId, text }: { eventId: string; text: string }) =>
+      eventTodoApi.create({ eventId, text }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["event-todos"] });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to add todo"),
+  });
+
+  const toggleEventTodoMutation = useMutation({
+    mutationFn: ({
+      todoId,
+      isCompleted,
+    }: {
+      todoId: string;
+      isCompleted: boolean;
+    }) => eventTodoApi.update(todoId, { isCompleted }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["event-todos"] });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to update todo"),
+  });
+
   React.useEffect(() => {
     if (!createEventOpen) {
       return;
@@ -393,6 +461,39 @@ export default function HomePage() {
     setEventEnd(toLocalDateTimeInputValue(end));
     setNewEventBrick(selectedBrick === "all" ? "" : selectedBrick);
   }, [createEventOpen, selectedBrick, selectedDate]);
+
+  React.useEffect(() => {
+    if (!selectedDateEvents.length) {
+      setExpandedEventId(null);
+      return;
+    }
+
+    setExpandedEventId((prev) => {
+      if (prev && selectedDateEvents.some((event) => event.id === prev)) {
+        return prev;
+      }
+      return selectedDateEvents[0].id;
+    });
+  }, [selectedDateEvents]);
+
+  const handleAddTodoForEvent = React.useCallback(
+    (eventId: string) => {
+      const nextText = (newTodoByEvent[eventId] || "").trim();
+      if (!nextText) {
+        return;
+      }
+
+      createEventTodoMutation.mutate(
+        { eventId, text: nextText },
+        {
+          onSuccess: () => {
+            setNewTodoByEvent((prev) => ({ ...prev, [eventId]: "" }));
+          },
+        },
+      );
+    },
+    [createEventTodoMutation, newTodoByEvent],
+  );
 
   return (
     <div className="space-y-4">
@@ -456,10 +557,7 @@ export default function HomePage() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
             <aside className="rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-poppins text-[20px] leading-[120%] font-medium text-[#2C323E]">
-                  Scheduled
-                </h2>
+              <div className="mb-3 flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setCreateEventOpen(true)}
@@ -471,26 +569,144 @@ export default function HomePage() {
 
               {selectedDateEvents.length ? (
                 <div className="space-y-2">
-                  {selectedDateEvents.slice(0, 5).map((event) => (
-                    <div
-                      key={event.id}
-                      className="rounded-xl border border-[#D3DAE8] bg-white px-2 py-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-6 w-1.5 rounded-full"
-                          style={{ backgroundColor: event.color }}
-                        />
-                        <p className="font-poppins truncate text-[20px] leading-[120%] font-medium text-[#2E3542]">
-                          {event.title}
+                  {selectedDateEvents.map((event) => {
+                    const expanded = expandedEventId === event.id;
+                    const todoInput = newTodoByEvent[event.id] || "";
+
+                    return (
+                      <div
+                        key={event.id}
+                        className="rounded-xl border border-[#D3DAE8] bg-[#DFE4EC] px-2 py-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-7 w-1.5 rounded-full"
+                                style={{ backgroundColor: event.color }}
+                              />
+                              <div className="min-w-0">
+                                <p className="font-poppins truncate text-[16px] leading-[120%] font-medium text-[#535A66]">
+                                  <span
+                                    className={
+                                      event.isAllDay
+                                        ? "text-[#26A4E6]"
+                                        : "text-[#6C7485]"
+                                    }
+                                  >
+                                    {event.isAllDay
+                                      ? "All day"
+                                      : format(event.start, "hh:mm a")}
+                                  </span>
+                                  <span className="mx-1 text-[#B6BDC9]">|</span>
+                                  <span>{event.title}</span>
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1 text-[#A2A9B7]">
+                            <RefreshCw className="size-4" />
+                            <Bell className="size-4" />
+                            <ListTodo className="size-4" />
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center"
+                              aria-label={
+                                expanded
+                                  ? "Collapse event todos"
+                                  : "Expand event todos"
+                              }
+                              onClick={() =>
+                                setExpandedEventId((prev) =>
+                                  prev === event.id ? null : event.id,
+                                )
+                              }
+                            >
+                              {expanded ? (
+                                <ChevronUp className="size-4" />
+                              ) : (
+                                <ChevronDown className="size-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
+                          <MapPin className="size-3.5" />
+                          {event.location}
                         </p>
+
+                        {expanded ? (
+                          <div className="ml-8 mt-2 rounded-xl border border-[#D3DAE8] bg-white px-3 py-2">
+                            <div className="space-y-2">
+                              {event.todos.length ? (
+                                event.todos.map((todo) => (
+                                  <label
+                                    key={todo.id}
+                                    className="flex items-center gap-2 text-[13px] text-[#4C535F]"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={todo.isCompleted}
+                                      onChange={() =>
+                                        toggleEventTodoMutation.mutate({
+                                          todoId: todo.id,
+                                          isCompleted: !todo.isCompleted,
+                                        })
+                                      }
+                                      className="size-4 rounded-full border border-[#B7BFCE]"
+                                    />
+                                    <span
+                                      className={
+                                        todo.isCompleted
+                                          ? "line-through text-[#A2A9B6]"
+                                          : ""
+                                      }
+                                    >
+                                      {todo.text}
+                                    </span>
+                                  </label>
+                                ))
+                              ) : (
+                                <p className="text-[12px] text-[#A0A8B7]">
+                                  No todos yet
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="mt-2 flex items-center gap-2 text-[#9EA6B5]">
+                              <button
+                                type="button"
+                                onClick={() => handleAddTodoForEvent(event.id)}
+                                className="inline-flex items-center justify-center"
+                                aria-label="Add todo"
+                              >
+                                <Plus className="size-4" />
+                              </button>
+                              <Input
+                                value={todoInput}
+                                onChange={(inputEvent) =>
+                                  setNewTodoByEvent((prev) => ({
+                                    ...prev,
+                                    [event.id]: inputEvent.target.value,
+                                  }))
+                                }
+                                onKeyDown={(inputEvent) => {
+                                  if (inputEvent.key === "Enter") {
+                                    inputEvent.preventDefault();
+                                    handleAddTodoForEvent(event.id);
+                                  }
+                                }}
+                                placeholder="New todo"
+                                className="h-8 border-none bg-transparent px-0 text-[14px] placeholder:text-[#A7AFBE]"
+                              />
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
-                      <p className="font-poppins mt-1 flex items-center gap-1 text-[14px] leading-[120%] text-[#7A8396]">
-                        <MapPin className="size-3.5" />
-                        {event.location}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <EmptyState
