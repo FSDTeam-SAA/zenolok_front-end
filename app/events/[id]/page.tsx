@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Bell,
   CalendarCheck2,
   CalendarDays,
   Clock3,
@@ -101,21 +102,35 @@ function TodoSection({
   onToggle,
   onDelete,
 }: TodoSectionProps) {
+  const notesPlaceholder = title.toLowerCase().includes("shared")
+    ? "New shared notes"
+    : "New notes";
+
   return (
-    <Card className="rounded-[30px] border-none bg-[#ECEEF2] px-4 py-3 shadow-none">
-      <p className="text-[13px] text-[#A0A5AF]">{title}</p>
+    <Card className="rounded-[22px] border border-[#DCE2EC] bg-[#ECEFF4] px-4 py-3 shadow-none">
       {todos.length ? (
-        <div className="mt-2 space-y-2">
+        <div className="space-y-2">
           {todos.map((todo) => (
-            <div key={todo._id} className="flex items-center gap-2 rounded-xl bg-white px-2.5 py-2">
+            <div
+              key={todo._id}
+              className="flex items-center gap-2 rounded-xl border border-[#DCE2EC] bg-[#F8FAFD] px-2.5 py-2"
+            >
               <button
                 type="button"
                 className={`size-4 rounded-full border ${
-                  todo.isCompleted ? "border-[#32ADE6] bg-[#32ADE6]" : "border-[#A9AFBC] bg-transparent"
+                  todo.isCompleted
+                    ? "border-[#32ADE6] bg-[#32ADE6]"
+                    : "border-[#A9AFBC] bg-transparent"
                 }`}
                 onClick={() => onToggle(todo)}
               />
-              <p className={`min-w-0 flex-1 truncate text-sm ${todo.isCompleted ? "text-[#9DA3AF] line-through" : "text-[#4D4D4D]"}`}>
+              <p
+                className={`min-w-0 flex-1 truncate text-[13px] ${
+                  todo.isCompleted
+                    ? "text-[#9DA3AF] line-through"
+                    : "text-[#4D4D4D]"
+                }`}
+              >
                 {todo.text}
               </p>
               <button
@@ -130,13 +145,13 @@ function TodoSection({
           ))}
         </div>
       ) : (
-        <div className="mt-2 space-y-2">
-          <div className="h-3.5 w-28 rounded-full bg-[#DFE2E8]" />
-          <div className="h-px w-full bg-[#DBDFE6]" />
-          <div className="h-3.5 w-24 rounded-full bg-[#DFE2E8]" />
+        <div className="space-y-1">
+          <p className="text-[12px] text-[#A0A7B5]">{title}</p>
+          <div className="h-px w-28 bg-[#CAD1DD]" />
+          <p className="text-[11px] text-[#B6BCC8]">{notesPlaceholder}</p>
         </div>
       )}
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-2 rounded-full border border-[#D7DDE7] bg-[#F7F9FC] px-2 py-1">
         <Input
           value={inputValue}
           onChange={(event) => onInputChange(event.target.value)}
@@ -147,15 +162,15 @@ function TodoSection({
             }
           }}
           placeholder={title}
-          className="h-8 rounded-full border-none bg-white text-sm"
+          className="h-7 rounded-full border-none bg-transparent px-0 text-[13px] placeholder:text-[#B5BDCB]"
         />
         <button
           type="button"
           onClick={onAdd}
-          className="flex size-8 items-center justify-center rounded-full bg-white text-[#6C7384]"
+          className="flex size-6 items-center justify-center rounded-full border border-[#D2D9E5] bg-white text-[#6C7384]"
           aria-label="Add todo"
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
         </button>
       </div>
     </Card>
@@ -182,11 +197,13 @@ function MessageComposer({
   return (
     <div className="space-y-2">
       {selectedFileName ? (
-        <div className="rounded-xl bg-white px-3 py-2 text-xs text-[#6B7384]">{selectedFileName}</div>
+        <div className="rounded-xl border border-[#D7DDE7] bg-white px-3 py-2 text-xs text-[#6B7384]">
+          {selectedFileName}
+        </div>
       ) : null}
-      <div className="flex items-center gap-2 rounded-full bg-white px-2 py-1">
-        <label className="cursor-pointer px-1 text-[#939AA7]">
-          <ImagePlus className="size-5" />
+      <div className="flex items-center gap-2 rounded-full border border-[#D7DDE7] bg-[#F7F9FC] px-2 py-1">
+        <label className="cursor-pointer p-1 text-[#939AA7] transition hover:text-[#667083]">
+          <ImagePlus className="size-4" />
           <input
             type="file"
             className="hidden"
@@ -203,16 +220,16 @@ function MessageComposer({
             }
           }}
           placeholder="Type here..."
-          className="h-9 rounded-full border-none bg-transparent text-sm"
+          className="h-7 rounded-full border-none bg-transparent px-0 text-[13px] placeholder:text-[#B2B9C7]"
         />
         <button
           type="button"
-          className="rounded-full p-1 text-[#32ADE6] disabled:opacity-40"
+          className="flex size-6 items-center justify-center rounded-full bg-[#E8F4FE] text-[#32ADE6] disabled:opacity-40"
           onClick={onSend}
           disabled={isSending}
           aria-label="Send message"
         >
-          <Send className="size-4" />
+          <Send className="size-3.5" />
         </button>
       </div>
     </div>
@@ -413,60 +430,65 @@ export default function EventDetailsPage() {
   const endDate = new Date(event.endTime);
 
   return (
-    <div className="mx-auto w-full max-w-[430px] space-y-3 pb-8">
-      <div className="flex items-center justify-between px-1">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-[#4D4D4D]">
-          <ArrowLeft className="size-5" /> Back
+    <div className="space-y-3 ">
+      <div className=" flex items-center justify-between pt-1">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-[12px] text-[#4D5463]"
+        >
+          <ArrowLeft className="size-4" /> Back
         </button>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="text-[#FF3B30]"
+            className="rounded-full p-1 text-[#FF3B30] transition hover:bg-[#FFECEC]"
             onClick={() => deleteEventMutation.mutate()}
             aria-label="Delete event"
           >
-            <Trash2 className="size-5" />
+            <Trash2 className="size-4" />
           </button>
-          <button type="button" className="text-[#0088FF]" onClick={() => router.back()} aria-label="Done">
-            <CalendarCheck2 className="size-5" />
+          <button
+            type="button"
+            className="rounded-full p-1 text-[#0088FF] transition hover:bg-[#E8F4FF]"
+            onClick={() => router.back()}
+            aria-label="Done"
+          >
+            <CalendarCheck2 className="size-4" />
           </button>
         </div>
       </div>
 
-      <section className="rounded-[34px] border border-[#DEE3EC] bg-[#F4F6FA] p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1 block h-7 w-1.5 rounded-sm bg-[#32ADE6]" />
-              <p className="truncate text-[34px] font-medium leading-none text-[#4D4D4D]">{event.title}</p>
+      <section className=" rounded-[16px] border border-[#E4E9F1] bg-[#F6F8FB] p-2">
+        <div className="rounded-[14px] border border-[#D8DEE8] bg-[#ECEFF4] p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-start gap-2">
+                <span className="mt-1 block h-6 w-1 rounded-sm bg-[#32ADE6]" />
+                <p className="truncate text-[25px] font-medium leading-tight text-[#4D4D4D]">
+                  {event.title}
+                </p>
+              </div>
+              <div className="mt-1.5 pl-3">
+                {event.brick ? (
+                  <Badge
+                    variant="blue"
+                    className="rounded-full px-2.5 py-0 text-[11px]"
+                    style={{ backgroundColor: event.brick.color }}
+                  >
+                    <BrickIcon name={event.brick.icon} className="size-3.5" />{" "}
+                    {event.brick.name}
+                  </Badge>
+                ) : null}
+              </div>
             </div>
-            <div className="mt-2 pl-4">
-              {event.brick ? (
-                <Badge
-                  variant="blue"
-                  className="rounded-full px-2.5 py-0.5 text-sm"
-                  style={{ backgroundColor: event.brick.color }}
-                >
-                  <BrickIcon name={event.brick.icon} className="size-3.5" /> {event.brick.name}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {participants.slice(0, 4).map((participant) => (
-              <Avatar key={participant._id} className="-ml-2 size-6 border border-white first:ml-0">
-                <AvatarImage src={participant.avatar?.url} />
-                <AvatarFallback>{getParticipantDisplayName(participant).slice(0, 1)}</AvatarFallback>
-              </Avatar>
-            ))}
             <Dialog>
               <DialogTrigger asChild>
                 <button
                   type="button"
-                  className="ml-1 text-[#6F7789] hover:text-[#2E333B]"
+                  className="text-[#6F7789] transition hover:text-[#2E333B]"
                   aria-label="Share event"
                 >
-                  <Share2 className="size-[18px]" />
+                  <Share2 className="size-[16px]" />
                 </button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl rounded-[26px]">
@@ -481,54 +503,83 @@ export default function EventDetailsPage() {
                 />
                 <div className="max-h-[320px] space-y-2 overflow-auto rounded-xl border border-[#DFE3EC] bg-[#F8FAFD] p-2">
                   {userSearchQuery.data?.map((user) => (
-                    <div key={user._id} className="flex items-center justify-between rounded-lg bg-white px-3 py-2">
+                    <div
+                      key={user._id}
+                      className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
+                    >
                       <div className="flex items-center gap-2">
                         <Avatar className="size-8">
                           <AvatarImage src={user.avatar?.url} />
-                          <AvatarFallback>{getParticipantDisplayName(user).slice(0, 1)}</AvatarFallback>
+                          <AvatarFallback>
+                            {getParticipantDisplayName(user).slice(0, 1)}
+                          </AvatarFallback>
                         </Avatar>
                         <span>{getParticipantDisplayName(user)}</span>
                       </div>
-                      <button className="text-[#80889A]" onClick={() => addParticipantMutation.mutate(user._id)}>
+                      <button
+                        className="text-[#80889A]"
+                        onClick={() => addParticipantMutation.mutate(user._id)}
+                      >
                         <UserPlus className="size-4" />
                       </button>
                     </div>
                   ))}
-                  {!userSearchQuery.data?.length ? <p className="p-3 text-sm text-[#8A91A1]">No user found.</p> : null}
+                  {!userSearchQuery.data?.length ? (
+                    <p className="p-3 text-sm text-[#8A91A1]">No user found.</p>
+                  ) : null}
                 </div>
               </DialogContent>
             </Dialog>
           </div>
-        </div>
 
-        <div className="mt-4 space-y-3 text-[#4D4D4D]">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              className="flex items-center gap-2 text-left"
-              onClick={() => {
-                setSelectedDates({ from: new Date(event.startTime), to: new Date(event.endTime) });
-                setDateDialogOpen(true);
-              }}
-            >
-              <CalendarDays className="size-4 text-[#8C93A2]" />
-              <div>
-                <p className="text-xs text-[#B8BDC8]">{format(startDate, "EEEE")}</p>
-                <p className="text-[26px] leading-none">{format(startDate, "dd MMM yyyy").toUpperCase()}</p>
-              </div>
-            </button>
-            <Badge variant="neutral" className="rounded-full border border-[#4D4D4D] bg-transparent px-2.5 py-0.5 text-sm text-[#4D4D4D]">
-              {event.isAllDay ? "All day" : "Scheduled"}
-            </Badge>
+          <div className="mt-4 flex items-start justify-between gap-3 text-[#4D4D4D]">
+            <div className="space-y-2.5">
+              <button
+                type="button"
+                className="flex items-center gap-2 text-left"
+                onClick={() => {
+                  setSelectedDates({
+                    from: new Date(event.startTime),
+                    to: new Date(event.endTime),
+                  });
+                  setDateDialogOpen(true);
+                }}
+              >
+                <CalendarDays className="size-4 text-[#8C93A2]" />
+                <p className="text-[13px] font-medium tracking-[0.02em] text-[#5A6272]">
+                  {format(startDate, "dd MMM yyyy").toUpperCase()}
+                </p>
+              </button>
+              <p className="flex items-center gap-2 text-[13px] text-[#5A6272]">
+                <Clock3 className="size-4 text-[#8C93A2]" />
+                {event.isAllDay
+                  ? "All day"
+                  : `${format(startDate, "hh:mm a")} - ${format(
+                      endDate,
+                      "hh:mm a",
+                    )}`}
+              </p>
+              <p className="flex items-center gap-2 text-[13px] text-[#5A6272]">
+                <Locate className="size-4 text-[#8C93A2]" />
+                {event.location || "No location"}
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                type="button"
+                className="rounded-full p-1 text-[#7E8696] transition hover:bg-white"
+                aria-label="Notification"
+              >
+                <Bell className="size-4" />
+              </button>
+              <Badge
+                variant="neutral"
+                className="rounded-full border border-[#7E8696] bg-transparent px-2.5 py-0 text-[11px] text-[#4D4D4D]"
+              >
+                {event.isAllDay ? "All day" : "Scheduled"}
+              </Badge>
+            </div>
           </div>
-          <p className="flex items-center gap-2 text-[31px] leading-none">
-            <Clock3 className="size-4 text-[#8C93A2]" />
-            {event.isAllDay ? "All day" : `${format(startDate, "hh:mm a")} - ${format(endDate, "hh:mm a")}`}
-          </p>
-          <p className="flex items-center gap-2 text-[31px] leading-none">
-            <Locate className="size-4 text-[#8C93A2]" />
-            {event.location || "No location"}
-          </p>
         </div>
 
         <Dialog open={dateDialogOpen} onOpenChange={setDateDialogOpen}>
@@ -565,7 +616,7 @@ export default function EventDetailsPage() {
         </Dialog>
 
         {jamView === "jam" ? (
-          <div className="mt-4 space-y-4">
+          <div className="mt-3 space-y-3">
             <TodoSection
               todos={privateTodos}
               title="New todo"
@@ -580,7 +631,7 @@ export default function EventDetailsPage() {
               }
               onDelete={(todoId) => deleteTodoMutation.mutate(todoId)}
             />
-            <TodoSection
+            {/* <TodoSection
               todos={sharedTodos}
               title="New shared todo"
               inputValue={newSharedTodoText}
@@ -593,11 +644,11 @@ export default function EventDetailsPage() {
                 })
               }
               onDelete={(todoId) => deleteTodoMutation.mutate(todoId)}
-            />
+            /> */}
           </div>
         ) : null}
 
-        <Card className="mt-4 rounded-[32px] border-none bg-[#ECEEF2] p-4 shadow-none">
+        <Card className="mt-3 rounded-[22px] border border-[#DCE2EB] bg-[#ECEFF4] p-3.5 shadow-none">
           {jamView === "messages" ? (
             <div className="mb-3 flex items-center justify-between text-[#8E95A3]">
               <button
@@ -617,6 +668,22 @@ export default function EventDetailsPage() {
                 }}
               >
                 Media, files, link
+              </button>
+            </div>
+          ) : null}
+
+          {jamView === "jam" ? (
+            <div className="mb-2 flex items-center justify-end">
+              <button
+                type="button"
+                className="rounded-full p-1 text-[#8E95A3] transition hover:bg-white"
+                onClick={() => {
+                  setLibraryTab("media");
+                  setJamView("media");
+                }}
+                aria-label="Open media files and links"
+              >
+                <ImagePlus className="size-4" />
               </button>
             </div>
           ) : null}
@@ -729,14 +796,22 @@ export default function EventDetailsPage() {
                   <SectionLoading rows={3} />
                 ) : (jamView === "jam" ? jamPreviewMessages : messages).length ? (
                   (jamView === "jam" ? jamPreviewMessages : messages).map((message) => (
-                    <div key={message._id} className="space-y-0.5">
+                    <div key={message._id} className="space-y-1">
                       <div className="flex items-end justify-between gap-2">
-                        <p className={`text-sm ${getDisplayNameFromMessage(message) === "Me" ? "text-[#32ADE6]" : "text-[#4D4D4D]"}`}>
+                        <p
+                          className={`text-[11px] ${
+                            getDisplayNameFromMessage(message) === "Me"
+                              ? "text-[#32ADE6]"
+                              : "text-[#4D4D4D]"
+                          }`}
+                        >
                           {getDisplayNameFromMessage(message)}
                         </p>
-                        <p className="text-[10px] text-[#B3B9C6]">{formatMessageStamp(message.createdAt)}</p>
+                        <p className="text-[9px] text-[#B3B9C6]">
+                          {formatMessageStamp(message.createdAt)}
+                        </p>
                       </div>
-                      <div className="rounded-2xl bg-white px-3 py-2 text-sm text-[#4D4D4D]">
+                      <div className="rounded-2xl bg-white px-3 py-1.5 text-[12px] text-[#4D4D4D]">
                         {getMessageLabel(message)}
                       </div>
                     </div>
@@ -760,10 +835,10 @@ export default function EventDetailsPage() {
           ) : null}
 
           {jamView === "jam" ? (
-            <div className="mt-4 flex items-center justify-center">
+            <div className="mt-3 flex items-center justify-center">
               <button
                 type="button"
-                className="flex items-center gap-1 rounded-full bg-white px-3 py-0.5 text-sm text-[#B7BCC7]"
+                className="flex items-center gap-1 rounded-full border border-[#D6DCE8] bg-white px-3 py-0.5 text-[12px] text-[#AAB0BC]"
                 onClick={() => setJamView("messages")}
               >
                 Let&apos;s JAM
@@ -773,7 +848,7 @@ export default function EventDetailsPage() {
           ) : null}
         </Card>
 
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           {participants.map((participant) => (
             <Avatar key={participant._id} className="size-8 border border-[#d2d8e5]">
               <AvatarImage src={participant.avatar?.url} />

@@ -49,7 +49,6 @@ import { Switch } from "@/components/ui/switch";
 import {
   brickApi,
   eventApi,
-  eventTodoApi,
   type EventData,
 } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
@@ -139,6 +138,17 @@ function clampDate(date: Date, min: Date, max: Date) {
   return date;
 }
 
+function normalizeDateRange(start: Date, end: Date) {
+  const normalizedStart = startOfDay(start);
+  const normalizedEnd = startOfDay(end);
+
+  if (normalizedStart.getTime() <= normalizedEnd.getTime()) {
+    return { start: normalizedStart, end: normalizedEnd };
+  }
+
+  return { start: normalizedEnd, end: normalizedStart };
+}
+
 function buildWeekSegments(
   week: Date[],
   events: CalendarEvent[],
@@ -225,12 +235,18 @@ export default function HomePage() {
   const [eventDatePopupOpen, setEventDatePopupOpen] = React.useState(false);
   const [eventTimePopupOpen, setEventTimePopupOpen] = React.useState(false);
   const [newEventBrick, setNewEventBrick] = React.useState("");
+  const [selectedDateRange, setSelectedDateRange] = React.useState(() => {
+    const normalized = startOfDay(selectedDate);
+    return { start: normalized, end: normalized };
+  });
+  const [rangeDragAnchor, setRangeDragAnchor] = React.useState<Date | null>(
+    null,
+  );
+  const [isRangeDragging, setIsRangeDragging] = React.useState(false);
+  const skipRangeSyncRef = React.useRef(false);
   const [expandedEventId, setExpandedEventId] = React.useState<string | null>(
     null,
   );
-  const [newTodoByEvent, setNewTodoByEvent] = React.useState<
-    Record<string, string>
-  >({});
 
   const weekStartsOn = weekStartsOnMap[preferences.weekStartDay] ?? 1;
   const monthStart = React.useMemo(
@@ -330,6 +346,27 @@ export default function HomePage() {
         ),
       ),
     [weekStartsOn],
+  );
+
+  const finishRangeSelection = React.useCallback(
+    (finalDay?: Date) => {
+      if (!rangeDragAnchor) {
+        setIsRangeDragging(false);
+        return;
+      }
+
+      const finalRange = normalizeDateRange(
+        rangeDragAnchor,
+        finalDay || selectedDateRange.end,
+      );
+
+      setSelectedDateRange(finalRange);
+      setRangeDragAnchor(null);
+      setIsRangeDragging(false);
+      skipRangeSyncRef.current = true;
+      setSelectedDate(finalRange.start);
+    },
+    [rangeDragAnchor, selectedDateRange.end, setSelectedDate],
   );
 
   const selectedDateEvents = React.useMemo(
@@ -433,46 +470,43 @@ export default function HomePage() {
       toast.error(error.message || "Failed to create event"),
   });
 
-  const createEventTodoMutation = useMutation({
-    mutationFn: ({ eventId, text }: { eventId: string; text: string }) =>
-      eventTodoApi.create({ eventId, text }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      queryClient.invalidateQueries({ queryKey: ["event-todos"] });
-    },
-    onError: (error: Error) =>
-      toast.error(error.message || "Failed to add todo"),
-  });
-
-  const toggleEventTodoMutation = useMutation({
-    mutationFn: ({
-      todoId,
-      isCompleted,
-    }: {
-      todoId: string;
-      isCompleted: boolean;
-    }) => eventTodoApi.update(todoId, { isCompleted }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["events"] });
-      queryClient.invalidateQueries({ queryKey: ["event-todos"] });
-    },
-    onError: (error: Error) =>
-      toast.error(error.message || "Failed to update todo"),
-  });
-
   React.useEffect(() => {
     if (!createEventOpen) {
       return;
     }
 
+    const defaultStartDate = format(selectedDateRange.start, "yyyy-MM-dd");
+    const defaultEndDate = format(selectedDateRange.end, "yyyy-MM-dd");
+
     setEventDatePopupOpen(false);
     setEventTimePopupOpen(false);
-    setEventStartDate("");
-    setEventEndDate("");
+    setEventStartDate(defaultStartDate);
+    setEventEndDate(defaultEndDate);
     setEventStartTime("");
     setEventEndTime("");
     setNewEventBrick(selectedBrick === "all" ? "" : selectedBrick);
-  }, [createEventOpen, selectedBrick]);
+  }, [createEventOpen, selectedBrick, selectedDateRange]);
+
+  React.useEffect(() => {
+    if (!isRangeDragging) {
+      return;
+    }
+
+    const handleMouseUp = () => finishRangeSelection();
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [isRangeDragging, finishRangeSelection]);
+
+  React.useEffect(() => {
+    if (skipRangeSyncRef.current) {
+      skipRangeSyncRef.current = false;
+      return;
+    }
+
+    const normalized = startOfDay(selectedDate);
+    setSelectedDateRange({ start: normalized, end: normalized });
+  }, [selectedDate]);
 
   React.useEffect(() => {
     if (!hasEventDateRange) {
@@ -493,25 +527,6 @@ export default function HomePage() {
       return selectedDateEvents[0].id;
     });
   }, [selectedDateEvents]);
-
-  const handleAddTodoForEvent = React.useCallback(
-    (eventId: string) => {
-      const nextText = (newTodoByEvent[eventId] || "").trim();
-      if (!nextText) {
-        return;
-      }
-
-      createEventTodoMutation.mutate(
-        { eventId, text: nextText },
-        {
-          onSuccess: () => {
-            setNewTodoByEvent((prev) => ({ ...prev, [eventId]: "" }));
-          },
-        },
-      );
-    },
-    [createEventTodoMutation, newTodoByEvent],
-  );
 
   return (
     <div className="space-y-4">
@@ -589,7 +604,6 @@ export default function HomePage() {
                 <div className="space-y-2">
                   {selectedDateEvents.map((event) => {
                     const expanded = expandedEventId === event.id;
-                    const todoInput = newTodoByEvent[event.id] || "";
 
                     return (
                       <div
@@ -626,7 +640,6 @@ export default function HomePage() {
                           <div className="flex shrink-0 items-center gap-1 text-[#A2A9B7]">
                             <RefreshCw className="size-4" />
                             <Bell className="size-4" />
-                            <ListTodo className="size-4" />
                             <button
                               type="button"
                               className="inline-flex items-center justify-center"
@@ -660,21 +673,11 @@ export default function HomePage() {
                             <div className="space-y-2">
                               {event.todos.length ? (
                                 event.todos.map((todo) => (
-                                  <label
+                                  <div
                                     key={todo.id}
                                     className="flex items-center gap-2 text-[13px] text-[#4C535F]"
                                   >
-                                    <input
-                                      type="checkbox"
-                                      checked={todo.isCompleted}
-                                      onChange={() =>
-                                        toggleEventTodoMutation.mutate({
-                                          todoId: todo.id,
-                                          isCompleted: !todo.isCompleted,
-                                        })
-                                      }
-                                      className="size-4 rounded-full border border-[#B7BFCE]"
-                                    />
+                                    <span className="size-2 rounded-full bg-[#B7BFCE]" />
                                     <span
                                       className={
                                         todo.isCompleted
@@ -684,41 +687,13 @@ export default function HomePage() {
                                     >
                                       {todo.text}
                                     </span>
-                                  </label>
+                                  </div>
                                 ))
                               ) : (
                                 <p className="text-[12px] text-[#A0A8B7]">
                                   No todos yet
                                 </p>
                               )}
-                            </div>
-
-                            <div className="mt-2 flex items-center gap-2 text-[#9EA6B5]">
-                              <button
-                                type="button"
-                                onClick={() => handleAddTodoForEvent(event.id)}
-                                className="inline-flex items-center justify-center"
-                                aria-label="Add todo"
-                              >
-                                <Plus className="size-4" />
-                              </button>
-                              <Input
-                                value={todoInput}
-                                onChange={(inputEvent) =>
-                                  setNewTodoByEvent((prev) => ({
-                                    ...prev,
-                                    [event.id]: inputEvent.target.value,
-                                  }))
-                                }
-                                onKeyDown={(inputEvent) => {
-                                  if (inputEvent.key === "Enter") {
-                                    inputEvent.preventDefault();
-                                    handleAddTodoForEvent(event.id);
-                                  }
-                                }}
-                                placeholder="New todo"
-                                className="h-8 border-none bg-transparent px-0 text-[14px] placeholder:text-[#A7AFBE]"
-                              />
                             </div>
                           </div>
                         ) : null}
@@ -765,19 +740,65 @@ export default function HomePage() {
                         className="relative grid grid-cols-7 border-b border-[#DDE2EC] last:border-b-0"
                       >
                         {week.map((day) => {
-                          const selected = isSameDay(day, selectedDate);
+                          const isInSelectedRange =
+                            day >= selectedDateRange.start &&
+                            day <= selectedDateRange.end;
                           return (
                             <button
                               key={format(day, "yyyy-MM-dd")}
                               type="button"
-                              onClick={() => setSelectedDate(day)}
-                              className={`h-[136px] border-r border-[#DDE2EC] px-2 py-2 text-left last:border-r-0 ${
-                                selected ? "bg-[#ECEDEF]" : ""
+                              onMouseDown={(mouseEvent) => {
+                                if (mouseEvent.button !== 0) {
+                                  return;
+                                }
+
+                                mouseEvent.preventDefault();
+                                const normalized = startOfDay(day);
+                                setIsRangeDragging(true);
+                                setRangeDragAnchor(normalized);
+                                setSelectedDateRange({
+                                  start: normalized,
+                                  end: normalized,
+                                });
+                              }}
+                              onMouseEnter={() => {
+                                if (!isRangeDragging || !rangeDragAnchor) {
+                                  return;
+                                }
+
+                                setSelectedDateRange(
+                                  normalizeDateRange(rangeDragAnchor, day),
+                                );
+                              }}
+                              onMouseUp={(mouseEvent) => {
+                                mouseEvent.preventDefault();
+                                mouseEvent.stopPropagation();
+                                finishRangeSelection(day);
+                              }}
+                              onKeyDown={(keyEvent) => {
+                                if (
+                                  keyEvent.key !== "Enter" &&
+                                  keyEvent.key !== " "
+                                ) {
+                                  return;
+                                }
+
+                                keyEvent.preventDefault();
+                                const normalized = startOfDay(day);
+                                setSelectedDateRange({
+                                  start: normalized,
+                                  end: normalized,
+                                });
+                                skipRangeSyncRef.current = true;
+                                setSelectedDate(normalized);
+                              }}
+                              className={`h-[136px] select-none border-r border-[#DDE2EC] px-2 py-2 text-left last:border-r-0 ${
+                                isInSelectedRange ? "bg-[#ECEDEF]" : ""
                               }`}
                             >
                               <span
                                 className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl px-2 text-[20px] leading-[120%] font-medium ${
-                                  selected
+                                  isInSelectedRange
                                     ? "text-[#2E333E]"
                                     : isSameMonth(day, monthCursor)
                                       ? "text-[#2F3542]"

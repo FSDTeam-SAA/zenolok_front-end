@@ -157,10 +157,14 @@ export function EventDateRangePopup({
   endDate,
   onApply,
 }: DateRangePopupProps) {
+  const minYear = 1900;
+  const maxYear = 2100;
   const [draftStart, setDraftStart] = React.useState<Date | null>(null);
   const [draftEnd, setDraftEnd] = React.useState<Date | null>(null);
   const [cursorMonth, setCursorMonth] = React.useState(startOfMonth(new Date()));
   const [view, setView] = React.useState<"month" | "day">("month");
+  const [yearSearch, setYearSearch] = React.useState("");
+  const activeYearRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!open) {
@@ -174,6 +178,7 @@ export function EventDateRangePopup({
     setDraftEnd(parsedEnd);
     setCursorMonth(startOfMonth(parsedStart || new Date()));
     setView("month");
+    setYearSearch("");
   }, [open, startDate, endDate]);
 
   const monthStart = startOfMonth(cursorMonth);
@@ -181,7 +186,38 @@ export function EventDateRangePopup({
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
   const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
-  const years = [cursorMonth.getFullYear(), cursorMonth.getFullYear() + 1];
+  const years = React.useMemo(
+    () => Array.from({ length: maxYear - minYear + 1 }, (_, index) => minYear + index),
+    [maxYear, minYear],
+  );
+  const filteredYears = React.useMemo(() => {
+    const query = yearSearch.trim();
+    if (!query) {
+      return years;
+    }
+
+    return years.filter((year) => year.toString().includes(query));
+  }, [yearSearch, years]);
+  const scrollTargetYear = React.useMemo(() => {
+    const cursorYear = cursorMonth.getFullYear();
+
+    if (filteredYears.includes(cursorYear)) {
+      return cursorYear;
+    }
+
+    return filteredYears[0] ?? null;
+  }, [filteredYears, cursorMonth]);
+
+  React.useEffect(() => {
+    if (!open || view !== "month" || scrollTargetYear === null) {
+      return;
+    }
+
+    activeYearRef.current?.scrollIntoView({
+      block: "center",
+      behavior: "auto",
+    });
+  }, [open, view, scrollTargetYear]);
 
   const handleDaySelect = (day: Date) => {
     if (!draftStart || draftEnd) {
@@ -211,38 +247,66 @@ export function EventDateRangePopup({
 
           <div className="rounded-[22px] bg-[#ECEDEF] p-3">
             {view === "month" ? (
-              <div className="space-y-4">
-                {years.map((year) => (
-                  <div key={year}>
-                    <p className="mb-2 text-[30px] leading-none font-medium text-[#6D717B]">{year}</p>
-                    <div className="grid grid-cols-6 gap-2">
-                      {Array.from({ length: 12 }, (_, index) => {
-                        const monthDate = new Date(year, index, 1);
-                        const active =
-                          cursorMonth.getFullYear() === year && cursorMonth.getMonth() === index;
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={yearSearch}
+                  onChange={(event) =>
+                    setYearSearch(event.target.value.replace(/\D/g, "").slice(0, 4))
+                  }
+                  placeholder="Search year (e.g. 2026)"
+                  className="h-9 w-full rounded-xl border border-[#D2D7E0] bg-[#F8F9FB] px-3 text-[14px] text-[#4A4F59] placeholder:text-[#9AA1AE] focus:border-[#B5BDC9] focus:outline-none"
+                />
+                <div className="max-h-[312px] space-y-4 overflow-y-auto pr-1">
+                  {filteredYears.map((year) => (
+                    <div
+                      key={year}
+                      ref={year === scrollTargetYear ? activeYearRef : null}
+                    >
+                      <p className="mb-2 text-[30px] leading-none font-medium text-[#6D717B]">{year}</p>
+                      <div className="grid grid-cols-6 gap-2">
+                        {Array.from({ length: 12 }, (_, index) => {
+                          const monthDate = new Date(year, index, 1);
+                          const active =
+                            cursorMonth.getFullYear() === year && cursorMonth.getMonth() === index;
 
-                        return (
-                          <button
-                            key={`${year}-${index}`}
-                            type="button"
-                            onClick={() => {
-                              setCursorMonth(monthDate);
-                              setView("day");
-                            }}
-                            className={`flex size-10 items-center justify-center rounded-full text-[20px] leading-none ${
-                              active ? "bg-[#F07373] text-white" : "bg-[#B6B8BC] text-white"
-                            }`}
-                          >
-                            {index + 1}
-                          </button>
-                        );
-                      })}
+                          return (
+                            <button
+                              key={`${year}-${index}`}
+                              type="button"
+                              onClick={() => {
+                                setCursorMonth(monthDate);
+                                setView("day");
+                              }}
+                              className={`flex size-10 items-center justify-center rounded-full text-[20px] leading-none ${
+                                active ? "bg-[#F07373] text-white" : "bg-[#B6B8BC] text-white"
+                              }`}
+                            >
+                              {index + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                  {!filteredYears.length ? (
+                    <p className="py-4 text-center text-[13px] text-[#8B92A0]">
+                      No year found
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setView("month")}
+                  className="inline-flex items-center gap-1 rounded-lg px-1 text-[13px] text-[#6F7684] hover:text-white bg-white hover:bg-[#4A4F59] w-full py-2"
+                >
+                  <ChevronLeft className="size-4" />
+                  Go back
+                </button>
                 <div className="flex items-center justify-between">
                   <button
                     type="button"

@@ -7,7 +7,9 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-const baseURL = (process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTPUBLICBASEURL || "").replace(/\/+$/, "");
+function resolveAuthBaseURL() {
+  return (process.env.AUTH_API_BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTPUBLICBASEURL || "").replace(/\/+$/, "");
+}
 
 const loginEnvelopeSchema = z.object({
   success: z.boolean(),
@@ -90,17 +92,25 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        const baseURL = resolveAuthBaseURL();
+
         if (!baseURL) {
-          throw new Error("Missing environment variable NEXT_PUBLIC_BASE_URL");
+          throw new Error("Missing auth API URL. Set AUTH_API_BASE_URL or NEXT_PUBLIC_BASE_URL.");
         }
 
-        const response = await fetch(`${baseURL}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(parsed.data),
-        });
+        let response: Response;
+        try {
+          response = await fetch(`${baseURL}/auth/login`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(parsed.data),
+          });
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : "Unknown network error";
+          throw new Error(`Unable to reach auth API at ${baseURL}. ${reason}. If you changed .env, restart the Next.js server.`);
+        }
 
         const rawText = await response.text();
         let rawJson: unknown = {};
