@@ -10,4 +10,5 @@ export const queryKeys = {
   eventTodos: (eventId: string) => ["event-todos", eventId] as const,
   jamMessages: (eventId: string) => ["jam-messages", eventId] as const,
   userSearch: (query: string) => ["user-search", query] as const,
+  notifications: ["notifications"] as const,
 };

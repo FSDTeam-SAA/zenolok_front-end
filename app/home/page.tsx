@@ -21,7 +21,6 @@ import {
   Clock3,
   ChevronDown,
   ChevronUp,
-  ListTodo,
   MapPin,
   Plus,
   RefreshCw,
@@ -35,6 +34,7 @@ import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
 import { SectionLoading } from "@/components/shared/section-loading";
+import { BrickFilterBar } from "./_components/brick-filter-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -530,59 +530,12 @@ export default function HomePage() {
 
   return (
     <div className="space-y-4">
-      <section className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
-        <button
-          type="button"
-          className="shrink-0"
-          onClick={() => setSelectedBrick("all")}
-        >
-          <Badge
-            variant={selectedBrick === "all" ? "neutral" : "neutral"}
-            className="rounded-full px-4 py-2"
-          >
-            <CalendarClock className="size-4" />
-            All
-          </Badge>
-        </button>
-        {bricks.map((brick) => {
-          const active = selectedBrick === brick._id;
-          return (
-            <button
-              key={brick._id}
-              type="button"
-              className="shrink-0"
-              onClick={() => setSelectedBrick(brick._id)}
-            >
-              <Badge
-                variant={active ? "blue" : "neutral"}
-                className="rounded-full px-4 py-2"
-                style={
-                  active
-                    ? { backgroundColor: brick.color, color: "white" }
-                    : {
-                        color: brick.color,
-                        borderColor: brick.color,
-                        backgroundColor: "white",
-                      }
-                }
-              >
-                <BrickIcon name={brick.icon} className="size-4" />
-                {brick.name}
-              </Badge>
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          className="shrink-0"
-          onClick={() => setCreateBrickOpen(true)}
-          aria-label="Create brick"
-        >
-          <span className="flex size-8 items-center justify-center rounded-full border border-[#B9BFCA] bg-white text-[#7D8597]">
-            <Plus className="size-4" />
-          </span>
-        </button>
-      </section>
+      <BrickFilterBar
+        bricks={bricks}
+        selectedBrick={selectedBrick}
+        onSelectBrick={setSelectedBrick}
+        onCreateBrick={() => setCreateBrickOpen(true)}
+      />
 
       <section className="rounded-[30px] border border-[#DFE4ED] bg-[#F4F6FA] p-3 sm:p-4">
         {eventsQuery.isLoading ? (

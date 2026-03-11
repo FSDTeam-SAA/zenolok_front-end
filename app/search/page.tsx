@@ -2,11 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { endOfMonth, format, startOfMonth } from "date-fns";
 import { ArrowLeft, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-import { useAppState } from "@/components/providers/app-state-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { Card } from "@/components/ui/card";
@@ -18,15 +16,12 @@ const tabs = ["Messages", "System", "All"] as const;
 
 export default function SearchPage() {
   const router = useRouter();
-  const { monthCursor } = useAppState();
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Messages");
   const [query, setQuery] = useState("");
-  const monthStart = useMemo(() => format(startOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
-  const monthEnd = useMemo(() => format(endOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
 
   const eventsQuery = useQuery({
-    queryKey: queryKeys.events({ filter: "all", startDate: monthStart, endDate: monthEnd }),
-    queryFn: () => eventApi.getAll({ filter: "all", startDate: monthStart, endDate: monthEnd }),
+    queryKey: queryKeys.events({ filter: "all" }),
+    queryFn: () => eventApi.getAll({ filter: "all" }),
   });
 
   const results = useMemo(() => {
@@ -60,7 +55,6 @@ export default function SearchPage() {
         <button onClick={() => router.back()} className="flex items-center gap-2 text-xl font-medium text-[#2E333B]">
           <ArrowLeft className="size-5" /> Search
         </button>
-        <button className="text-xl text-[#1C8EE9]">Unread</button>
       </section>
 
       <section className="rounded-[28px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-6">
@@ -73,18 +67,6 @@ export default function SearchPage() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-          </div>
-
-          <div className="ml-auto flex overflow-hidden rounded-xl border border-[#CED4DF]">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-4 py-2 text-lg ${activeTab === tab ? "bg-[#DDE3EF] text-[#262B35]" : "text-[#727A8A]"}`}
-              >
-                {tab}
-              </button>
-            ))}
           </div>
         </div>
 

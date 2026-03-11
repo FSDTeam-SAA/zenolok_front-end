@@ -11,6 +11,7 @@ import {
   isBefore,
   isSameDay,
   isSameMonth,
+  startOfDay,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
@@ -176,6 +177,7 @@ export function EventDateRangePopup({
   const [view, setView] = React.useState<"month" | "day">("month");
   const [yearSearch, setYearSearch] = React.useState("");
   const activeYearRef = React.useRef<HTMLDivElement | null>(null);
+  const yearsScrollRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!open) {
@@ -184,10 +186,13 @@ export function EventDateRangePopup({
 
     const parsedStart = parseDateValue(startDate);
     const parsedEnd = parseDateValue(endDate);
+    const today = startOfDay(new Date());
+    const normalizedStart = parsedStart || parsedEnd || today;
+    const normalizedEnd = parsedEnd || parsedStart || normalizedStart;
 
-    setDraftStart(parsedStart);
-    setDraftEnd(parsedEnd);
-    setCursorMonth(startOfMonth(parsedStart || new Date()));
+    setDraftStart(normalizedStart);
+    setDraftEnd(normalizedEnd);
+    setCursorMonth(startOfMonth(normalizedStart));
     setView("month");
     setYearSearch("");
   }, [open, startDate, endDate]);
@@ -224,10 +229,23 @@ export function EventDateRangePopup({
       return;
     }
 
-    activeYearRef.current?.scrollIntoView({
-      block: "center",
-      behavior: "auto",
+    const scroller = yearsScrollRef.current;
+    const target = activeYearRef.current;
+    if (!scroller || !target) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const scrollerRect = scroller.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const targetTopInScroller = targetRect.top - scrollerRect.top + scroller.scrollTop;
+      const centeredScrollTop =
+        targetTopInScroller - scroller.clientHeight / 2 + targetRect.height / 2;
+
+      scroller.scrollTop = Math.max(0, centeredScrollTop);
     });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [open, view, scrollTargetYear]);
 
   const handleDaySelect = (day: Date) => {
@@ -269,7 +287,10 @@ export function EventDateRangePopup({
                   placeholder="Search year (e.g. 2026)"
                   className="h-9 w-full rounded-xl border border-[#D2D7E0] bg-[#F8F9FB] px-3 text-[14px] text-[#4A4F59] placeholder:text-[#9AA1AE] focus:border-[#B5BDC9] focus:outline-none"
                 />
-                <div className="max-h-[312px] space-y-4 overflow-y-auto pr-1">
+                <div
+                  ref={yearsScrollRef}
+                  className="max-h-[312px] space-y-4 overflow-y-auto pr-1"
+                >
                   {filteredYears.map((year) => (
                     <div
                       key={year}
@@ -316,7 +337,7 @@ export function EventDateRangePopup({
                   className="inline-flex items-center gap-1 rounded-lg px-1 text-[13px] text-[#6F7684] hover:text-white bg-white hover:bg-[#4A4F59] w-full py-2"
                 >
                   <ChevronLeft className="size-4" />
-                  Go back
+                  Year
                 </button>
                 <div className="flex items-center justify-between">
                   <button

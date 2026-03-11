@@ -99,6 +99,16 @@ export interface JamMessage {
   updatedAt: string;
 }
 
+export interface NotificationData {
+  _id: string;
+  title: string;
+  user: string | UserProfile;
+  read: boolean;
+  type?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PaginatedResult<T> {
   items: T[];
   page: number;
@@ -256,4 +266,10 @@ export const jamApi = {
     })),
   getByEvent: (eventId: string) => unwrap<JamMessage[]>(apiClient.get(`/jam-messages/event/${eventId}`)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/jam-messages/${id}`)),
+};
+
+export const notificationApi = {
+  getAll: () => unwrap<NotificationData[]>(apiClient.get("/notifications")),
+  markAsRead: (id: string) => unwrap<NotificationData>(apiClient.patch(`/notifications/${id}/read`)),
+  clearAll: () => unwrap<null>(apiClient.delete("/notifications/clear")),
 };

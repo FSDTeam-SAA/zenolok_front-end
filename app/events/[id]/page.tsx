@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { io, type Socket } from "socket.io-client";
 import {
   ArrowLeft,
   Bell,
@@ -15,11 +16,8 @@ import {
   Link2,
   Locate,
   Paperclip,
-  Plus,
-  Send,
   Share2,
   Trash2,
-  UserPlus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -32,12 +30,13 @@ import {
   type EventData,
   type EventTodo,
   type JamMessage,
-  userApi,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionLoading } from "@/components/shared/section-loading";
+import { MessageComposer } from "./_components/message-composer";
+import { TodoSection } from "./_components/todo-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,12 +50,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 
 function mapParticipants(participants: EventData["participants"]) {
-  return participants
+  const mapped = participants
     .map((participant) => (typeof participant === "string" ? null : participant))
     .filter((participant): participant is NonNullable<typeof participant> => Boolean(participant));
+
+  const seen = new Set<string>();
+  return mapped.filter((participant) => {
+    if (seen.has(participant._id)) {
+      return false;
+    }
+    seen.add(participant._id);
+    return true;
+  });
 }
 
 function getParticipantDisplayName(participant: { name?: string; username?: string; email?: string }) {
@@ -83,157 +90,19 @@ function getMessageLabel(message: JamMessage) {
   return message.text || message.fileName || (message.messageType === "link" ? "Link" : "Media");
 }
 
-type TodoSectionProps = {
-  todos: EventTodo[];
-  title: string;
-  inputValue: string;
-  onInputChange: (value: string) => void;
-  onAdd: () => void;
-  onToggle: (todo: EventTodo) => void;
-  onDelete: (todoId: string) => void;
-};
-
-function TodoSection({
-  todos,
-  title,
-  inputValue,
-  onInputChange,
-  onAdd,
-  onToggle,
-  onDelete,
-}: TodoSectionProps) {
-  const notesPlaceholder = title.toLowerCase().includes("shared")
-    ? "New shared notes"
-    : "New notes";
-
-  return (
-    <Card className="rounded-[22px] border border-[#DCE2EC] bg-[#ECEFF4] px-4 py-3 shadow-none">
-      {todos.length ? (
-        <div className="space-y-2">
-          {todos.map((todo) => (
-            <div
-              key={todo._id}
-              className="flex items-center gap-2 rounded-xl border border-[#DCE2EC] bg-[#F8FAFD] px-2.5 py-2"
-            >
-              <button
-                type="button"
-                className={`size-4 rounded-full border ${
-                  todo.isCompleted
-                    ? "border-[#32ADE6] bg-[#32ADE6]"
-                    : "border-[#A9AFBC] bg-transparent"
-                }`}
-                onClick={() => onToggle(todo)}
-              />
-              <p
-                className={`min-w-0 flex-1 truncate text-[13px] ${
-                  todo.isCompleted
-                    ? "text-[#9DA3AF] line-through"
-                    : "text-[#4D4D4D]"
-                }`}
-              >
-                {todo.text}
-              </p>
-              <button
-                type="button"
-                className="text-[#9EA5B2] transition hover:text-[#E94B3C]"
-                onClick={() => onDelete(todo._id)}
-                aria-label="Delete todo"
-              >
-                <Trash2 className="size-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <p className="text-[12px] text-[#A0A7B5]">{title}</p>
-          <div className="h-px w-28 bg-[#CAD1DD]" />
-          <p className="text-[11px] text-[#B6BCC8]">{notesPlaceholder}</p>
-        </div>
-      )}
-      <div className="mt-3 flex items-center gap-2 rounded-full border border-[#D7DDE7] bg-[#F7F9FC] px-2 py-1">
-        <Input
-          value={inputValue}
-          onChange={(event) => onInputChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onAdd();
-            }
-          }}
-          placeholder={title}
-          className="h-7 rounded-full border-none bg-transparent px-0 text-[13px] placeholder:text-[#B5BDCB]"
-        />
-        <button
-          type="button"
-          onClick={onAdd}
-          className="flex size-6 items-center justify-center rounded-full border border-[#D2D9E5] bg-white text-[#6C7384]"
-          aria-label="Add todo"
-        >
-          <Plus className="size-3.5" />
-        </button>
-      </div>
-    </Card>
+function sortMessagesByCreatedAt(messages: JamMessage[]) {
+  return [...messages].sort(
+    (a, b) =>
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
   );
 }
 
-type MessageComposerProps = {
-  messageText: string;
-  onMessageChange: (value: string) => void;
-  onFileChange: (file: File | null) => void;
-  selectedFileName?: string;
-  onSend: () => void;
-  isSending: boolean;
-};
+function appendMessageIfMissing(messages: JamMessage[], next: JamMessage) {
+  if (messages.some((message) => message._id === next._id)) {
+    return messages;
+  }
 
-function MessageComposer({
-  messageText,
-  onMessageChange,
-  onFileChange,
-  selectedFileName,
-  onSend,
-  isSending,
-}: MessageComposerProps) {
-  return (
-    <div className="space-y-2">
-      {selectedFileName ? (
-        <div className="rounded-xl border border-[#D7DDE7] bg-white px-3 py-2 text-xs text-[#6B7384]">
-          {selectedFileName}
-        </div>
-      ) : null}
-      <div className="flex items-center gap-2 rounded-full border border-[#D7DDE7] bg-[#F7F9FC] px-2 py-1">
-        <label className="cursor-pointer p-1 text-[#939AA7] transition hover:text-[#667083]">
-          <ImagePlus className="size-4" />
-          <input
-            type="file"
-            className="hidden"
-            onChange={(event) => onFileChange(event.target.files?.[0] || null)}
-          />
-        </label>
-        <Input
-          value={messageText}
-          onChange={(event) => onMessageChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onSend();
-            }
-          }}
-          placeholder="Type here..."
-          className="h-7 rounded-full border-none bg-transparent px-0 text-[13px] placeholder:text-[#B2B9C7]"
-        />
-        <button
-          type="button"
-          className="flex size-6 items-center justify-center rounded-full bg-[#E8F4FE] text-[#32ADE6] disabled:opacity-40"
-          onClick={onSend}
-          disabled={isSending}
-          aria-label="Send message"
-        >
-          <Send className="size-3.5" />
-        </button>
-      </div>
-    </div>
-  );
+  return sortMessagesByCreatedAt([...messages, next]);
 }
 
 export default function EventDetailsPage() {
@@ -244,14 +113,23 @@ export default function EventDetailsPage() {
   const id = params.id;
 
   const [newTodoText, setNewTodoText] = useState("");
-  const [newSharedTodoText, setNewSharedTodoText] = useState("");
   const [messageText, setMessageText] = useState("");
-  const [userSearch, setUserSearch] = useState("");
+  const [shareUrl, setShareUrl] = useState("");
   const [selectedDates, setSelectedDates] = useState<DateRange | undefined>(undefined);
   const [dateDialogOpen, setDateDialogOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jamView, setJamView] = useState<"jam" | "messages" | "media">("jam");
   const [libraryTab, setLibraryTab] = useState<"media" | "files" | "link">("media");
+  const socketRef = React.useRef<Socket | null>(null);
+  const socketServerUrl = React.useMemo(
+    () =>
+      (
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        process.env.NEXTPUBLICBASEURL ||
+        ""
+      ).replace(/\/+$/, ""),
+    [],
+  );
 
   const eventQuery = useQuery({
     queryKey: queryKeys.event(id),
@@ -271,11 +149,58 @@ export default function EventDetailsPage() {
     enabled: Boolean(id),
   });
 
-  const userSearchQuery = useQuery({
-    queryKey: queryKeys.userSearch(userSearch),
-    queryFn: () => userApi.searchUsers(userSearch),
-    enabled: userSearch.length > 1,
-  });
+  React.useEffect(() => {
+    if (!id || !socketServerUrl) {
+      return;
+    }
+
+    const socket = io(socketServerUrl, {
+      transports: ["websocket", "polling"],
+    });
+    socketRef.current = socket;
+
+    const handleConnect = () => {
+      socket.emit("joinEventRoom", id);
+    };
+
+    const handleNewMessage = (message: JamMessage) => {
+      queryClient.setQueryData<JamMessage[]>(
+        queryKeys.jamMessages(id),
+        (previous = []) => appendMessageIfMissing(previous, message),
+      );
+    };
+
+    const handleDeleteMessage = (messageId: string) => {
+      queryClient.setQueryData<JamMessage[]>(
+        queryKeys.jamMessages(id),
+        (previous = []) =>
+          previous.filter((message) => message._id !== messageId),
+      );
+    };
+
+    socket.on("connect", handleConnect);
+    socket.on("newMessage", handleNewMessage);
+    socket.on("deleteMessage", handleDeleteMessage);
+
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    return () => {
+      socket.off("connect", handleConnect);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("deleteMessage", handleDeleteMessage);
+      socket.disconnect();
+
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+    };
+  }, [id, queryClient, socketServerUrl]);
+
+  React.useEffect(() => {
+    setShareUrl(window.location.href);
+  }, [id]);
 
   const refreshEverything = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.event(id) });
@@ -317,12 +242,8 @@ export default function EventDetailsPage() {
         isShared: Boolean(isShared),
       });
     },
-    onSuccess: (_, variables) => {
-      if (variables.isShared) {
-        setNewSharedTodoText("");
-      } else {
-        setNewTodoText("");
-      }
+    onSuccess: () => {
+      setNewTodoText("");
       refreshEverything();
     },
     onError: (error: Error) => toast.error(error.message || "Failed to add todo"),
@@ -369,41 +290,19 @@ export default function EventDetailsPage() {
 
       return jamApi.create(form);
     },
-    onSuccess: () => {
+    onSuccess: (message) => {
       setMessageText("");
       setSelectedFile(null);
-      refreshEverything();
+      queryClient.setQueryData<JamMessage[]>(
+        queryKeys.jamMessages(id),
+        (previous = []) => appendMessageIfMissing(previous, message),
+      );
     },
     onError: (error: Error) => toast.error(error.message || "Failed to send message"),
   });
 
   const event = eventQuery.data;
   const participants = useMemo(() => mapParticipants(event?.participants || []), [event?.participants]);
-
-  const addParticipantMutation = useMutation({
-    mutationFn: (userId: string) => {
-      if (!event) {
-        throw new Error("Event not loaded yet");
-      }
-
-      const currentIds = event.participants.map((participant) =>
-        typeof participant === "string" ? participant : participant._id
-      );
-
-      if (currentIds.includes(userId)) {
-        throw new Error("User already added");
-      }
-
-      return eventApi.update(id, {
-        participants: [...currentIds, userId],
-      });
-    },
-    onSuccess: () => {
-      toast.success("Participant added");
-      refreshEverything();
-    },
-    onError: (error: Error) => toast.error(error.message || "Failed to add participant"),
-  });
 
   if (eventQuery.isLoading) {
     return <SectionLoading rows={6} />;
@@ -415,7 +314,6 @@ export default function EventDetailsPage() {
 
   const messages = messagesQuery.data || [];
   const privateTodos = (eventTodosQuery.data || []).filter((todo) => !todo.isShared);
-  const sharedTodos = (eventTodosQuery.data || []).filter((todo) => todo.isShared);
   const mediaMessages = messages.filter((message) => message.messageType === "media" || Boolean(message.mediaUrl));
   const fileMessages = messages.filter(
     (message) =>
@@ -428,6 +326,45 @@ export default function EventDetailsPage() {
   const jamPreviewMessages = messages.slice(-2);
   const startDate = new Date(event.startTime);
   const endDate = new Date(event.endTime);
+  const shareMessage = `Join "${event.title}" on Zenolok`;
+  const encodedShareUrl = encodeURIComponent(shareUrl);
+  const encodedShareMessage = encodeURIComponent(shareMessage);
+  const socialLinks = [
+    { label: "WhatsApp", href: `https://wa.me/?text=${encodedShareMessage}%20${encodedShareUrl}` },
+    { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodedShareUrl}` },
+    { label: "X", href: `https://twitter.com/intent/tweet?text=${encodedShareMessage}&url=${encodedShareUrl}` },
+    { label: "Telegram", href: `https://t.me/share/url?url=${encodedShareUrl}&text=${encodedShareMessage}` },
+    { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedShareUrl}` },
+  ];
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link copied");
+    } catch {
+      toast.error("Failed to copy link");
+    }
+  };
+
+  const handleNativeShare = async () => {
+    if (!shareUrl || typeof navigator === "undefined" || !navigator.share) {
+      return;
+    }
+
+    try {
+      await navigator.share({
+        title: event.title,
+        text: shareMessage,
+        url: shareUrl,
+      });
+    } catch {
+      // Ignore cancellation or unsupported browser behavior.
+    }
+  };
 
   return (
     <div className="space-y-3 ">
@@ -491,42 +428,45 @@ export default function EventDetailsPage() {
                   <Share2 className="size-[16px]" />
                 </button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl rounded-[26px]">
+              <DialogContent className="max-w-lg rounded-[26px]">
                 <DialogHeader>
-                  <DialogTitle>Share tasks with others.</DialogTitle>
+                  <DialogTitle>Share on social media</DialogTitle>
                 </DialogHeader>
-                <Input
-                  placeholder="Search by name..."
-                  value={userSearch}
-                  onChange={(event) => setUserSearch(event.target.value)}
-                  className="h-12"
-                />
-                <div className="max-h-[320px] space-y-2 overflow-auto rounded-xl border border-[#DFE3EC] bg-[#F8FAFD] p-2">
-                  {userSearchQuery.data?.map((user) => (
-                    <div
-                      key={user._id}
-                      className="flex items-center justify-between rounded-lg bg-white px-3 py-2"
+                <div className="space-y-3">
+                  <div className="rounded-xl border border-[#DFE3EC] bg-[#F8FAFD] px-3 py-2 text-sm text-[#687083]">
+                    {shareUrl || "Preparing link..."}
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      className="h-10 rounded-xl"
+                      onClick={handleCopyShareLink}
+                      disabled={!shareUrl}
                     >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="size-8">
-                          <AvatarImage src={user.avatar?.url} />
-                          <AvatarFallback>
-                            {getParticipantDisplayName(user).slice(0, 1)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{getParticipantDisplayName(user)}</span>
-                      </div>
-                      <button
-                        className="text-[#80889A]"
-                        onClick={() => addParticipantMutation.mutate(user._id)}
+                      Copy Link
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="h-10 rounded-xl"
+                      onClick={handleNativeShare}
+                      disabled={!shareUrl || typeof navigator === "undefined" || !navigator.share}
+                    >
+                      Quick Share
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {socialLinks.map((platform) => (
+                      <a
+                        key={platform.label}
+                        href={platform.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-10 items-center justify-center rounded-xl border border-[#D7DDE8] bg-white px-3 text-sm text-[#4C5463] transition hover:bg-[#F1F5FB]"
                       >
-                        <UserPlus className="size-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {!userSearchQuery.data?.length ? (
-                    <p className="p-3 text-sm text-[#8A91A1]">No user found.</p>
-                  ) : null}
+                        {platform.label}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               </DialogContent>
             </Dialog>

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { endOfMonth, format, formatDistanceToNowStrict, startOfMonth } from "date-fns";
+import { format, formatDistanceToNowStrict } from "date-fns";
 import {
   Bell,
   CalendarClock,
@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { useAppState } from "@/components/providers/app-state-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
@@ -200,7 +199,6 @@ function CategoryCard({
 
 export default function TodosPage() {
   const queryClient = useQueryClient();
-  const { monthCursor } = useAppState();
 
   const [page, setPage] = React.useState(1);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -228,8 +226,6 @@ export default function TodosPage() {
   const [repeatValue, setRepeatValue] = React.useState<RepeatValue>("daily");
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [newCategoryColor, setNewCategoryColor] = React.useState("#F7C700");
-  const monthStart = React.useMemo(() => format(startOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
-  const monthEnd = React.useMemo(() => format(endOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
 
   const categoriesQuery = useQuery({
     queryKey: queryKeys.categoriesWithItems,
@@ -237,8 +233,8 @@ export default function TodosPage() {
   });
 
   const scheduledQuery = useQuery({
-    queryKey: queryKeys.scheduledTodos({ status: "unfinished", startDate: monthStart, endDate: monthEnd }),
-    queryFn: () => todoItemApi.getScheduled({ status: "unfinished", startDate: monthStart, endDate: monthEnd }),
+    queryKey: queryKeys.scheduledTodos({ status: "unfinished" }),
+    queryFn: () => todoItemApi.getScheduled({ status: "unfinished" }),
   });
 
   const createTodoMutation = useMutation({

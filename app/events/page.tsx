@@ -13,10 +13,9 @@ import {
   Plus,
   SlidersHorizontal,
 } from "lucide-react";
-import { endOfDay, endOfMonth, format, startOfDay, startOfMonth } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
-import { useAppState } from "@/components/providers/app-state-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -48,7 +47,6 @@ const eventFilters = [
 
 export default function EventsPage() {
   const queryClient = useQueryClient();
-  const { monthCursor } = useAppState();
   const [filter, setFilter] = useState<(typeof eventFilters)[number]["value"]>("upcoming");
   const [selectedBrick, setSelectedBrick] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
@@ -70,8 +68,6 @@ export default function EventsPage() {
   const [brickName, setBrickName] = useState("");
   const [brickColor, setBrickColor] = useState("#36A9E1");
   const [brickIcon, setBrickIcon] = useState("home");
-  const monthStart = useMemo(() => format(startOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
-  const monthEnd = useMemo(() => format(endOfMonth(monthCursor), "yyyy-MM-dd"), [monthCursor]);
 
   const bricksQuery = useQuery({
     queryKey: queryKeys.bricks,
@@ -82,15 +78,11 @@ export default function EventsPage() {
     queryKey: queryKeys.events({
       filter,
       brickId: selectedBrick === "all" ? undefined : selectedBrick,
-      startDate: monthStart,
-      endDate: monthEnd,
     }),
     queryFn: () =>
       eventApi.getAll({
         filter,
         brickId: selectedBrick === "all" ? undefined : selectedBrick,
-        startDate: monthStart,
-        endDate: monthEnd,
       }),
   });
 
@@ -198,7 +190,7 @@ export default function EventsPage() {
 
   React.useEffect(() => {
     setPage(1);
-  }, [filter, monthEnd, monthStart, searchText, selectedBrick]);
+  }, [filter, searchText, selectedBrick]);
 
   React.useEffect(() => {
     if (!createEventOpen) {
