@@ -207,3 +207,20 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none;
 }
+
+button:not(:disabled),
+a[href],
+[role="button"]:not([aria-disabled="true"]),
+label,
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"],
+summary,
+select {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}

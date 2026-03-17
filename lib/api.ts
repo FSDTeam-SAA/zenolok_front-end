@@ -258,9 +258,13 @@ export const eventApi = {
     filter?: "today" | "past" | "all" | "upcoming";
   }) => unwrap<EventData[]>(apiClient.get("/events", withParams(undefined, params))),
   getById: (id: string) => unwrap<EventData>(apiClient.get(`/events/${id}`)),
-  update: (id: string, payload: Partial<Omit<EventData, "_id" | "createdAt" | "updatedAt">> & {
-    todos?: Array<{ _id?: string; text: string; isShared?: boolean }>;
-  }) => unwrap<EventData>(apiClient.patch(`/events/${id}`, payload)),
+  update: (
+    id: string,
+    payload: Partial<Omit<EventData, "_id" | "createdAt" | "updatedAt" | "brick">> & {
+      brick?: string;
+      todos?: Array<{ _id?: string; text: string; isShared?: boolean }>;
+    }
+  ) => unwrap<EventData>(apiClient.patch(`/events/${id}`, payload)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/events/${id}`)),
 };
 

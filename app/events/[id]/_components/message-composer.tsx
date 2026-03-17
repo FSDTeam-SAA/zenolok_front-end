@@ -2,8 +2,6 @@
 
 import { ImagePlus, Send } from "lucide-react";
 
-import { Input } from "@/components/ui/input";
-
 type MessageComposerProps = {
   messageText: string;
   onMessageChange: (value: string) => void;
@@ -28,7 +26,7 @@ export function MessageComposer({
           {selectedFileName}
         </div>
       ) : null}
-      <div className="flex items-center gap-2 rounded-full border border-[#D7DDE7] bg-white px-2.5 py-1.5">
+      <div className="flex items-end gap-2 rounded-[20px] border border-[#D7DDE7] bg-white px-2.5 py-1.5">
         <label className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full text-[#B1B7C3] transition hover:bg-[#F1F4F9] hover:text-[#7A8190]">
           <ImagePlus className="size-4" />
           <input
@@ -37,21 +35,16 @@ export function MessageComposer({
             onChange={(event) => onFileChange(event.target.files?.[0] || null)}
           />
         </label>
-        <Input
+        <textarea
           value={messageText}
           onChange={(event) => onMessageChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onSend();
-            }
-          }}
           placeholder="Type here..."
-          className="h-8 rounded-full border-none bg-transparent px-0 text-[17px] text-[#616772] placeholder:text-[#D1D5DD]"
+          rows={1}
+          className="min-h-8 max-h-28 w-full resize-none overflow-y-auto rounded border-none bg-transparent px-0 text-[16px] text-[#616772] placeholder:text-[16px] placeholder:text-[#D1D5DD] focus:outline-none"
         />
         <button
           type="button"
-          className="inline-flex size-7 items-center justify-center rounded-full text-[#32ADE6] transition hover:bg-[#EAF6FF] disabled:opacity-40"
+          className="inline-flex size-7 items-center justify-center rounded-full text-[#32ADE6] transition hover:bg-[#EAF6FF] disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed"
           onClick={onSend}
           disabled={isSending}
           aria-label="Send message"

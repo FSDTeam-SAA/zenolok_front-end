@@ -15,7 +15,7 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
         titleClassName="text-[30px] text-[#1E2430] sm:text-[36px] lg:text-[40px]"
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#bfc2c9] p-4 sm:p-5">
+      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
         <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
           Click the button below to logout from this device.
         </p>
@@ -31,4 +31,3 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
     </section>
   );
 }
-

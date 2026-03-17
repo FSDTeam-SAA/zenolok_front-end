@@ -10,7 +10,13 @@ import { useAppState } from "@/components/providers/app-state-provider";
 import { BricksManagePanel } from "@/components/settings/bricks-manage-panel";
 import { WeekStartDayPanel } from "@/components/settings/week-start-day-panel";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { authApi, userApi } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { weekStartDayOptions } from "@/lib/settings";
@@ -25,7 +31,10 @@ import { LogoutSection } from "./_components/logout-section";
 import { NotificationsSection } from "./_components/notifications-section";
 import { PasswordSection } from "./_components/password-section";
 import { ProfileSection } from "./_components/profile-section";
-import { SettingsSidebarDesktop, SettingsSidebarMobile } from "./_components/settings-sidebar";
+import {
+  SettingsSidebarDesktop,
+  SettingsSidebarMobile,
+} from "./_components/settings-sidebar";
 import {
   isSettingsSection,
   sections,
@@ -41,7 +50,8 @@ export default function SettingsPage() {
   const { preferences, updatePreferences } = useAppState();
   const initialParamsHandled = React.useRef(false);
 
-  const [activeSection, setActiveSection] = React.useState<SettingsSection>("profile");
+  const [activeSection, setActiveSection] =
+    React.useState<SettingsSection>("profile");
 
   const [name, setName] = React.useState("");
   const [selectedAvatar, setSelectedAvatar] = React.useState<File | null>(null);
@@ -55,9 +65,12 @@ export default function SettingsPage() {
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = React.useState(false);
-  const [bricksManageModalOpen, setBricksManageModalOpen] = React.useState(false);
+  const [bricksManageModalOpen, setBricksManageModalOpen] =
+    React.useState(false);
   const [weekStartModalOpen, setWeekStartModalOpen] = React.useState(false);
-  const [notificationPrefs, setNotificationPrefs] = React.useState<Record<NotificationKey, boolean>>({
+  const [notificationPrefs, setNotificationPrefs] = React.useState<
+    Record<NotificationKey, boolean>
+  >({
     anyMessages: true,
     taggedMessages: true,
     eventAlarms: true,
@@ -192,14 +205,17 @@ export default function SettingsPage() {
     setFeedbackMessage("");
   };
 
-  const profileName = profileQuery.data?.name || profileQuery.data?.username || "User";
+  const profileName =
+    profileQuery.data?.name || profileQuery.data?.username || "User";
   const profileEmail = profileQuery.data?.email || "";
   const profileUsername = profileQuery.data?.username || "";
 
   const primarySections = sections.filter((section) => !section.support);
   const supportSections = sections.filter((section) => section.support);
   const currentWeekStartLabel =
-    weekStartDayOptions.find((option) => option.key === preferences.weekStartDay)?.label || "Monday";
+    weekStartDayOptions.find(
+      (option) => option.key === preferences.weekStartDay,
+    )?.label || "Monday";
 
   const handleSectionSelect = (section: SettingsSection) => {
     setActiveSection(section);
@@ -237,7 +253,11 @@ export default function SettingsPage() {
           />
         );
       case "bricksManage":
-        return <BricksManageSection onOpenModal={() => setBricksManageModalOpen(true)} />;
+        return (
+          <BricksManageSection
+            onOpenModal={() => setBricksManageModalOpen(true)}
+          />
+        );
       case "weekStartDay":
         return (
           <WeekStartDaySection
@@ -253,7 +273,9 @@ export default function SettingsPage() {
           />
         );
       case "alarmPreset":
-        return <AlarmPresetSection value={alarmPreset} onChange={setAlarmPreset} />;
+        return (
+          <AlarmPresetSection value={alarmPreset} onChange={setAlarmPreset} />
+        );
       case "darkMode":
         return (
           <DarkModeSection
@@ -262,12 +284,19 @@ export default function SettingsPage() {
           />
         );
       case "notificationsReminders":
-        return <NotificationsSection prefs={notificationPrefs} onToggle={updateNotification} />;
+        return (
+          <NotificationsSection
+            prefs={notificationPrefs}
+            onToggle={updateNotification}
+          />
+        );
       case "calendar":
         return (
           <CalendarSection
             onManageWeekStartDay={() => setActiveSection("weekStartDay")}
-            onCalendarSync={() => toast.info("Calendar sync settings coming soon")}
+            onCalendarSync={() =>
+              toast.info("Calendar sync settings coming soon")
+            }
           />
         );
       case "feedback":
@@ -289,8 +318,12 @@ export default function SettingsPage() {
     <>
       <div className="font-poppins mb-3 flex items-center justify-between rounded-2xl border border-[#E0E5EE] bg-[#172649] p-3 shadow-[0_12px_30px_rgba(17,24,37,0.10)] xl:hidden">
         <div>
-          <h1 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">Settings</h1>
-          <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
+          <h1 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">
+            Settings
+          </h1>
+          <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">
+            Account and preferences
+          </p>
         </div>
         <Button
           type="button"
@@ -311,7 +344,7 @@ export default function SettingsPage() {
           onSectionSelect={handleSectionSelect}
         />
 
-        <main className="rounded-r-xl border border-[#E0E5EE] bg-[#bfc2c9] p-4 sm:p-6">
+        <main className="rounded-r-xl border border-[#E0E5EE] bg-[#ECEFF4] p-4 sm:p-6">
           {renderActiveSection()}
         </main>
       </div>
@@ -325,25 +358,32 @@ export default function SettingsPage() {
         onClose={() => setMobileSidebarOpen(false)}
       />
 
-      <Dialog open={bricksManageModalOpen} onOpenChange={setBricksManageModalOpen}>
-        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[#DDE3EE] bg-[#bfc2c9] p-4 sm:p-6">
+      <Dialog
+        open={bricksManageModalOpen}
+        onOpenChange={setBricksManageModalOpen}
+      >
+        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[#DDE3EE] bg-[#e1e3e7] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">
               Bricks Manage
             </DialogTitle>
-            <DialogDescription>Manage brick name, icon, and color from this modal.</DialogDescription>
+            <DialogDescription>
+              Manage brick name, icon, and color from this modal.
+            </DialogDescription>
           </DialogHeader>
           <BricksManagePanel />
         </DialogContent>
       </Dialog>
 
       <Dialog open={weekStartModalOpen} onOpenChange={setWeekStartModalOpen}>
-        <DialogContent className="max-w-3xl rounded-[30px] border border-[#DDE3EE] bg-[#bfc2c9] p-4 sm:p-6">
+        <DialogContent className="max-w-3xl rounded-[30px] border border-[#DDE3EE] bg-[#e1e3e7] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">
               Manage weeks start day
             </DialogTitle>
-            <DialogDescription>Choose the first day of your week calendar.</DialogDescription>
+            <DialogDescription>
+              Choose the first day of your week calendar.
+            </DialogDescription>
           </DialogHeader>
           <WeekStartDayPanel
             selectedDay={preferences.weekStartDay}
@@ -361,4 +401,3 @@ export default function SettingsPage() {
     </>
   );
 }
-

@@ -19,9 +19,13 @@ export function SettingsSidebarDesktop({
   onSectionSelect,
 }: SettingsSidebarProps) {
   return (
-    <aside className="hidden rounded-xl bg-[#bfc2c9] p-4  sm:p-6 xl:sticky xl:top-24 xl:block xl:h-[calc(100vh-130px)] xl:overflow-auto xl:p-8">
-      <h1 className="font-poppins mb-3 text-[28px] leading-[120%] font-semibold text-[#202531] sm:mb-4 sm:text-[30px]">Settings</h1>
-      <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
+    <aside className="hidden rounded-xl bg-[#ECEFF4] p-4  sm:p-6 xl:sticky xl:top-24 xl:block xl:h-[calc(100vh-130px)] xl:overflow-auto xl:p-8">
+      <h1 className="font-poppins mb-3 text-[28px] leading-[120%] font-semibold text-[#202531] sm:mb-4 sm:text-[30px]">
+        Settings
+      </h1>
+      <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#7A8598]">
+        Account and preferences
+      </p>
 
       <SettingsNavList
         activeSection={activeSection}
@@ -32,7 +36,9 @@ export function SettingsSidebarDesktop({
       />
 
       <div className="mt-5 border-t border-[#DFE4EE] pt-4">
-        <p className="font-poppins mb-2 text-[20px] leading-[120%] font-semibold text-[#212734]">Support</p>
+        <p className="font-poppins mb-2 text-[20px] leading-[120%] font-semibold text-[#212734]">
+          Support
+        </p>
         <SettingsNavList
           activeSection={activeSection}
           sections={supportSections}
@@ -70,11 +76,15 @@ export function SettingsSidebarMobile({
         onClick={onClose}
         aria-label="Close settings menu overlay"
       />
-      <aside className="absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[#E0E5EE] bg-[#bfc2c9] p-5 shadow-[0_16px_44px_rgba(17,24,37,0.20)]">
+      <aside className="absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[#E0E5EE] bg-[#e1e3e7] p-5 shadow-[0_16px_44px_rgba(17,24,37,0.20)]">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="font-poppins text-[26px] leading-[120%] font-semibold text-[#202531]">Settings</h2>
-            <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">Account and preferences</p>
+            <h2 className="font-poppins text-[26px] leading-[120%] font-semibold text-[#202531]">
+              Settings
+            </h2>
+            <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">
+              Account and preferences
+            </p>
           </div>
           <Button
             type="button"
@@ -87,14 +97,23 @@ export function SettingsSidebarMobile({
           </Button>
         </div>
 
-        <SettingsNavList activeSection={activeSection} sections={primarySections} onSelect={onSectionSelect} />
+        <SettingsNavList
+          activeSection={activeSection}
+          sections={primarySections}
+          onSelect={onSectionSelect}
+        />
 
         <div className="mt-5 border-t border-[#DFE4EE] pt-4">
-          <p className="font-poppins mb-2 text-[18px] leading-[120%] font-semibold text-[#212734]">Support</p>
-          <SettingsNavList activeSection={activeSection} sections={supportSections} onSelect={onSectionSelect} />
+          <p className="font-poppins mb-2 text-[18px] leading-[120%] font-semibold text-[#212734]">
+            Support
+          </p>
+          <SettingsNavList
+            activeSection={activeSection}
+            sections={supportSections}
+            onSelect={onSectionSelect}
+          />
         </div>
       </aside>
     </div>
   );
 }
-

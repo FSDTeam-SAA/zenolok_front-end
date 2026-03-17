@@ -7,7 +7,10 @@ interface CalendarSectionProps {
   onManageWeekStartDay: () => void;
 }
 
-export function CalendarSection({ onCalendarSync, onManageWeekStartDay }: CalendarSectionProps) {
+export function CalendarSection({
+  onCalendarSync,
+  onManageWeekStartDay,
+}: CalendarSectionProps) {
   return (
     <section className="space-y-5">
       <SectionHeader
@@ -15,7 +18,7 @@ export function CalendarSection({ onCalendarSync, onManageWeekStartDay }: Calend
         description="Manage calendar-related settings."
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#bfc2c9] p-4 sm:p-5">
+      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
@@ -38,4 +41,3 @@ export function CalendarSection({ onCalendarSync, onManageWeekStartDay }: Calend
     </section>
   );
 }
-

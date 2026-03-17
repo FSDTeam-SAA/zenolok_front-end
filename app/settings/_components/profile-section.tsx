@@ -48,24 +48,32 @@ export function ProfileSection({
           <Skeleton className="h-12 w-full rounded-xl" />
         </div>
       ) : (
-        <div className="rounded-3xl border border-[#DEE3ED] bg-[#bfc2c9] p-4 sm:p-5">
+        <div className="rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center gap-4">
             <Avatar className="size-20 border border-[#D8DFEA]">
               <AvatarImage src={avatarPreview || undefined} alt={profileName} />
-              <AvatarFallback>{profileName.slice(0, 1).toUpperCase()}</AvatarFallback>
+              <AvatarFallback>
+                {profileName.slice(0, 1).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#212733]">{profileName}</p>
-              <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#717B8D]">{profileEmail}</p>
+              <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#212733]">
+                {profileName}
+              </p>
+              <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#717B8D]">
+                {profileEmail}
+              </p>
             </div>
             <label className="ml-auto cursor-pointer">
               <input
                 type="file"
                 accept="image/*"
                 className="hidden"
-                onChange={(event) => onAvatarSelect(event.target.files?.[0] || null)}
+                onChange={(event) =>
+                  onAvatarSelect(event.target.files?.[0] || null)
+                }
               />
-              <span className="font-poppins inline-flex h-10 items-center gap-2 rounded-xl border border-[#CED6E4] bg-[#bfc2c9] px-4 text-[16px] leading-[120%] font-medium text-[#44506B] hover:bg-[#EDF2FC]">
+              <span className="font-poppins inline-flex h-10 items-center gap-2 rounded-xl border border-[#CED6E4] bg-[#e1e3e7] px-4 text-[16px] leading-[120%] font-medium text-[#44506B] hover:bg-[#EDF2FC]">
                 <Upload className="size-4" />
                 Upload Avatar
               </span>
@@ -73,7 +81,11 @@ export function ProfileSection({
           </div>
 
           <div className="grid gap-3">
-            <Input value={name} onChange={(event) => onNameChange(event.target.value)} placeholder="Name" />
+            <Input
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder="Name"
+            />
             <Input value={profileUsername} disabled placeholder="Username" />
             <Input value={profileEmail} disabled placeholder="Email" />
           </div>
@@ -94,4 +106,3 @@ export function ProfileSection({
     </section>
   );
 }
-

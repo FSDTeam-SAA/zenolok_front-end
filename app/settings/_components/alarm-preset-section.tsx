@@ -15,7 +15,10 @@ interface AlarmPresetSectionProps {
   onChange: (preset: AlarmPreset) => void;
 }
 
-export function AlarmPresetSection({ value, onChange }: AlarmPresetSectionProps) {
+export function AlarmPresetSection({
+  value,
+  onChange,
+}: AlarmPresetSectionProps) {
   return (
     <section className="space-y-5">
       <SectionHeader
@@ -23,7 +26,7 @@ export function AlarmPresetSection({ value, onChange }: AlarmPresetSectionProps)
         description="Select your default reminder pattern."
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#bfc2c9] p-4 sm:p-5">
+      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
         <div className="space-y-2">
           {alarmOptions.map((item) => {
             const active = value === item.id;
@@ -34,11 +37,17 @@ export function AlarmPresetSection({ value, onChange }: AlarmPresetSectionProps)
                 type="button"
                 onClick={() => onChange(item.id)}
                 className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition ${
-                  active ? "border-[#31C65B] bg-[#F3FFF6]" : "border-[#D9DEE8] bg-[#bfc2c9] hover:border-[#BFC7D8]"
+                  active
+                    ? "border-[#31C65B] bg-[#F3FFF6]"
+                    : "border-[#D9DEE8] bg-[#e1e3e7] hover:border-[#BFC7D8]"
                 }`}
               >
-                <span className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">{item.label}</span>
-                {active ? <CheckCircle2 className="size-5 text-[#31C65B]" /> : null}
+                <span className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+                  {item.label}
+                </span>
+                {active ? (
+                  <CheckCircle2 className="size-5 text-[#31C65B]" />
+                ) : null}
               </button>
             );
           })}
@@ -47,4 +56,3 @@ export function AlarmPresetSection({ value, onChange }: AlarmPresetSectionProps)
     </section>
   );
 }
-

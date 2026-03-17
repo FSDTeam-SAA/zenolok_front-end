@@ -9,7 +9,6 @@ import { io, type Socket } from "socket.io-client";
 import {
   ArrowLeft,
   Bell,
-  CalendarCheck2,
   CalendarDays,
   Clock3,
   ImagePlus,
@@ -17,14 +16,15 @@ import {
   Locate,
   Maximize2,
   Paperclip,
+  Pencil,
   UserPlus,
   Trash2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
-import type { DateRange } from "react-day-picker";
 
 import {
+  brickApi,
   eventApi,
   eventTodoApi,
   jamApi,
@@ -36,15 +36,20 @@ import {
 import { queryKeys } from "@/lib/query-keys";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
+import {
+  EventDateRangePopup,
+  EventTimeRangePopup,
+} from "@/components/shared/event-date-time-popups";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { MessageComposer } from "./_components/message-composer";
 import { TodoSection } from "./_components/todo-section";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -135,6 +140,24 @@ function appendMessageIfMissing(messages: JamMessage[], next: JamMessage) {
   return sortMessagesByCreatedAt([...messages, next]);
 }
 
+function toDateValue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return format(date, "yyyy-MM-dd");
+}
+
+function toTimeValue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return format(date, "HH:mm");
+}
+
 export default function EventDetailsPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -148,10 +171,18 @@ export default function EventDetailsPage() {
   const [selectedShareUserIds, setSelectedShareUserIds] = useState<string[]>(
     [],
   );
-  const [selectedDates, setSelectedDates] = useState<DateRange | undefined>(
-    undefined,
-  );
-  const [dateDialogOpen, setDateDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editBrickId, setEditBrickId] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editStartTime, setEditStartTime] = useState("");
+  const [editEndTime, setEditEndTime] = useState("");
+  const [editDatePopupOpen, setEditDatePopupOpen] = useState(false);
+  const [editTimePopupOpen, setEditTimePopupOpen] = useState(false);
+  const [editIsAllDay, setEditIsAllDay] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jamView, setJamView] = useState<"jam" | "media">("jam");
   const [libraryTab, setLibraryTab] = useState<"media" | "files" | "link">(
@@ -201,10 +232,18 @@ export default function EventDetailsPage() {
     enabled: shareDialogOpen,
   });
 
+  const bricksQuery = useQuery({
+    queryKey: queryKeys.bricks,
+    queryFn: brickApi.getAll,
+  });
+
   const profileQuery = useQuery({
     queryKey: queryKeys.profile,
     queryFn: userApi.getProfile,
   });
+  const editHasDateRange = Boolean(editStartDate && editEndDate);
+  const editDateSummary = editHasDateRange ? `${editStartDate} - ${editEndDate}` : "";
+  const editHasTimeRange = Boolean(editStartTime && editEndTime);
 
   React.useEffect(() => {
     if (!id || !socketServerUrl) {
@@ -282,7 +321,8 @@ export default function EventDetailsPage() {
   });
 
   const updateEventMutation = useMutation({
-    mutationFn: (payload: Partial<EventData>) => eventApi.update(id, payload),
+    mutationFn: (payload: Parameters<typeof eventApi.update>[1]) =>
+      eventApi.update(id, payload),
     onSuccess: () => {
       toast.success("Event updated");
       refreshEverything();
@@ -385,6 +425,7 @@ export default function EventDetailsPage() {
     () => new Set(mapParticipantIds(event?.participants || [])),
     [event?.participants],
   );
+  const bricks = useMemo(() => bricksQuery.data ?? [], [bricksQuery.data]);
 
   React.useEffect(() => {
     if (!shareDialogOpen || !event) {
@@ -393,6 +434,27 @@ export default function EventDetailsPage() {
 
     setSelectedShareUserIds(mapParticipantIds(event.participants || []));
   }, [shareDialogOpen, event]);
+
+  React.useEffect(() => {
+    if (!editDialogOpen || !event) {
+      return;
+    }
+
+    setEditTitle(event.title || "");
+    setEditLocation(event.location || "");
+    setEditBrickId(event.brick?._id || "");
+    setEditStartDate(toDateValue(event.startTime));
+    setEditEndDate(toDateValue(event.endTime));
+    setEditStartTime(toTimeValue(event.startTime));
+    setEditEndTime(toTimeValue(event.endTime));
+    setEditIsAllDay(Boolean(event.isAllDay));
+  }, [editDialogOpen, event]);
+
+  React.useEffect(() => {
+    if (!editHasDateRange) {
+      setEditTimePopupOpen(false);
+    }
+  }, [editHasDateRange]);
 
   if (eventQuery.isLoading) {
     return <SectionLoading rows={6} />;
@@ -429,6 +491,7 @@ export default function EventDetailsPage() {
   const startDate = new Date(event.startTime);
   const endDate = new Date(event.endTime);
   const allUsers = usersQuery.data?.users || [];
+  const isEventOwner = viewerId === event.createdBy;
 
   const toggleShareUser = (userId: string, checked: boolean) => {
     setSelectedShareUserIds((previous) => {
@@ -443,6 +506,11 @@ export default function EventDetailsPage() {
   };
 
   const handleShareWithSelectedUsers = () => {
+    if (!isEventOwner) {
+      toast.error("Only the event creator can edit this event");
+      return;
+    }
+
     const participantIdsToAdd = selectedShareUserIds.filter(
       (participantId) => !currentParticipantIds.has(participantId),
     );
@@ -462,6 +530,62 @@ export default function EventDetailsPage() {
     );
   };
 
+  const handleEditEvent = () => {
+    if (!isEventOwner) {
+      toast.error("Only the event creator can edit this event");
+      return;
+    }
+
+    if (!editTitle.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!editStartDate || !editEndDate) {
+      toast.error("Start and end dates are required");
+      return;
+    }
+
+    if (!editIsAllDay && (!editStartTime || !editEndTime)) {
+      toast.error("Start and end time are required");
+      return;
+    }
+
+    const nextStart = new Date(`${editStartDate}T${(editStartTime || "00:00")}:00`);
+    const nextEnd = new Date(`${editEndDate}T${(editEndTime || "00:00")}:00`);
+
+    if (Number.isNaN(nextStart.getTime()) || Number.isNaN(nextEnd.getTime())) {
+      toast.error("Invalid start or end date/time");
+      return;
+    }
+
+    const normalizedStart = editIsAllDay ? startOfDay(nextStart) : nextStart;
+    const normalizedEnd = editIsAllDay ? endOfDay(nextEnd) : nextEnd;
+
+    if (normalizedEnd.getTime() <= normalizedStart.getTime()) {
+      toast.error("End date/time must be after start date/time");
+      return;
+    }
+
+    updateEventMutation.mutate(
+      {
+        title: editTitle.trim(),
+        location: editLocation.trim() || undefined,
+        brick: editBrickId || undefined,
+        isAllDay: editIsAllDay,
+        startTime: normalizedStart.toISOString(),
+        endTime: normalizedEnd.toISOString(),
+      },
+      {
+        onSuccess: () => {
+          setEditDialogOpen(false);
+          setEditDatePopupOpen(false);
+          setEditTimePopupOpen(false);
+        },
+      },
+    );
+  };
+
   return (
     <div className="space-y-3 ">
       <div className=" flex items-center justify-between pt-1">
@@ -474,29 +598,203 @@ export default function EventDetailsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full p-1 text-[#FF3B30] transition hover:bg-[#FFECEC]"
-            onClick={() => deleteEventMutation.mutate()}
+            className="rounded-full p-1 text-[#FF3B30] transition hover:bg-[#FFECEC] cursor-pointer"
+            onClick={() => {
+              if (!isEventOwner) {
+                toast.error("Only the event creator can delete this event");
+                return;
+              }
+              setDeleteDialogOpen(true);
+            }}
             aria-label="Delete event"
           >
             <Trash2 className="size-4" />
           </button>
           <button
             type="button"
-            className="rounded-full p-1 text-[#0088FF] transition hover:bg-[#E8F4FF]"
-            onClick={() => router.back()}
-            aria-label="Done"
+            className="rounded p-1 text-[#0088FF] transition hover:bg-[#E8F4FF] cursor-pointer"
+            onClick={() => {
+              if (!isEventOwner) {
+                toast.error("Only the event creator can edit this event");
+                return;
+              }
+              setEditDialogOpen(true);
+            }}
+            aria-label="Edit event"
           >
-            <CalendarCheck2 className="size-4" />
+            <Pencil className="size-4" />
           </button>
         </div>
       </div>
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm rounded-[22px] space-y-2">
+          <DialogHeader>
+            <DialogTitle className="!text-[24px] font-medium text-[#4D4D4D]">
+              Delete this event?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[#6F7789]">
+            This action cannot be undone.
+          </p>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteEventMutation.isPending}
+              className="!text-[14px]"
+            >
+              No
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() =>
+                deleteEventMutation.mutate(undefined, {
+                  onSuccess: () => {
+                    setDeleteDialogOpen(false);
+                  },
+                })
+              }
+              className="!text-[14px]"
+              disabled={deleteEventMutation.isPending}
+            >
+              {deleteEventMutation.isPending ? "Deleting..." : "Yes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={editDialogOpen}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setEditDatePopupOpen(false);
+            setEditTimePopupOpen(false);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl rounded-[26px] space-y-3">
+          <DialogHeader>
+            <DialogTitle>Edit event</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Title"
+              value={editTitle}
+              onChange={(eventValue) => setEditTitle(eventValue.target.value)}
+            />
+            <Input
+              placeholder="Location"
+              value={editLocation}
+              onChange={(eventValue) => setEditLocation(eventValue.target.value)}
+            />
+            <div className="space-y-2">
+              <button
+                type="button"
+                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D]"
+                onClick={() => setEditDatePopupOpen(true)}
+              >
+                <CalendarDays className="size-5" />
+                Choose a date
+              </button>
+              {editDateSummary ? (
+                <p className="text-[12px] text-[#8890A0]">{editDateSummary}</p>
+              ) : null}
+            </div>
+            {!editIsAllDay ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D] disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => setEditTimePopupOpen(true)}
+                  disabled={!editHasDateRange}
+                >
+                  <Clock3 className="size-5" />
+                  Set time
+                </button>
+                {editHasTimeRange ? (
+                  <p className="text-[12px] text-[#8890A0]">
+                    {editStartTime} - {editEndTime}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+            <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
+              <p className="fs-pop-16-regular text-[#3A404D]">All day</p>
+              <Switch
+                checked={editIsAllDay}
+                onCheckedChange={(checked) => {
+                  setEditIsAllDay(checked);
+                  if (checked) {
+                    setEditTimePopupOpen(false);
+                  }
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+              {bricks.map((brick) => (
+                <button
+                  key={brick._id}
+                  type="button"
+                  className="shrink-0"
+                  onClick={() => setEditBrickId(brick._id)}
+                >
+                  <Badge
+                    variant={editBrickId === brick._id ? "blue" : "neutral"}
+                    style={
+                      editBrickId === brick._id
+                        ? { backgroundColor: brick.color }
+                        : { color: brick.color, borderColor: brick.color }
+                    }
+                  >
+                    <BrickIcon name={brick.icon} className="size-4" />{" "}
+                    {brick.name}
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              onClick={handleEditEvent}
+              disabled={updateEventMutation.isPending}
+            >
+              {updateEventMutation.isPending ? "Updating..." : "Update event"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <EventDateRangePopup
+        open={editDatePopupOpen}
+        onOpenChange={setEditDatePopupOpen}
+        startDate={editStartDate}
+        endDate={editEndDate}
+        onApply={({ startDate: nextStartDate, endDate: nextEndDate }) => {
+          setEditStartDate(nextStartDate);
+          setEditEndDate(nextEndDate);
+        }}
+      />
+      <EventTimeRangePopup
+        open={editTimePopupOpen}
+        onOpenChange={setEditTimePopupOpen}
+        startTime={editStartTime}
+        endTime={editEndTime}
+        onApply={({ startTime: nextStartTime, endTime: nextEndTime }) => {
+          setEditStartTime(nextStartTime);
+          setEditEndTime(nextEndTime);
+        }}
+      />
 
       <section className=" rounded-[16px] border border-[#E4E9F1] bg-[#F6F8FB] p-2">
         <div className="rounded-[14px] border border-[#D8DEE8] bg-[#ECEFF4] p-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-start gap-2">
-                <span className="mt-1 block h-6 w-1 rounded-sm bg-[#32ADE6]" />
+                <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
                 <p className="truncate text-[25px] font-medium leading-tight text-[#4D4D4D]">
                   {event.title}
                 </p>
@@ -540,8 +838,9 @@ export default function EventDetailsPage() {
                 <DialogTrigger asChild>
                   <button
                     type="button"
-                    className="rounded-full p-1 text-[#6F7789] transition hover:bg-white hover:text-[#2E333B]"
+                    className="rounded-full p-1 text-[#6F7789] transition hover:bg-white hover:text-[#2E333B] disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Add participants"
+                    disabled={!isEventOwner}
                   >
                     <UserPlus className="size-[16px]" />
                   </button>
@@ -634,22 +933,12 @@ export default function EventDetailsPage() {
 
           <div className="mt-4 flex items-start justify-between gap-3 text-[#4D4D4D]">
             <div className="space-y-2.5">
-              <button
-                type="button"
-                className="flex items-center gap-2 text-left"
-                onClick={() => {
-                  setSelectedDates({
-                    from: new Date(event.startTime),
-                    to: new Date(event.endTime),
-                  });
-                  setDateDialogOpen(true);
-                }}
-              >
+              <div className="flex items-center gap-2 text-left">
                 <CalendarDays className="size-4 text-[#8C93A2]" />
                 <p className="text-[13px] font-medium tracking-[0.02em] text-[#5A6272]">
                   {format(startDate, "dd MMM yyyy").toUpperCase()}
                 </p>
-              </button>
+              </div>
               <p className="flex items-center gap-2 text-[13px] text-[#5A6272]">
                 <Clock3 className="size-4 text-[#8C93A2]" />
                 {event.isAllDay
@@ -674,48 +963,13 @@ export default function EventDetailsPage() {
               </button>
               <Badge
                 variant="neutral"
-                className="rounded-full border border-[#7E8696] bg-transparent px-2.5 py-0 text-[11px] text-[#4D4D4D]"
+                className="rounded-full border border-[#7E8696] bg-transparent px-2.5 py-1 !text-[14px] text-[#4D4D4D]"
               >
                 {event.isAllDay ? "All day" : "Scheduled"}
               </Badge>
             </div>
           </div>
         </div>
-
-        <Dialog open={dateDialogOpen} onOpenChange={setDateDialogOpen}>
-          <DialogContent className="max-w-md rounded-[26px]">
-            <DialogHeader>
-              <DialogTitle>Choose a date</DialogTitle>
-            </DialogHeader>
-            <Calendar
-              mode="range"
-              selected={selectedDates}
-              onSelect={(range) => {
-                setSelectedDates(range);
-              }}
-            />
-            <DialogFooter>
-              <Button
-                onClick={() => {
-                  if (!selectedDates?.from) {
-                    toast.error("Please select at least start date");
-                    return;
-                  }
-
-                  updateEventMutation.mutate({
-                    startTime: selectedDates.from.toISOString(),
-                    endTime: (
-                      selectedDates.to || selectedDates.from
-                    ).toISOString(),
-                  });
-                  setDateDialogOpen(false);
-                }}
-              >
-                Done
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
 
         {jamView === "jam" ? (
           <div className="mt-3 space-y-3">

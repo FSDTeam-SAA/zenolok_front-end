@@ -3,15 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlarmClock,
   CalendarDays,
   Clock3,
   ListFilter,
   MapPin,
+  MessageCircle,
   Plus,
-  SlidersHorizontal,
 } from "lucide-react";
 import { endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
@@ -34,7 +33,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
-import { eventApi, brickApi, paginateArray } from "@/lib/api";
+import { eventApi, brickApi, jamApi, paginateArray } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -184,6 +183,21 @@ export default function EventsPage() {
   }, [eventsQuery.data, searchText]);
 
   const paged = useMemo(() => paginateArray(filteredEvents, page, 6), [filteredEvents, page]);
+  const jamCountQueries = useQueries({
+    queries: paged.items.map((event) => ({
+      queryKey: queryKeys.jamMessages(event._id),
+      queryFn: () => jamApi.getByEvent(event._id),
+      enabled: Boolean(event._id),
+      staleTime: 60_000,
+    })),
+  });
+  const jamCountByEventId = useMemo(() => {
+    return paged.items.reduce<Record<string, number>>((accumulator, event, index) => {
+      const messageCount = jamCountQueries[index]?.data?.length ?? 0;
+      accumulator[event._id] = messageCount;
+      return accumulator;
+    }, {});
+  }, [paged.items, jamCountQueries]);
   const hasDateRange = Boolean(startDate && endDate);
   const dateSummary = hasDateRange ? `${startDate} - ${endDate}` : "";
   const hasTimeRange = Boolean(startTime && endTime);
@@ -310,7 +324,7 @@ export default function EventsPage() {
           </Dialog>
         </div>
 
-        <div className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col items-end gap-2">
           <Input
             className="h-10 w-full min-w-[220px] rounded-xl bg-white sm:w-[260px]"
             placeholder="Search events..."
@@ -330,9 +344,6 @@ export default function EventsPage() {
                 {item.label}
               </button>
             ))}
-            <button className="px-3 text-[#717A8A]">
-              <SlidersHorizontal className="size-4" />
-            </button>
           </div>
         </div>
       </section>
@@ -355,7 +366,7 @@ export default function EventsPage() {
           <>
             <div className="space-y-3">
               {paged.items.map((event) => {
-                const incompleteCount = event.todos?.filter((todo) => !todo.isCompleted).length ?? 0;
+                const messageCount = jamCountByEventId[event._id] ?? 0;
 
                 return (
                   <Link key={event._id} href={`/events/${event._id}`}>
@@ -364,7 +375,7 @@ export default function EventsPage() {
                         <div className="flex items-start gap-3">
                           <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
                           <div>
-                            <p className="font-poppins text-[40px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
+                            <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
                             <div className="font-poppins mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[#4D5463]">
                               <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
                                 <CalendarDays className="size-4" /> {format(new Date(event.startTime), "dd MMM yyyy")}
@@ -382,8 +393,8 @@ export default function EventsPage() {
                           </div>
                         </div>
                         <div className="font-poppins flex items-center gap-3 text-[#7A8293]">
-                          <AlarmClock className="size-5" />
-                          <span className="rounded-full bg-white px-2 py-0.5 text-[14px] leading-[120%] font-normal">{incompleteCount}</span>
+                          <MessageCircle className="size-5" />
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[14px] leading-[120%] font-normal">{messageCount}</span>
                         </div>
                       </div>
                     </Card>

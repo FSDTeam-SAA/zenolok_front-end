@@ -7,7 +7,10 @@ interface WeekStartDaySectionProps {
   onOpenModal: () => void;
 }
 
-export function WeekStartDaySection({ currentWeekStartLabel, onOpenModal }: WeekStartDaySectionProps) {
+export function WeekStartDaySection({
+  currentWeekStartLabel,
+  onOpenModal,
+}: WeekStartDaySectionProps) {
   return (
     <section className="space-y-5">
       <SectionHeader
@@ -15,7 +18,7 @@ export function WeekStartDaySection({ currentWeekStartLabel, onOpenModal }: Week
         description="Choose the first day of your week calendar."
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#bfc2c9] p-4 sm:p-5">
+      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
         <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
           Current week starts on: {currentWeekStartLabel}
         </p>
@@ -30,4 +33,3 @@ export function WeekStartDaySection({ currentWeekStartLabel, onOpenModal }: Week
     </section>
   );
 }
-
