@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   
   addDays,
@@ -50,6 +51,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   brickApi,
   eventApi,
+  userApi,
   type EventData,
 } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
@@ -61,6 +63,8 @@ type CalendarEvent = {
   title: string;
   start: Date;
   end: Date;
+  startAt: Date;
+  endAt: Date;
   spansMultipleDays: boolean;
   color: string;
   location: string;
@@ -152,6 +156,40 @@ function normalizeDateRange(start: Date, end: Date) {
   return { start: normalizedEnd, end: normalizedStart };
 }
 
+function parseDateTimeValue(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatDateInputSummary(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  const parsed = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return format(parsed, "yyyy-MM-dd");
+}
+
+function formatTimeInputSummary(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  const parsed = new Date(`1970-01-01T${value}:00`);
+  if (Number.isNaN(parsed.getTime())) {
+    return value;
+  }
+
+  return format(parsed, "HH:mm");
+}
+
 function buildWeekSegments(
   week: Date[],
   events: CalendarEvent[],
@@ -219,6 +257,7 @@ function getSegmentTextColor(hex: string) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [selectedBrickIds, setSelectedBrickIds] = React.useState<string[]>([]);
   const { monthCursor, selectedDate, setSelectedDate, preferences } =
@@ -286,6 +325,10 @@ export default function HomePage() {
         endDate: calendarEndParam,
       }),
   });
+  const profileQuery = useQuery({
+    queryKey: queryKeys.profile,
+    queryFn: userApi.getProfile,
+  });
 
   const bricks = React.useMemo(
     () => bricksQuery.data ?? [],
@@ -293,36 +336,49 @@ export default function HomePage() {
   );
 
   const normalizedEvents = React.useMemo<CalendarEvent[]>(() => {
-    return (eventsQuery.data || []).map((event: EventData) => {
-      const start = startOfDay(new Date(event.startTime));
-      const rawEnd = startOfDay(new Date(event.endTime));
-      const end = rawEnd < start ? start : rawEnd;
-      const spansMultipleDays = differenceInCalendarDays(end, start) > 0;
+    return (eventsQuery.data || []).reduce<CalendarEvent[]>(
+      (items, event: EventData) => {
+        const startAt = parseDateTimeValue(event.startTime);
+        const rawEndAt = parseDateTimeValue(event.endTime);
+        if (!startAt || !rawEndAt) {
+          return items;
+        }
 
-      const titleLower = event.title.toLowerCase();
-      const color = titleLower.includes("exhibition week")
-        ? exhibitionColor
-        : event.brick?.color || "#84C6EC";
+        const endAt = rawEndAt < startAt ? startAt : rawEndAt;
+        const start = startOfDay(startAt);
+        const rawEnd = startOfDay(endAt);
+        const end = rawEnd < start ? start : rawEnd;
+        const spansMultipleDays = differenceInCalendarDays(end, start) > 0;
 
-      return {
-        id: event._id,
-        title: event.title,
-        start,
-        end,
-        spansMultipleDays,
-        color,
-        location: event.location || "No location",
-        brickId: event.brick?._id,
-        brickName: event.brick?.name,
-        icon: event.brick?.icon,
-        isAllDay: event.isAllDay,
-        todos: (event.todos || []).map((todo) => ({
-          id: todo._id,
-          text: todo.text,
-          isCompleted: todo.isCompleted,
-        })),
-      };
-    });
+        const titleLower = event.title.toLowerCase();
+        const color = titleLower.includes("exhibition week")
+          ? exhibitionColor
+          : event.brick?.color || "#84C6EC";
+
+        items.push({
+          id: event._id,
+          title: event.title,
+          start,
+          end,
+          startAt,
+          endAt,
+          spansMultipleDays,
+          color,
+          location: event.location || "No location",
+          brickId: event.brick?._id,
+          brickName: event.brick?.name,
+          icon: event.brick?.icon,
+          isAllDay: event.isAllDay,
+          todos: (event.todos || []).map((todo) => ({
+            id: todo._id,
+            text: todo.text,
+            isCompleted: todo.isCompleted,
+          })),
+        });
+        return items;
+      },
+      [],
+    );
   }, [eventsQuery.data]);
 
   const filteredEvents = React.useMemo(() => {
@@ -338,13 +394,25 @@ export default function HomePage() {
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weeks = splitIntoWeeks(days);
 
+  const weekendDaySet = React.useMemo(() => {
+    const normalizeDay = (value: string) => value.trim().toLowerCase();
+    const validDays = new Set(Object.keys(weekStartsOnMap));
+    const backendWeekend = (profileQuery.data?.weekend || [])
+      .filter((day): day is string => typeof day === "string")
+      .map(normalizeDay)
+      .filter((day) => validDays.has(day));
+
+    if (backendWeekend.length) {
+      return new Set(backendWeekend);
+    }
+
+    return new Set([preferences.weekStartDay]);
+  }, [preferences.weekStartDay, profileQuery.data?.weekend]);
+
   const weekdayLabels = React.useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) =>
-        format(
-          addDays(startOfWeek(new Date(), { weekStartsOn }), index),
-          "EEE",
-        ),
+        addDays(startOfWeek(new Date(), { weekStartsOn }), index),
       ),
     [weekStartsOn],
   );
@@ -380,16 +448,19 @@ export default function HomePage() {
         if (a.isAllDay !== b.isAllDay) {
           return a.isAllDay ? -1 : 1;
         }
-        return a.start.getTime() - b.start.getTime();
+        return a.startAt.getTime() - b.startAt.getTime();
       });
     },
     [filteredEvents, selectedDate],
   );
   const hasEventDateRange = Boolean(eventStartDate && eventEndDate);
   const eventDateSummary = hasEventDateRange
-    ? `${eventStartDate} - ${eventEndDate}`
+    ? `${formatDateInputSummary(eventStartDate)} - ${formatDateInputSummary(eventEndDate)}`
     : "";
   const hasEventTimeRange = Boolean(eventStartTime && eventEndTime);
+  const eventTimeSummary = hasEventTimeRange
+    ? `${formatTimeInputSummary(eventStartTime)} - ${formatTimeInputSummary(eventEndTime)}`
+    : "";
 
   const createBrickMutation = useMutation({
     mutationFn: () => {
@@ -534,7 +605,7 @@ export default function HomePage() {
   }, [selectedDateEvents]);
 
   return (
-    <div className="space-y-4">
+    <div className="home-page space-y-4">
       <BrickFilterBar
         bricks={bricks}
         selectedBrickIds={selectedBrickIds}
@@ -549,17 +620,17 @@ export default function HomePage() {
         onCreateBrick={() => setCreateBrickOpen(true)}
       />
 
-      <section className="rounded-[30px] border border-[#DFE4ED] bg-[#F4F6FA] p-3 sm:p-4">
+      <section className="home-calendar-shell rounded-[30px] border border-[#DFE4ED] bg-[#F4F6FA] p-3 sm:p-4">
         {eventsQuery.isLoading ? (
           <SectionLoading rows={8} />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
-            <aside className="rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3">
+          <div className="home-calendar-layout grid gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
+            <aside className="home-events-sidebar rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3">
               <div className="mb-3 flex items-center justify-end">
                 <button
                   type="button"
                   onClick={() => setCreateEventOpen(true)}
-                  className="flex size-8 items-center justify-center rounded-lg border border-dashed border-[#BFC7D7] text-[#8A94A7]"
+                  className="home-add-event-btn flex size-8 items-center justify-center rounded-lg border border-dashed border-[#BFC7D7] text-[#8A94A7]"
                 >
                   <Plus className="size-4" />
                 </button>
@@ -569,11 +640,28 @@ export default function HomePage() {
                 <div className="space-y-2">
                   {selectedDateEvents.map((event) => {
                     const expanded = expandedEventId === event.id;
+                    const eventDateLabel = isSameDay(event.start, event.end)
+                      ? format(event.startAt, "yyyy-MM-dd")
+                      : `${format(event.startAt, "yyyy-MM-dd")} - ${format(event.endAt, "yyyy-MM-dd")}`;
+                    const eventTimeLabel = event.isAllDay
+                      ? "All day"
+                      : `${format(event.startAt, "hh:mm a")} - ${format(event.endAt, "hh:mm a")}`;
 
                     return (
                       <div
                         key={event.id}
-                        className="rounded-xl border border-[#D3DAE8] bg-[#DFE4EC] px-2 py-2"
+                        className="home-event-card rounded-xl border border-[#D3DAE8] bg-[#DFE4EC] px-2 py-2"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => router.push(`/events/${event.id}`)}
+                        onKeyDown={(keyEvent) => {
+                          if (keyEvent.key !== "Enter" && keyEvent.key !== " ") {
+                            return;
+                          }
+
+                          keyEvent.preventDefault();
+                          router.push(`/events/${event.id}`);
+                        }}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
@@ -591,9 +679,7 @@ export default function HomePage() {
                                         : "text-[#6C7485]"
                                     }
                                   >
-                                    {event.isAllDay
-                                      ? "All day"
-                                      : format(event.start, "hh:mm a")}
+                                    {eventTimeLabel}
                                   </span>
                                   <span className="mx-1 text-[#B6BDC9]">|</span>
                                   <span>{event.title}</span>
@@ -616,11 +702,12 @@ export default function HomePage() {
                                   ? "Collapse event todos"
                                   : "Expand event todos"
                               }
-                              onClick={() =>
+                              onClick={(clickEvent) => {
+                                clickEvent.stopPropagation();
                                 setExpandedEventId((prev) =>
                                   prev === event.id ? null : event.id,
-                                )
-                              }
+                                );
+                              }}
                             >
                               {expanded ? (
                                 <ChevronUp className="size-4" />
@@ -632,24 +719,29 @@ export default function HomePage() {
                         </div>
 
                         <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
+                          <CalendarClock className="size-3.5" />
+                          {eventDateLabel}
+                        </p>
+
+                        <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
                           <MapPin className="size-3.5" />
                           {event.location}
                         </p>
 
                         {expanded ? (
-                          <div className="ml-8 mt-2 rounded-xl border border-[#D3DAE8] bg-white px-3 py-2">
+                          <div className="ml-8 mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2">
                             <div className="space-y-2">
                               {event.todos.length ? (
                                 event.todos.map((todo) => (
                                   <div
                                     key={todo.id}
-                                    className="flex items-center gap-2 text-[13px] text-[#4C535F]"
+                                    className="flex items-center gap-2 text-[13px] text-[var(--text-default)]"
                                   >
-                                    <span className="size-2 rounded-full bg-[#B7BFCE]" />
+                                    <span className="size-2 rounded-full bg-[var(--text-muted)]" />
                                     <span
                                       className={
                                         todo.isCompleted
-                                          ? "line-through text-[#A2A9B6]"
+                                          ? "line-through text-[var(--text-muted)]"
                                           : ""
                                       }
                                     >
@@ -658,7 +750,7 @@ export default function HomePage() {
                                   </div>
                                 ))
                               ) : (
-                                <p className="text-[12px] text-[#A0A8B7]">
+                                <p className="text-[12px] text-[var(--text-muted)]">
                                   No todos yet
                                 </p>
                               )}
@@ -677,25 +769,31 @@ export default function HomePage() {
               )}
             </aside>
 
-            <div className="overflow-x-auto">
-              <div className="min-w-[840px]">
+            <div className="home-calendar-wrap overflow-x-auto">
+              <div className="home-calendar-board min-w-[840px]">
                 <div className="mb-2 grid grid-cols-7">
-                  {weekdayLabels.map((label) => (
+                  {weekdayLabels.map((weekday) => {
+                    const label = format(weekday, "EEE");
+                    const normalizedDay = format(weekday, "EEEE").toLowerCase();
+                    const isWeekendLabel = weekendDaySet.has(normalizedDay);
+
+                    return (
                     <div key={label} className="px-2 py-1 text-center">
                       <p
                         className={`font-poppins text-[16px] leading-[120%] font-medium ${
-                          label.startsWith("Sun")
-                            ? "text-[#FF3B30]"
-                            : "text-[#3A4150]"
+                          isWeekendLabel
+                            ? "!text-[#FF3B30]"
+                            : "!text-[var(--text-default)]"
                         }`}
                       >
                         {label}
                       </p>
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
 
-                <div className="space-y-0 rounded-[18px] border border-[#D7DCE6] bg-white">
+                <div className="space-y-0 rounded-[18px] border border-[var(--border)] bg-[var(--surface-1)]">
                   {weeks.map((week, weekIndex) => {
                     const weekInfo = buildWeekSegments(week, filteredEvents);
                     const shouldScrollSegments = weekInfo.laneCount > 3;
@@ -703,12 +801,15 @@ export default function HomePage() {
                     return (
                       <div
                         key={`${format(week[0], "yyyy-MM-dd")}-${weekIndex}`}
-                        className="relative grid grid-cols-7 overflow-hidden border-b border-[#DDE2EC] last:border-b-0"
+                        className="relative grid grid-cols-7 overflow-hidden border-b border-[var(--border)] last:border-b-0"
                       >
                         {week.map((day) => {
                           const isInSelectedRange =
                             day >= selectedDateRange.start &&
                             day <= selectedDateRange.end;
+                          const isWeekendDay = weekendDaySet.has(
+                            format(day, "EEEE").toLowerCase(),
+                          );
                           return (
                             <button
                               key={format(day, "yyyy-MM-dd")}
@@ -758,17 +859,19 @@ export default function HomePage() {
                                 skipRangeSyncRef.current = true;
                                 setSelectedDate(normalized);
                               }}
-                              className={`h-[136px] select-none border-r border-[#DDE2EC] px-2 py-2 text-left last:border-r-0 ${
-                                isInSelectedRange ? "bg-[#ECEDEF]" : ""
+                              className={`home-day-cell h-[136px] select-none border-r border-[var(--border)] px-2 py-2 text-left last:border-r-0 ${
+                                isInSelectedRange ? "bg-[var(--surface-2)]" : ""
                               }`}
                             >
                               <span
                                 className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl pb-6 px-2 text-[20px] leading-[120%] font-medium ${
                                   isInSelectedRange
-                                    ? "text-[#2E333E]"
-                                    : isSameMonth(day, monthCursor)
-                                      ? "text-[#2F3542]"
-                                      : "text-[#A4ABBB]"
+                                    ? "text-[var(--text-strong)]"
+                                    : isWeekendDay
+                                      ? "text-[#FF3B30]"
+                                      : isSameMonth(day, monthCursor)
+                                        ? "text-[var(--text-default)]"
+                                        : "text-[var(--text-muted)]"
                                 }`}
                               >
                                 {format(day, "d")}
@@ -825,9 +928,9 @@ export default function HomePage() {
       </section>
 
       <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
-        <DialogContent className="max-w-5xl rounded-[28px] border border-[#DCE2ED] bg-[#F5F7FB] p-4 sm:p-6 space-y-2">
+        <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
           <DialogHeader>
-            <DialogTitle className="text-3xl">Create Brick</DialogTitle>
+            <DialogTitle className="text-3xl text-[var(--text-strong)]">Create Brick</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
@@ -835,7 +938,7 @@ export default function HomePage() {
               value={brickName}
               onChange={(event) => setBrickName(event.target.value)}
             />
-            <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+            <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
               <div className="grid grid-cols-10 gap-2 sm:gap-3">
                 {colorPalette.map((color) => (
                   <button
@@ -856,7 +959,7 @@ export default function HomePage() {
               <div>
                 <p className="text-sm">Brick Icon</p>
               </div>
-              <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+              <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
                 <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5 md:grid-cols-10">
                   {brickIconOptions.map((option) => (
                     <button
@@ -866,7 +969,7 @@ export default function HomePage() {
                       className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
                         brickIcon === option.value
                           ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
-                          : "border-transparent bg-white text-[#5A6070] hover:border-[#C8D0E0]"
+                          : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-default)] hover:border-[var(--ring)]"
                       }`}
                       aria-label={option.label}
                       title={option.label}
@@ -878,13 +981,13 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-[#D6DCE8] bg-[#F5F7FB] px-3 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
               <span
                 className="h-5 w-5 rounded-full"
                 style={{ backgroundColor: brickColor }}
               />
               <BrickIcon name={brickIcon} className="size-4" />
-              <span className="font-poppins text-[14px] font-medium text-[#2E3542]">
+              <span className="font-poppins text-[14px] font-medium text-[var(--text-default)]">
                 {brickName.trim() || "Preview"}
               </span>
             </div>
@@ -940,7 +1043,7 @@ export default function HomePage() {
                 </button>
                 {hasEventTimeRange ? (
                   <p className="text-[12px] text-[#8890A0]">
-                    {eventStartTime} - {eventEndTime}
+                    {eventTimeSummary}
                   </p>
                 ) : null}
               </div>
@@ -978,7 +1081,7 @@ export default function HomePage() {
                         ? {
                             color: brick.color,
                             borderColor: brick.color,
-                            backgroundColor: "white",
+                            backgroundColor: "var(--ui-badge-neutral-bg)",
                           }
                         : {
                             backgroundColor: brick.color,

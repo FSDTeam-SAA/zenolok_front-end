@@ -66,5 +66,7 @@ export function applyThemePreference(darkMode: boolean) {
     return;
   }
 
+  document.documentElement.classList.toggle("theme-dark", darkMode);
+  document.documentElement.style.colorScheme = darkMode ? "dark" : "light";
   document.body.classList.toggle("theme-dark", darkMode);
 }

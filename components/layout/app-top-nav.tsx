@@ -98,7 +98,7 @@ export function AppTopNav() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#E2E6EE] bg-[#F2F5FA]/90 backdrop-blur">
+    <header className="app-top-nav sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-[76px] w-full max-w-[1180px] items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-3">
           <Link href="/home" className="flex items-center gap-2">
@@ -114,7 +114,7 @@ export function AppTopNav() {
           {isHomePage ? (
             <>
               <Button
-                className="fs-pop-20-medium-center rounded-full border border-[#7A8F64] bg-[#A7C58D] px-7 text-[#2A2E36] hover:bg-[#97ba79]"
+                className="app-top-nav-today fs-pop-20-medium-center rounded-full border px-7"
                 onClick={() => {
                   goToToday();
                   router.push("/home");
@@ -140,7 +140,7 @@ export function AppTopNav() {
               >
                 <ChevronRight className="size-5" />
               </Button>
-              <div className="fs-pop-20-medium-center hidden md:block">
+              <div className="app-top-nav-month fs-pop-20-medium-center hidden md:block">
                 {format(monthCursor, "MMMM yyyy")}
               </div>
             </>
@@ -155,11 +155,12 @@ export function AppTopNav() {
               <Link
                 key={item.href}
                 href={item.href}
+                data-active={active}
                 className={cn(
-                  "fs-pop-20-medium-center inline-flex items-center gap-2 rounded-full px-4 py-2 transition",
+                  "app-top-nav-link fs-pop-20-medium-center inline-flex items-center gap-2 rounded-full px-4 py-2 transition",
                   active
-                    ? "bg-[#DDE9FF] text-[#2C5CA8]"
-                    : "text-[#5E6577] hover:bg-[#E9EEF7]",
+                    ? "bg-[var(--nav-link-active-bg)] text-[var(--nav-link-active-text)]"
+                    : "text-[var(--nav-link-text)] hover:bg-[var(--nav-link-hover-bg)]",
                 )}
               >
                 <item.icon className="size-5" />
@@ -173,7 +174,7 @@ export function AppTopNav() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full bg-[#D5DAE5] cursor-pointer"
+            className="app-top-nav-icon-btn rounded-full cursor-pointer"
             onClick={() => router.push("/search")}
           >
             <Search className="size-5" />
@@ -191,7 +192,7 @@ export function AppTopNav() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="relative rounded-full bg-[#D5DAE5] cursor-pointer"
+                className="app-top-nav-icon-btn relative rounded-full cursor-pointer"
                 aria-label="Open notifications"
               >
                 <Bell className="size-5" />
@@ -204,7 +205,7 @@ export function AppTopNav() {
             </PopoverTrigger>
             <PopoverContent
               align="end"
-              className="w-[310px] border-none bg-[#F0F0F0] p-3 shadow-[0_10px_24px_rgba(20,24,35,0.12)]"
+              className="app-notification-popover w-[310px] border p-3"
             >
               <div className="mb-2 flex items-center justify-center gap-6">
                 {[
@@ -219,8 +220,8 @@ export function AppTopNav() {
                     className={cn(
                       "relative text-[13px] leading-none transition",
                       activeNotificationTab === tab.key
-                        ? "text-[#2A2E36]"
-                        : "text-[#9B9EA6]",
+                        ? "text-[var(--text-strong)]"
+                        : "text-[var(--text-muted)]",
                     )}
                   >
                     {tab.label}
@@ -238,11 +239,8 @@ export function AppTopNav() {
                   <>
                     {[40, 40, 66].map((height, index) => (
                       <div key={index} className="flex items-start gap-2">
-                        <span className="mt-2 size-4 rounded-full border border-[#D3D3D3] bg-[#E2E2E2]" />
-                        <Skeleton
-                          className="flex-1 rounded-xl bg-[#DEDEDE]"
-                          style={{ height }}
-                        />
+                        <span className="mt-2 size-4 rounded-full border border-[var(--border)] bg-[var(--surface-3)]" />
+                        <Skeleton className="flex-1 rounded-xl" style={{ height }} />
                       </div>
                     ))}
                   </>
@@ -272,23 +270,23 @@ export function AppTopNav() {
                           className={cn(
                             "mt-2 size-4 rounded-full border",
                             notification.read
-                              ? "border-[#D6D6D6] bg-[#ECECEC]"
-                              : "border-[#C5C5C5] bg-white",
+                              ? "border-[var(--border)] bg-[var(--surface-2)]"
+                              : "border-[var(--border)] bg-[var(--surface-1)]",
                           )}
                         />
                         <div
                           className={cn(
                             "flex-1 rounded-xl border px-3 py-2 transition",
                             notification.read
-                              ? "border-[#E2E2E2] bg-[#ECECEC]"
-                              : "border-[#D8D8D8] bg-[#E8E8E8]",
+                              ? "border-[var(--border)] bg-[var(--surface-2)]"
+                              : "border-[var(--border)] bg-[var(--surface-1)]",
                           )}
                         >
-                          <p className="text-[12px] leading-[1.35] text-[#4A4F59]">
+                          <p className="text-[12px] leading-[1.35] text-[var(--text-default)]">
                             {notification.title}
                           </p>
                           {timeLabel ? (
-                            <p className="mt-1 text-[10px] text-[#8A8F9C]">{timeLabel}</p>
+                            <p className="mt-1 text-[10px] text-[var(--text-muted)]">{timeLabel}</p>
                           ) : null}
                         </div>
                       </button>
@@ -305,7 +303,7 @@ export function AppTopNav() {
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full hidden sm:inline-flex bg-[#D5DAE5] cursor-pointer"
+            className="app-top-nav-icon-btn hidden rounded-full cursor-pointer sm:inline-flex"
             onClick={() => router.push("/settings")}
             aria-label="Open settings"
           >

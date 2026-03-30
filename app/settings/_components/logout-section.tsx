@@ -12,11 +12,11 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
       <SectionHeader
         title="Logout"
         description="End your current session securely."
-        titleClassName="text-[30px] text-[#1E2430] sm:text-[36px] lg:text-[40px]"
+        titleClassName="text-[30px] text-[var(--text-strong)] sm:text-[36px] lg:text-[40px]"
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
-        <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
+        <p className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
           Click the button below to logout from this device.
         </p>
         <Button
@@ -31,3 +31,4 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
     </section>
   );
 }
+

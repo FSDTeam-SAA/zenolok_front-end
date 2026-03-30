@@ -8,7 +8,8 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        neutral: "border-[#B9BFCA] bg-white text-[#757B86]",
+        neutral:
+          "border-[var(--ui-badge-neutral-border)] bg-[var(--ui-badge-neutral-bg)] text-[var(--ui-badge-neutral-text)]",
         blue: "border-transparent bg-[#36A9E1] text-white",
         yellow: "border-transparent bg-[#F7C700] text-white",
         purple: "border-[#A855F7] bg-white text-[#A855F7]",

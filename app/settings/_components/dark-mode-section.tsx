@@ -15,13 +15,13 @@ export function DarkModeSection({ darkMode, onToggle }: DarkModeSectionProps) {
         description="Toggle dark mode preference."
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="settings-darkmode-card w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">
+            <p className="settings-darkmode-title font-poppins text-[24px] leading-[120%] font-semibold text-[var(--text-strong)]">
               Enable dark mode
             </p>
-            <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
+            <p className="settings-darkmode-status font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[var(--text-muted)]">
               {darkMode ? "Enabled" : "Disabled"}
             </p>
           </div>
@@ -31,3 +31,4 @@ export function DarkModeSection({ darkMode, onToggle }: DarkModeSectionProps) {
     </section>
   );
 }
+

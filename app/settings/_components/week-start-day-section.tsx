@@ -18,8 +18,8 @@ export function WeekStartDaySection({
         description="Choose the first day of your week calendar."
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
-        <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
+        <p className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
           Current week starts on: {currentWeekStartLabel}
         </p>
         <Button
@@ -33,3 +33,4 @@ export function WeekStartDaySection({
     </section>
   );
 }
+

@@ -134,7 +134,7 @@ export function BricksManagePanel() {
       {bricksQuery.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className="rounded-2xl border border-[#DDE2EB] bg-white p-4">
+            <div key={index} className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-4">
               <Skeleton className="h-9 w-full rounded-xl" />
             </div>
           ))}
@@ -165,9 +165,9 @@ export function BricksManagePanel() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="brick-manage-dialog max-w-4xl rounded-[28px] border border-[#DCE2ED] bg-[#F5F7FB] p-4 sm:p-6">
+        <DialogContent className="brick-manage-dialog max-w-4xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="font-poppins text-[32px] leading-[120%] font-semibold text-[#2A2E36]">
+            <DialogTitle className="font-poppins text-[32px] leading-[120%] font-semibold text-[var(--text-strong)]">
               {editingBrick ? "Edit Brick" : "New Brick"}
             </DialogTitle>
           </DialogHeader>
@@ -184,10 +184,10 @@ export function BricksManagePanel() {
               value={name}
               onChange={(event) => setName(event.target.value)}
               placeholder="Brick name"
-              className="h-12 rounded-xl bg-white font-poppins text-[20px] leading-[120%] font-medium"
+              className="h-12 rounded-xl bg-[var(--surface-1)] font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]"
             />
 
-            <div className="brick-palette-box rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+            <div className="brick-palette-box rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
               <div className="grid grid-cols-10 gap-2 sm:gap-3">
                 {colorPalette.map((paletteColor) => (
                   <button
@@ -204,7 +204,7 @@ export function BricksManagePanel() {
               </div>
             </div>
 
-            <div className="brick-icons-box rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+            <div className="brick-icons-box rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
               <div className="grid grid-cols-8 gap-2 sm:grid-cols-10 sm:gap-2.5">
                 {brickIconOptions.map((option) => (
                   <button
@@ -214,7 +214,7 @@ export function BricksManagePanel() {
                     className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
                       icon === option.value
                         ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
-                        : "border-transparent bg-white text-[#5A6070] hover:border-[#C8D0E0]"
+                        : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-default)] hover:border-[var(--ring)]"
                     }`}
                     aria-label={option.label}
                     title={option.label}

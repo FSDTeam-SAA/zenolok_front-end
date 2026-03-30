@@ -26,7 +26,7 @@ export function AlarmPresetSection({
         description="Select your default reminder pattern."
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="space-y-2">
           {alarmOptions.map((item) => {
             const active = value === item.id;
@@ -38,11 +38,11 @@ export function AlarmPresetSection({
                 onClick={() => onChange(item.id)}
                 className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition ${
                   active
-                    ? "border-[#31C65B] bg-[#F3FFF6]"
-                    : "border-[#D9DEE8] bg-[#e1e3e7] hover:border-[#BFC7D8]"
+                    ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.14)]"
+                    : "border-[var(--border)] bg-[var(--surface-1)] hover:border-[color:var(--ring)]"
                 }`}
               >
-                <span className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+                <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
                   {item.label}
                 </span>
                 {active ? (
@@ -56,3 +56,4 @@ export function AlarmPresetSection({
     </section>
   );
 }
+

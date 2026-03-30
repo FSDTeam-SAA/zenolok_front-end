@@ -11,13 +11,13 @@ export function SectionHeader({ title, description, titleClassName }: SectionHea
     <div>
       <h2
         className={cn(
-          "font-poppins mb-4 text-[24px] leading-[120%] font-semibold text-[#202531]",
+          "settings-section-title font-poppins mb-4 text-[24px] leading-[120%] font-semibold text-[var(--text-strong)]",
           titleClassName,
         )}
       >
         {title}
       </h2>
-      <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">{description}</p>
+      <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[var(--text-muted)]">{description}</p>
     </div>
   );
 }

@@ -49,14 +49,14 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[#E3E7F0] bg-white p-5 shadow-[0_20px_70px_rgba(20,24,33,0.24)] duration-200",
+          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[var(--ui-dialog-border)] bg-[var(--ui-dialog-bg)] p-5 text-[var(--text-default)] shadow-[var(--ui-dialog-shadow)] duration-200",
           className
         )}
         {...props}
       >
         {children}
         {showClose ? (
-          <DialogPrimitive.Close className="absolute top-4 right-4 rounded-md text-[#727A8B] hover:text-[#23262E] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#88B4FF]">
+          <DialogPrimitive.Close className="absolute top-4 right-4 rounded-md text-[var(--ui-dialog-close)] hover:text-[var(--ui-dialog-close-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
             <X className="size-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
@@ -75,11 +75,11 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 }
 
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("fs-pop-40-semibold text-[#23262E]", className)} {...props} />;
+  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("fs-pop-40-semibold text-[var(--text-strong)]", className)} {...props} />;
 }
 
 function DialogDescription({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("fs-pop-16-regular text-[#6E7585]", className)} {...props} />;
+  return <DialogPrimitive.Description data-slot="dialog-description" className={cn("fs-pop-16-regular text-[var(--text-muted)]", className)} {...props} />;
 }
 
 export {

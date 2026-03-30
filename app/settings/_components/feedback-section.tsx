@@ -18,15 +18,15 @@ export function FeedbackSection({
       <SectionHeader
         title="Feedback"
         description="Send us your feedback and suggestions."
-        titleClassName="text-[30px] text-[#1E2430] sm:text-[36px] lg:text-[40px]"
+        titleClassName="text-[30px] text-[var(--text-strong)] sm:text-[36px] lg:text-[40px]"
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <textarea
           value={message}
           onChange={(event) => onChangeMessage(event.target.value)}
           placeholder="Type your feedback..."
-          className="font-poppins min-h-[180px] w-full rounded-2xl border border-[#D9DEE8] bg-[#e1e3e7] p-3 text-[16px] leading-[120%] font-normal text-[#2A2E36] outline-none placeholder:text-[#97A1B3] focus:border-[#7AA8EE]"
+          className="font-poppins min-h-[180px] w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[16px] leading-[120%] font-normal text-[var(--text-default)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--ring)]"
         />
         <div className="mt-3 flex justify-end">
           <Button
@@ -41,3 +41,4 @@ export function FeedbackSection({
     </section>
   );
 }
+

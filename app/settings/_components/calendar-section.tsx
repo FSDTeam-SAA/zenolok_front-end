@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import { SectionHeader } from "./section-header";
 
 interface CalendarSectionProps {
+  isCalendarSyncing?: boolean;
   onCalendarSync: () => void;
   onManageWeekStartDay: () => void;
 }
 
 export function CalendarSection({
+  isCalendarSyncing = false,
   onCalendarSync,
   onManageWeekStartDay,
 }: CalendarSectionProps) {
@@ -18,7 +20,7 @@ export function CalendarSection({
         description="Manage calendar-related settings."
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             type="button"
@@ -33,11 +35,13 @@ export function CalendarSection({
             variant="outline"
             className="font-poppins h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
             onClick={onCalendarSync}
+            disabled={isCalendarSyncing}
           >
-            Calendar sync
+            {isCalendarSyncing ? "Syncing..." : "Google Calendar sync"}
           </Button>
         </div>
       </div>
     </section>
   );
 }
+

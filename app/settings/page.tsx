@@ -17,9 +17,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { authApi, userApi } from "@/lib/api";
+import { authApi, eventApi, userApi } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import { weekStartDayOptions } from "@/lib/settings";
+import { weekStartDayOptions, type WeekStartDay } from "@/lib/settings";
 
 import { AlarmPresetSection } from "./_components/alarm-preset-section";
 import { BricksManageSection } from "./_components/bricks-manage-section";
@@ -45,10 +45,254 @@ import {
 import { TimeFormatSection } from "./_components/time-format-section";
 import { WeekStartDaySection } from "./_components/week-start-day-section";
 
+function resolveWeekStartDayFromWeekend(
+  weekend?: string[],
+): WeekStartDay | null {
+  if (!Array.isArray(weekend) || !weekend.length) {
+    return null;
+  }
+
+  const firstWeekendValue = weekend[0];
+  if (typeof firstWeekendValue !== "string") {
+    return null;
+  }
+
+  const normalizedWeekendDay = firstWeekendValue.trim().toLowerCase();
+  return weekStartDayOptions.some((option) => option.key === normalizedWeekendDay)
+    ? (normalizedWeekendDay as WeekStartDay)
+    : null;
+}
+
+const GOOGLE_GSI_SCRIPT_URL = "https://accounts.google.com/gsi/client";
+const GOOGLE_CALENDAR_SCOPE =
+  "https://www.googleapis.com/auth/calendar.readonly";
+const GOOGLE_CALENDAR_EVENTS_LIMIT = 100;
+
+type GoogleTokenResponse = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleTokenClient = {
+  requestAccessToken: (config?: { prompt?: string }) => void;
+};
+
+type GoogleOAuth2Namespace = {
+  initTokenClient: (config: {
+    client_id: string;
+    scope: string;
+    callback: (response: GoogleTokenResponse) => void;
+    error_callback?: () => void;
+  }) => GoogleTokenClient;
+};
+
+type GoogleOAuthWindow = Window & {
+  google?: {
+    accounts?: {
+      oauth2?: GoogleOAuth2Namespace;
+    };
+  };
+};
+
+type GoogleCalendarEvent = {
+  id: string;
+  status?: string;
+  summary?: string;
+  location?: string;
+  start?: {
+    date?: string;
+    dateTime?: string;
+  };
+  end?: {
+    date?: string;
+    dateTime?: string;
+  };
+};
+
+type SyncCandidateEvent = {
+  title: string;
+  location?: string;
+  startTime: string;
+  endTime: string;
+  isAllDay: boolean;
+};
+
+function createSyncEventKey(event: SyncCandidateEvent) {
+  const title = event.title.trim().toLowerCase();
+  const location = (event.location || "").trim().toLowerCase();
+  const startTime = new Date(event.startTime).getTime();
+  const endTime = new Date(event.endTime).getTime();
+  const allDayFlag = event.isAllDay ? "1" : "0";
+
+  return `${title}|${location}|${startTime}|${endTime}|${allDayFlag}`;
+}
+
+function toSyncCandidateEvent(
+  googleEvent: GoogleCalendarEvent,
+): SyncCandidateEvent | null {
+  if (googleEvent.status === "cancelled") {
+    return null;
+  }
+
+  const title = (googleEvent.summary || "Untitled event").trim();
+  const location = googleEvent.location?.trim() || undefined;
+
+  if (googleEvent.start?.date && googleEvent.end?.date) {
+    const start = new Date(`${googleEvent.start.date}T00:00:00`);
+    const endExclusive = new Date(`${googleEvent.end.date}T00:00:00`);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(endExclusive.getTime())) {
+      return null;
+    }
+
+    const end = new Date(endExclusive.getTime() - 1);
+    if (end.getTime() < start.getTime()) {
+      return null;
+    }
+
+    return {
+      title,
+      location,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+      isAllDay: true,
+    };
+  }
+
+  if (googleEvent.start?.dateTime && googleEvent.end?.dateTime) {
+    const start = new Date(googleEvent.start.dateTime);
+    const end = new Date(googleEvent.end.dateTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return null;
+    }
+
+    if (end.getTime() <= start.getTime()) {
+      return null;
+    }
+
+    return {
+      title,
+      location,
+      startTime: start.toISOString(),
+      endTime: end.toISOString(),
+      isAllDay: false,
+    };
+  }
+
+  return null;
+}
+
+function loadGoogleIdentityScript() {
+  return new Promise<void>((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Google sign-in is only available in the browser"));
+      return;
+    }
+
+    const googleWindow = window as GoogleOAuthWindow;
+    if (googleWindow.google?.accounts?.oauth2) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.querySelector(
+      "script[data-google-gsi='true']",
+    ) as HTMLScriptElement | null;
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => resolve(), { once: true });
+      existingScript.addEventListener(
+        "error",
+        () => reject(new Error("Failed to load Google sign-in script")),
+        { once: true },
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = GOOGLE_GSI_SCRIPT_URL;
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleGsi = "true";
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error("Failed to load Google sign-in script"));
+    document.head.appendChild(script);
+  });
+}
+
+async function requestGoogleAccessToken(clientId: string) {
+  await loadGoogleIdentityScript();
+
+  const googleWindow = window as GoogleOAuthWindow;
+  const oauth2 = googleWindow.google?.accounts?.oauth2;
+
+  if (!oauth2) {
+    throw new Error("Google sign-in client is unavailable");
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const tokenClient = oauth2.initTokenClient({
+      client_id: clientId,
+      scope: GOOGLE_CALENDAR_SCOPE,
+      callback: (response) => {
+        if (response.error || !response.access_token) {
+          reject(
+            new Error(
+              response.error_description ||
+                response.error ||
+                "Failed to authorize Google Calendar",
+            ),
+          );
+          return;
+        }
+
+        resolve(response.access_token);
+      },
+      error_callback: () =>
+        reject(new Error("Google sign-in was cancelled or failed")),
+    });
+
+    tokenClient.requestAccessToken({ prompt: "consent" });
+  });
+}
+
+async function fetchGoogleCalendarEvents(accessToken: string) {
+  const url = new URL(
+    "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+  );
+  url.searchParams.set("singleEvents", "true");
+  url.searchParams.set("orderBy", "startTime");
+  url.searchParams.set("timeMin", new Date().toISOString());
+  url.searchParams.set("maxResults", String(GOOGLE_CALENDAR_EVENTS_LIMIT));
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = (await response.json()) as {
+    items?: GoogleCalendarEvent[];
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    throw new Error(
+      data.error?.message || "Failed to fetch events from Google Calendar",
+    );
+  }
+
+  return data.items || [];
+}
+
 export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { preferences, updatePreferences } = useAppState();
   const initialParamsHandled = React.useRef(false);
+  const didSyncWeekStartFromProfile = React.useRef(false);
 
   const [activeSection, setActiveSection] =
     React.useState<SettingsSection>("profile");
@@ -90,6 +334,21 @@ export default function SettingsPage() {
     setName(profileQuery.data.name || "");
     setAvatarPreview(profileQuery.data.avatar?.url || null);
   }, [profileQuery.data]);
+
+  React.useEffect(() => {
+    if (!profileQuery.data || didSyncWeekStartFromProfile.current) {
+      return;
+    }
+
+    didSyncWeekStartFromProfile.current = true;
+    const backendWeekStartDay = resolveWeekStartDayFromWeekend(
+      profileQuery.data.weekend,
+    );
+
+    if (backendWeekStartDay) {
+      updatePreferences({ weekStartDay: backendWeekStartDay });
+    }
+  }, [profileQuery.data, updatePreferences]);
 
   React.useEffect(() => {
     if (!selectedAvatar) {
@@ -149,6 +408,145 @@ export default function SettingsPage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || "Profile update failed");
+    },
+  });
+
+  const updateWeekStartDayMutation = useMutation({
+    mutationFn: ({
+      day,
+    }: {
+      day: WeekStartDay;
+      previousDay: WeekStartDay;
+    }) => {
+      const formData = new FormData();
+      formData.append("weekend", JSON.stringify([day]));
+      return userApi.updateProfile(formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: (error: Error, variables) => {
+      updatePreferences({ weekStartDay: variables.previousDay });
+      toast.error(error.message || "Failed to update week start day");
+    },
+  });
+
+  const handleWeekStartDayChange = React.useCallback(
+    (day: WeekStartDay) => {
+      if (day === preferences.weekStartDay) {
+        return;
+      }
+
+      const previousDay = preferences.weekStartDay;
+      updatePreferences({ weekStartDay: day });
+      updateWeekStartDayMutation.mutate({ day, previousDay });
+    },
+    [
+      preferences.weekStartDay,
+      updatePreferences,
+      updateWeekStartDayMutation,
+    ],
+  );
+
+  const googleCalendarSyncMutation = useMutation({
+    mutationFn: async () => {
+      const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID?.trim();
+      if (!googleClientId) {
+        throw new Error("Google client ID is not configured");
+      }
+
+      const accessToken = await requestGoogleAccessToken(googleClientId);
+      const [googleEvents, existingEvents] = await Promise.all([
+        fetchGoogleCalendarEvents(accessToken),
+        eventApi.getAll({ filter: "all" }),
+      ]);
+
+      const existingEventKeys = new Set(
+        existingEvents
+          .map((event) => {
+            const start = new Date(event.startTime);
+            const end = new Date(event.endTime);
+            if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+              return null;
+            }
+
+            return createSyncEventKey({
+              title: event.title || "Untitled event",
+              location: event.location || undefined,
+              startTime: start.toISOString(),
+              endTime: end.toISOString(),
+              isAllDay: Boolean(event.isAllDay),
+            });
+          })
+          .filter((key): key is string => Boolean(key)),
+      );
+
+      let imported = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      for (const googleEvent of googleEvents) {
+        const candidate = toSyncCandidateEvent(googleEvent);
+        if (!candidate) {
+          skipped += 1;
+          continue;
+        }
+
+        const candidateKey = createSyncEventKey(candidate);
+        if (existingEventKeys.has(candidateKey)) {
+          skipped += 1;
+          continue;
+        }
+
+        try {
+          await eventApi.create({
+            title: candidate.title,
+            startTime: candidate.startTime,
+            endTime: candidate.endTime,
+            isAllDay: candidate.isAllDay,
+            location: candidate.location,
+            recurrence: "once",
+          });
+          existingEventKeys.add(candidateKey);
+          imported += 1;
+        } catch {
+          failed += 1;
+        }
+      }
+
+      return {
+        scanned: googleEvents.length,
+        imported,
+        skipped,
+        failed,
+      };
+    },
+    onSuccess: ({ scanned, imported, skipped, failed }) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+
+      if (!scanned) {
+        toast.info("No upcoming Google Calendar events found");
+        return;
+      }
+
+      if (!imported && !failed) {
+        toast.info(`Google Calendar already in sync (${skipped} skipped)`);
+        return;
+      }
+
+      if (failed) {
+        toast.warning(
+          `Google sync finished: ${imported} imported, ${skipped} skipped, ${failed} failed`,
+        );
+        return;
+      }
+
+      toast.success(
+        `Google sync finished: ${imported} imported, ${skipped} skipped`,
+      );
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Google Calendar sync failed");
     },
   });
 
@@ -294,9 +692,8 @@ export default function SettingsPage() {
         return (
           <CalendarSection
             onManageWeekStartDay={() => setActiveSection("weekStartDay")}
-            onCalendarSync={() =>
-              toast.info("Calendar sync settings coming soon")
-            }
+            onCalendarSync={() => googleCalendarSyncMutation.mutate()}
+            isCalendarSyncing={googleCalendarSyncMutation.isPending}
           />
         );
       case "feedback":
@@ -315,13 +712,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
-      <div className="font-poppins mb-3 flex items-center justify-between rounded-2xl border border-[#E0E5EE] bg-[#172649] p-3 shadow-[0_12px_30px_rgba(17,24,37,0.10)] xl:hidden">
+    <div className="settings-page space-y-3">
+      <div className="settings-mobile-header font-poppins flex items-center justify-between rounded-2xl border p-3 shadow-[0_12px_30px_rgba(17,24,37,0.10)] xl:hidden">
         <div>
-          <h1 className="font-poppins text-[24px] leading-[120%] font-semibold text-[#202531]">
+          <h1 className="font-poppins text-[24px] leading-[120%] font-semibold text-[var(--text-strong)]">
             Settings
           </h1>
-          <p className="font-poppins text-[14px] leading-[120%] font-normal text-[#7A8598]">
+          <p className="font-poppins text-[14px] leading-[120%] font-normal text-[var(--text-muted)]">
             Account and preferences
           </p>
         </div>
@@ -336,7 +733,7 @@ export default function SettingsPage() {
         </Button>
       </div>
 
-      <div className="font-poppins grid gap-1 xl:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="settings-layout font-poppins grid gap-1 xl:grid-cols-[340px_minmax(0,1fr)]">
         <SettingsSidebarDesktop
           activeSection={activeSection}
           primarySections={primarySections}
@@ -344,7 +741,7 @@ export default function SettingsPage() {
           onSectionSelect={handleSectionSelect}
         />
 
-        <main className="rounded-r-xl border border-[#E0E5EE] bg-[#ECEFF4] p-4 sm:p-6">
+        <main className="settings-content-panel rounded-r-xl border border-[#E0E5EE] bg-[#ECEFF4] p-4 sm:p-6">
           {renderActiveSection()}
         </main>
       </div>
@@ -362,7 +759,7 @@ export default function SettingsPage() {
         open={bricksManageModalOpen}
         onOpenChange={setBricksManageModalOpen}
       >
-        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[#DDE3EE] bg-[#e1e3e7] p-4 sm:p-6">
+        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">
               Bricks Manage
@@ -376,7 +773,7 @@ export default function SettingsPage() {
       </Dialog>
 
       <Dialog open={weekStartModalOpen} onOpenChange={setWeekStartModalOpen}>
-        <DialogContent className="max-w-3xl rounded-[30px] border border-[#DDE3EE] bg-[#e1e3e7] p-4 sm:p-6 space-y-2">
+        <DialogContent className="max-w-3xl rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
           <DialogHeader>
             <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[#1E2430] sm:text-[36px] lg:text-[40px]">
               Manage weeks start day
@@ -387,7 +784,7 @@ export default function SettingsPage() {
           </DialogHeader>
           <WeekStartDayPanel
             selectedDay={preferences.weekStartDay}
-            onSelect={(day) => updatePreferences({ weekStartDay: day })}
+            onSelect={handleWeekStartDayChange}
           />
         </DialogContent>
       </Dialog>
@@ -398,6 +795,6 @@ export default function SettingsPage() {
         onConfirm={() => logoutMutation.mutate()}
         isPending={logoutMutation.isPending}
       />
-    </>
+    </div>
   );
 }

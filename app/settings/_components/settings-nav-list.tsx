@@ -27,10 +27,16 @@ export function SettingsNavList({
             type="button"
             onClick={() => onSelect(section.id)}
             className={`flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left transition ${
-              active ? "bg-[#DCE9FF] text-[#2C5DA9]" : "text-[#4C5668] hover:bg-[#ECF1FA]"
+              active
+                ? "bg-[var(--nav-link-active-bg)] text-[var(--nav-link-active-text)]"
+                : "text-[var(--text-default)] hover:bg-[var(--nav-link-hover-bg)]"
             }`}
           >
-            <span className={`flex size-10 items-center justify-center rounded-xl ${active ? "bg-[#BFD7FF]" : "bg-[#E9EEF6]"}`}>
+            <span
+              className={`flex size-10 items-center justify-center rounded-xl ${
+                active ? "bg-[var(--surface-3)]" : "bg-[var(--surface-2)]"
+              }`}
+            >
               <Icon className="size-5" />
             </span>
             <span className={labelClassName}>{section.label}</span>

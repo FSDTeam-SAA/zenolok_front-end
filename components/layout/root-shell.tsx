@@ -17,7 +17,7 @@ export function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppTopNav />
-      <main className="mx-auto w-full max-w-[1180px] px-3 py-6 sm:px-5">{children}</main>
+      <main className="app-main mx-auto w-full max-w-[1180px] px-3 py-4 sm:px-5 sm:py-6">{children}</main>
     </>
   );
 }

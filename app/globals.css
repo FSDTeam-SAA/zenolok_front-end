@@ -5,14 +5,80 @@ html {
 }
 
 :root {
-  --background: #eff2f8;
-  --foreground: #23262e;
-  --card: #f5f7fb;
-  --card-foreground: #23262e;
-  --muted: #8a91a1;
-  --border: #dce2ec;
-  --input: #c5ccd8;
-  --ring: #8db5ff;
+  --background: #edf1f8;
+  --foreground: #222b38;
+  --card: #f6f8fc;
+  --card-foreground: #222b38;
+  --muted: #7f8aa0;
+  --border: #d8dfeb;
+  --input: #c6cfdd;
+  --ring: #7eaefb;
+  --surface-0: #eef2f8;
+  --surface-1: #f7f9fc;
+  --surface-2: #e9eef6;
+  --surface-3: #dde4ef;
+  --text-strong: #1f2633;
+  --text-default: #2d3645;
+  --text-muted: #7a869f;
+  --bg-glow-1: rgba(120, 167, 255, 0.2);
+  --bg-glow-2: rgba(65, 199, 137, 0.1);
+  --nav-bg: rgba(245, 248, 252, 0.82);
+  --nav-border: #dbe3ef;
+  --nav-shadow: 0 10px 30px rgba(20, 27, 40, 0.08);
+  --nav-link-text: #58627a;
+  --nav-link-hover-bg: #e8eef8;
+  --nav-link-active-bg: #dbe8ff;
+  --nav-link-active-text: #2d5faa;
+  --nav-today-bg: #a7c58d;
+  --nav-today-hover: #96b97b;
+  --nav-today-border: #7a8f64;
+  --nav-today-text: #243021;
+  --nav-icon-bg: #d6dce8;
+  --nav-icon-text: #4d586f;
+  --ui-btn-primary-bg: #2daa46;
+  --ui-btn-primary-hover: #23903a;
+  --ui-btn-primary-text: #ffffff;
+  --ui-btn-secondary-bg: #e7efff;
+  --ui-btn-secondary-hover: #d7e3ff;
+  --ui-btn-secondary-text: #2f5aa8;
+  --ui-btn-outline-bg: transparent;
+  --ui-btn-outline-border: #a0a9b8;
+  --ui-btn-outline-hover: #edf2f8;
+  --ui-btn-outline-text: #2d3645;
+  --ui-btn-ghost-hover: #e8edf6;
+  --ui-btn-ghost-text: #4a556a;
+  --ui-btn-danger-bg: #ff3b30;
+  --ui-btn-danger-hover: #dd3028;
+  --ui-input-bg: #d5dce8;
+  --ui-input-border: #a5afbf;
+  --ui-input-text: #222939;
+  --ui-input-placeholder: #909aad;
+  --ui-card-bg: #f6f8fc;
+  --ui-card-border: #dfe5ef;
+  --ui-card-text: #232938;
+  --ui-card-shadow: 0 14px 40px rgba(20, 23, 31, 0.08);
+  --ui-dialog-bg: #f6f8fc;
+  --ui-dialog-border: #dfe5ef;
+  --ui-dialog-shadow: 0 24px 70px rgba(20, 24, 33, 0.24);
+  --ui-dialog-close: #6f788b;
+  --ui-dialog-close-hover: #23262e;
+  --ui-popover-bg: #f4f6fa;
+  --ui-popover-border: #dde4ef;
+  --ui-popover-shadow: 0 14px 35px rgba(18, 22, 31, 0.14);
+  --ui-switch-off: #d9dee7;
+  --ui-switch-on: #34c759;
+  --ui-badge-neutral-bg: #ffffff;
+  --ui-badge-neutral-border: #b9bfca;
+  --ui-badge-neutral-text: #666f83;
+  --ui-tabs-list-bg: #e6ebf4;
+  --ui-tabs-trigger-text: #596178;
+  --ui-tabs-trigger-active-bg: #ffffff;
+  --ui-tabs-trigger-active-text: #232a3a;
+  --ui-avatar-bg: #e5ebf4;
+  --ui-avatar-text: #4b5569;
+  --ui-checkbox-bg: #ffffff;
+  --ui-checkbox-border: #8b93a4;
+  --ui-checkbox-ring: #88b4ff;
 }
 
 * {
@@ -20,7 +86,10 @@ html {
 }
 
 body {
-  background: radial-gradient(1200px 700px at 50% -250px, #fefeff 0%, var(--background) 70%);
+  background:
+    radial-gradient(1100px 650px at 8% -220px, var(--bg-glow-1) 0%, transparent 66%),
+    radial-gradient(920px 580px at 92% -220px, var(--bg-glow-2) 0%, transparent 70%),
+    linear-gradient(180deg, var(--surface-0), var(--surface-0));
   color: var(--foreground);
   font-family: var(--font-poppins), system-ui, sans-serif;
   font-weight: 400;
@@ -28,95 +97,232 @@ body {
   min-height: 100vh;
   line-height: 120%;
   letter-spacing: 0;
+  transition: background 220ms ease, color 180ms ease;
+}
+
+.app-main {
+  color: var(--text-default);
 }
 
 body.theme-dark {
-  --background: #090d14;
-  --foreground: #f5f7fd;
-  --card: #101723;
-  --card-foreground: #f5f7fd;
-  --muted: #9aa4ba;
-  --border: #263042;
-  --input: #37445c;
-  --ring: #7eb8ff;
-  background: radial-gradient(1200px 700px at 50% -250px, #123518 0%, var(--background) 70%);
+  --background: #070b12;
+  --foreground: #e8eef9;
+  --card: #111a29;
+  --card-foreground: #e8eef9;
+  --muted: #95a5bf;
+  --border: #2a3952;
+  --input: #223149;
+  --ring: #84b7ff;
+  --surface-0: #070b12;
+  --surface-1: #111a29;
+  --surface-2: #172233;
+  --surface-3: #1e2b41;
+  --text-strong: #f3f7ff;
+  --text-default: #d5deee;
+  --text-muted: #98a8c1;
+  --bg-glow-1: rgba(93, 141, 255, 0.24);
+  --bg-glow-2: rgba(53, 193, 136, 0.16);
+  --nav-bg: rgba(9, 15, 24, 0.84);
+  --nav-border: #24334a;
+  --nav-shadow: 0 12px 32px rgba(3, 8, 16, 0.58);
+  --nav-link-text: #9bacca;
+  --nav-link-hover-bg: #1b2a42;
+  --nav-link-active-bg: #203251;
+  --nav-link-active-text: #c5dcff;
+  --nav-today-bg: #2f5a3a;
+  --nav-today-hover: #356743;
+  --nav-today-border: #4f845e;
+  --nav-today-text: #ebffe9;
+  --nav-icon-bg: #1e2a3d;
+  --nav-icon-text: #c4d0e5;
+  --ui-btn-primary-bg: #2fae52;
+  --ui-btn-primary-hover: #279246;
+  --ui-btn-primary-text: #f5fff6;
+  --ui-btn-secondary-bg: #203455;
+  --ui-btn-secondary-hover: #294267;
+  --ui-btn-secondary-text: #d4e5ff;
+  --ui-btn-outline-bg: transparent;
+  --ui-btn-outline-border: #3a4d6b;
+  --ui-btn-outline-hover: #1a273a;
+  --ui-btn-outline-text: #c8d4ea;
+  --ui-btn-ghost-hover: #1b2a41;
+  --ui-btn-ghost-text: #c0cee6;
+  --ui-btn-danger-bg: #df3e3e;
+  --ui-btn-danger-hover: #c33636;
+  --ui-input-bg: #162236;
+  --ui-input-border: #344a69;
+  --ui-input-text: #e1e9f8;
+  --ui-input-placeholder: #8396b5;
+  --ui-card-bg: #121d2c;
+  --ui-card-border: #2a3a54;
+  --ui-card-text: #e1e9f8;
+  --ui-card-shadow: 0 18px 52px rgba(2, 7, 15, 0.62);
+  --ui-dialog-bg: #121d2d;
+  --ui-dialog-border: #2d3f5c;
+  --ui-dialog-shadow: 0 26px 72px rgba(2, 7, 15, 0.7);
+  --ui-dialog-close: #9fb0cb;
+  --ui-dialog-close-hover: #f0f5ff;
+  --ui-popover-bg: #121d2e;
+  --ui-popover-border: #2d405d;
+  --ui-popover-shadow: 0 18px 40px rgba(2, 7, 15, 0.65);
+  --ui-switch-off: #2c3c54;
+  --ui-switch-on: #34c759;
+  --ui-badge-neutral-bg: #1a263a;
+  --ui-badge-neutral-border: #32445f;
+  --ui-badge-neutral-text: #c5d1e5;
+  --ui-tabs-list-bg: #1c2a3f;
+  --ui-tabs-trigger-text: #9eb0cb;
+  --ui-tabs-trigger-active-bg: #243750;
+  --ui-tabs-trigger-active-text: #e9f1ff;
+  --ui-avatar-bg: #1f2d45;
+  --ui-avatar-text: #d3ddef;
+  --ui-checkbox-bg: #162337;
+  --ui-checkbox-border: #496082;
+  --ui-checkbox-ring: #8bbaff;
 }
 
-body.theme-dark ::-webkit-scrollbar-thumb {
-  background: #4a556c;
+.app-top-nav {
+  border-color: var(--nav-border);
+  background: var(--nav-bg);
+  box-shadow: var(--nav-shadow);
 }
 
-body.theme-dark ::-webkit-scrollbar-track {
-  background: #151d2c;
+.app-top-nav-today {
+  border-color: var(--nav-today-border);
+  background: var(--nav-today-bg);
+  color: var(--nav-today-text);
 }
 
-body.theme-dark .settings-page {
-  background: #080d15;
+.app-top-nav-today:hover {
+  background: var(--nav-today-hover);
 }
 
-body.theme-dark .settings-shell {
-  background: #0f1622;
-  border-color: #212c3f;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+.app-top-nav-month {
+  color: var(--text-default);
 }
 
-body.theme-dark .settings-shell-title,
-body.theme-dark .settings-section-title {
-  color: #f3f6fd;
+.app-top-nav-link {
+  color: var(--nav-link-text);
 }
 
-body.theme-dark .settings-back {
-  color: #bbc6da;
+.app-top-nav-icon-btn {
+  background: var(--nav-icon-bg) !important;
+  color: var(--nav-icon-text) !important;
+}
+
+.app-notification-popover {
+  background: var(--ui-popover-bg) !important;
+  border-color: var(--ui-popover-border) !important;
+  box-shadow: var(--ui-popover-shadow) !important;
+}
+
+.home-page .home-calendar-shell,
+.events-page .events-content-shell,
+.todos-page .todos-shell,
+.event-details-page .event-details-shell,
+.settings-content-panel,
+.settings-sidebar-panel,
+.settings-darkmode-card {
+  background: var(--surface-1);
+  border-color: var(--border);
+  color: var(--text-default);
+}
+
+.home-page .home-events-sidebar,
+.event-details-page .event-details-card,
+.todos-page .todos-scheduled-panel,
+.settings-content-panel {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.home-page .home-event-card,
+.events-page .events-list-card,
+.todos-page .todo-category-card {
+  background: var(--surface-3);
+  border-color: var(--border);
+}
+
+.home-page .home-add-event-btn,
+.events-page .events-create-btn,
+.events-page .events-toolbar-create-brick-btn {
+  border-color: var(--ui-badge-neutral-border);
+  background: var(--ui-badge-neutral-bg);
+  color: var(--ui-badge-neutral-text);
+}
+
+.home-page .home-calendar-layout,
+.settings-layout {
+  gap: 1rem;
+}
+
+.home-page .home-calendar-board .grid-cols-7 > div > p,
+.event-details-page p,
+.events-page p,
+.todos-page p,
+.settings-page p {
+  color: inherit;
+}
+
+.home-page .home-day-cell {
+  border-color: var(--border);
+}
+
+.events-page .events-filter-tabs {
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+.settings-mobile-header {
+  border-color: var(--border);
+  background: var(--surface-1);
+}
+
+.settings-shell {
+  background: var(--surface-1);
+  border-color: var(--border);
 }
 
 body.theme-dark .settings-row:hover {
-  background: #192333;
-}
-
-body.theme-dark .settings-row-icon-box {
-  background: #202b3c;
-  color: #f2f6ff;
+  background: #1a283f;
 }
 
 body.theme-dark .settings-row-label {
-  color: #edf2fb;
+  color: var(--text-default);
 }
 
-body.theme-dark .settings-row-right {
-  color: #91a1bd;
+body.theme-dark .settings-row-icon-box {
+  background: var(--surface-3);
+  color: var(--text-default);
 }
 
-body.theme-dark .settings-week-subtitle {
-  color: #9ba8bf;
+body.theme-dark .settings-week-subtitle,
+body.theme-dark .settings-darkmode-status {
+  color: var(--text-muted);
 }
 
-body.theme-dark .settings-week-item {
-  background: #151f2f;
-  border-color: #27344a;
+body.theme-dark .settings-week-item,
+body.theme-dark .brick-palette-box,
+body.theme-dark .brick-icons-box {
+  background: var(--surface-2);
+  border-color: var(--border);
 }
 
 body.theme-dark .settings-week-item:hover {
-  border-color: #375174;
+  border-color: #43638f;
 }
 
 body.theme-dark .settings-week-letter {
-  background: #1f2a3b;
-  color: #ecf2ff;
+  background: var(--surface-3);
+  color: var(--text-default);
 }
 
-body.theme-dark .settings-week-label {
-  color: #edf2fb;
-}
-
-body.theme-dark .bricks-manage-dialog {
-  background: #0f1623;
-  border-color: #26344b;
-}
-
-body.theme-dark .brick-palette-box,
-body.theme-dark .brick-icons-box {
-  background: #182334;
-  border-color: #263750;
+body.theme-dark .settings-week-label,
+body.theme-dark .settings-back,
+body.theme-dark .settings-shell-title,
+body.theme-dark .settings-section-title,
+body.theme-dark .settings-darkmode-title {
+  color: var(--text-strong);
 }
 
 h1,
@@ -199,8 +405,16 @@ select {
   border-radius: 999px;
 }
 
+body.theme-dark ::-webkit-scrollbar-thumb {
+  background: #40506b;
+}
+
 ::-webkit-scrollbar-track {
   background: #eff2f7;
+}
+
+body.theme-dark ::-webkit-scrollbar-track {
+  background: #101827;
 }
 
 input::-ms-reveal,
@@ -223,4 +437,36 @@ select {
 button:disabled,
 [role="button"][aria-disabled="true"] {
   cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .home-page .home-calendar-board {
+    min-width: 760px;
+  }
+
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .app-main {
+    padding-top: 0.85rem;
+    padding-bottom: 1rem;
+  }
+
+  .home-page .home-calendar-shell,
+  .events-page .events-content-shell,
+  .todos-page .todos-shell {
+    border-radius: 20px;
+    padding: 0.8rem;
+  }
+
+  .home-page .home-calendar-board {
+    min-width: 690px;
+  }
+
+  .events-page .events-toolbar {
+    gap: 0.8rem;
+  }
 }

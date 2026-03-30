@@ -101,14 +101,12 @@ function DayPill({
     "flex h-9 items-center justify-center text-[17px] leading-none transition-colors";
 
   if (isRangeStart) {
-    className += " w-full rounded-l-full rounded-r-none bg-[#F07373] text-white";
+    className += " w-full rounded-l-full rounded-r-none bg-[#4B4D54] text-white";
   } else if (isRangeEnd) {
     className += " w-full rounded-r-full rounded-l-none bg-[#4B4D54] text-white";
   } else if (inRange) {
     className += " w-full rounded-none bg-[#4B4D54] text-white";
-  } else if (isStart) {
-    className += " mx-auto size-9 rounded-full bg-[#F07373] text-white";
-  } else if (isEnd) {
+  } else if (isStart || isEnd) {
     className += " mx-auto size-9 rounded-full bg-[#4B4D54] text-white";
   } else if (isSunday) {
     className += " mx-auto size-9 rounded-full bg-[#F07373] text-white hover:bg-[#ea6a6a]";
@@ -299,6 +297,18 @@ export function EventDateRangePopup({
   };
 
   const canApply = Boolean(draftStart);
+  const applySelection = () => {
+    if (!draftStart) {
+      return;
+    }
+
+    const normalizedEnd = draftEnd || draftStart;
+    onApply({
+      startDate: toDateValue(draftStart),
+      endDate: toDateValue(normalizedEnd),
+    });
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -366,36 +376,40 @@ export function EventDateRangePopup({
               </div>
             ) : (
               <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => setView("month")}
-                  className="inline-flex items-center gap-1 rounded-lg px-1 text-[13px] text-[#6F7684] hover:text-white bg-white hover:bg-[#4A4F59] w-full py-2"
-                >
-                  <ChevronLeft className="size-4" />
-                  Year
-                </button>
                 <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setCursorMonth(addDays(monthStart, -1))}
+                      className="rounded-full p-1 text-[#767D89]"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setView("month")}
+                      className="text-[42px] leading-none font-medium text-[#4A4F59]"
+                    >
+                      {format(cursorMonth, "MMMM")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCursorMonth(addDays(monthEnd, 1))}
+                      className="rounded-full p-1 text-[#767D89]"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setCursorMonth(addDays(monthStart, -1))}
-                    className="rounded-full p-1 text-[#767D89]"
-                    aria-label="Previous month"
+                    disabled={!canApply}
+                    onClick={applySelection}
+                    className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[16px] text-[#A4A9B3] disabled:opacity-40"
                   >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setView("month")}
-                    className="text-[30px] leading-none font-medium text-[#4A4F59]"
-                  >
-                    {format(cursorMonth, "MMMM")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setCursorMonth(addDays(monthEnd, 1))}
-                    className="rounded-full p-1 text-[#767D89]"
-                    aria-label="Next month"
-                  >
+                    Done
                     <ChevronRight className="size-4" />
                   </button>
                 </div>
@@ -444,27 +458,17 @@ export function EventDateRangePopup({
             )}
           </div>
 
-          <div className="flex items-center justify-end">
-            <button
-              type="button"
-              disabled={!canApply}
-              onClick={() => {
-                if (!draftStart) {
-                  return;
-                }
-
-                const normalizedEnd = draftEnd || draftStart;
-                onApply({
-                  startDate: toDateValue(draftStart),
-                  endDate: toDateValue(normalizedEnd),
-                });
-                onOpenChange(false);
-              }}
-              className="rounded-full px-3 py-1 text-[12px] text-[#8E93A0] disabled:opacity-40"
-            >
-              Done
-            </button>
-          </div>
+          {view === "month" ? (
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setView("day")}
+                className="rounded-full px-3 py-1 text-[12px] text-[#8E93A0]"
+              >
+                Back
+              </button>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>

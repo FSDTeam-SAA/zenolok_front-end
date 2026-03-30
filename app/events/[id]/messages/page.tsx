@@ -140,24 +140,24 @@ export default function EventMessagesPage() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="event-details-page space-y-3">
       <div className="flex items-center justify-between pt-1">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-[20px] text-[#4D5463]"
+          className="flex items-center gap-1.5 text-[20px] text-[var(--text-muted)]"
         >
           <ArrowLeft className="size-5" />
           Back
         </button>
       </div>
 
-      <section className="rounded-[16px] border border-[#E4E9F1] bg-[#F6F8FB] p-2">
-        <div className="rounded-[14px] border border-[#D8DEE8] bg-[#ECEFF4] p-3.5">
+      <section className="rounded-[16px] border border-[var(--border)] bg-[var(--surface-1)] p-2">
+        <div className="rounded-[14px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="block h-6 w-1 rounded-sm bg-[#32ADE6]" />
-                <p className="truncate text-[34px] font-medium leading-tight text-[#4D4D4D]">
+                <p className="truncate text-[34px] font-medium leading-tight text-[var(--text-strong)]">
                   {event.title}
                 </p>
               </div>
@@ -166,7 +166,7 @@ export default function EventMessagesPage() {
               {participants.slice(0, 4).map((participant, index) => (
                 <Avatar
                   key={participant._id}
-                  className={`size-7 border-2 border-[#ECEFF4] ${index === 0 ? "" : "-ml-2"}`}
+                  className={`size-7 border-2 border-[var(--border)] ${index === 0 ? "" : "-ml-2"}`}
                 >
                   <AvatarImage src={participant.avatar?.url} />
                   <AvatarFallback>{getParticipantDisplayName(participant).slice(0, 1)}</AvatarFallback>
@@ -176,11 +176,11 @@ export default function EventMessagesPage() {
           </div>
         </div>
 
-        <Card className="mt-3 rounded-[22px] border border-[#DCE2EB] bg-[#ECEFF4] p-3.5 shadow-none">
-          <div className="mb-3 flex items-center justify-between text-[#A9B0BC]">
+        <Card className="mt-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 text-[var(--text-default)] shadow-none">
+          <div className="mb-3 flex items-center justify-between text-[var(--text-muted)]">
             <button
               type="button"
-              className="rounded-full p-1 transition hover:bg-white"
+              className="rounded-full p-1 transition hover:bg-[var(--surface-3)]"
               onClick={() => router.back()}
               aria-label="Back"
             >
@@ -192,7 +192,7 @@ export default function EventMessagesPage() {
             </span>
           </div>
 
-          <div className="max-h-[58vh] space-y-3 overflow-auto rounded-[22px] bg-[#E6E8EC] p-2">
+          <div className="max-h-[58vh] space-y-3 overflow-auto rounded-[22px] bg-[var(--surface-3)] p-2">
             {messages.length ? (
               messages.map((message) => {
                 const rawName = (message.user.name || message.user.username || "").trim();
@@ -205,7 +205,7 @@ export default function EventMessagesPage() {
                     className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}
                   >
                     {!isMe ? (
-                      <Avatar className="size-10 border border-[#D4DAE5]">
+                      <Avatar className="size-10 border border-[var(--border)]">
                         <AvatarImage src={getMessageAvatarUrl(message)} />
                         <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
                       </Avatar>
@@ -213,7 +213,7 @@ export default function EventMessagesPage() {
                     <div className={`min-w-0 max-w-[85%] ${isMe ? "text-right" : ""}`}>
                       <p
                         className={`mb-1 text-[14px] leading-none font-medium ${
-                          isMe ? "text-[#31A8E8]" : "text-[#4D4D4D]"
+                          isMe ? "text-[#31A8E8]" : "text-[var(--text-strong)]"
                         }`}
                       >
                         {displayName}
@@ -222,26 +222,26 @@ export default function EventMessagesPage() {
                         className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}
                       >
                         {isMe ? (
-                          <p className="pb-0.5 text-[10px] text-[#B3B9C6]">
+                          <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
                             {formatMessageStamp(message.createdAt)}
                           </p>
                         ) : null}
                         <div
-                          className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[#4D4D4D] ${
-                            isMe ? "bg-[#E9F5FF]" : "bg-white"
+                          className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[var(--text-strong)] ${
+                            isMe ? "bg-[#E9F5FF]" : "bg-[var(--surface-1)]"
                           }`}
                         >
                           {getMessageLabel(message)}
                         </div>
                         {!isMe ? (
-                          <p className="pb-0.5 text-[10px] text-[#B3B9C6]">
+                          <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
                             {formatMessageStamp(message.createdAt)}
                           </p>
                         ) : null}
                       </div>
                     </div>
                     {isMe ? (
-                      <Avatar className="size-10 border border-[#D4DAE5]">
+                      <Avatar className="size-10 border border-[var(--border)]">
                         <AvatarImage src={getMessageAvatarUrl(message)} />
                         <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
                       </Avatar>
@@ -269,3 +269,4 @@ export default function EventMessagesPage() {
     </div>
   );
 }
+

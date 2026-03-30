@@ -37,7 +37,7 @@ export function ProfileSection({
       <SectionHeader
         title="New Profile"
         description="Create new profile info, update existing profile, and manage avatar."
-        titleClassName="text-[30px] text-[#1E2430]"
+        titleClassName="text-[30px] text-[var(--text-strong)]"
       />
 
       {isLoading ? (
@@ -48,19 +48,19 @@ export function ProfileSection({
           <Skeleton className="h-12 w-full rounded-xl" />
         </div>
       ) : (
-        <div className="rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+        <div className="settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center gap-4">
-            <Avatar className="size-20 border border-[#D8DFEA]">
+            <Avatar className="size-20 border border-[var(--border)]">
               <AvatarImage src={avatarPreview || undefined} alt={profileName} />
               <AvatarFallback>
                 {profileName.slice(0, 1).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#212733]">
+              <p className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-strong)]">
                 {profileName}
               </p>
-              <p className="font-poppins text-[16px] leading-[120%] font-normal text-[#717B8D]">
+              <p className="font-poppins text-[16px] leading-[120%] font-normal text-[var(--text-muted)]">
                 {profileEmail}
               </p>
             </div>
@@ -73,7 +73,7 @@ export function ProfileSection({
                   onAvatarSelect(event.target.files?.[0] || null)
                 }
               />
-              <span className="font-poppins inline-flex h-10 items-center gap-2 rounded-xl border border-[#CED6E4] bg-[#e1e3e7] px-4 text-[16px] leading-[120%] font-medium text-[#44506B] hover:bg-[#EDF2FC]">
+              <span className="font-poppins inline-flex h-10 items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-4 text-[16px] leading-[120%] font-medium text-[var(--text-default)] hover:bg-[var(--surface-3)]">
                 <Upload className="size-4" />
                 Upload Avatar
               </span>
@@ -106,3 +106,5 @@ export function ProfileSection({
     </section>
   );
 }
+
+

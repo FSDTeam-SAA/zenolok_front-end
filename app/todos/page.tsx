@@ -166,7 +166,7 @@ function CategoryCard({
           onOpen(category._id);
         }
       }}
-      className="rounded-[26px] border border-[#D8DEE8] bg-[#F0F3F8] p-4 transition hover:border-[#C7CEDD]"
+      className="todo-category-card rounded-[26px] border border-[#D8DEE8] bg-[#F0F3F8] p-4 transition hover:border-[#C7CEDD]"
     >
       <div className="mb-3 flex items-center justify-between">
         <h3 className="font-poppins text-[24px] leading-[120%] font-semibold" style={{ color: category.color }}>
@@ -279,7 +279,7 @@ function CategoryCard({
 
       <button
         type="button"
-        className="mt-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[13px] text-[#7D8596]"
+        className="mt-3 inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1 text-[13px] text-[var(--text-muted)]"
         onClick={(event) => {
           event.stopPropagation();
           onCreateTodoRequest(category._id);
@@ -767,8 +767,8 @@ export default function TodosPage() {
   }, [deleteCategoryMutation, deleteTargetCategoryId]);
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-[30px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-5">
+    <div className="todos-page space-y-4">
+      <section className="todos-shell rounded-[30px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-end">
           <AddCategoryDialog
             open={addOpen}
@@ -811,7 +811,7 @@ export default function TodosPage() {
             {categoriesQuery.isLoading ? (
               <SectionLoading rows={4} />
             ) : scheduledItems.length ? (
-              <div className="rounded-[24px] bg-[#ECEFF4] p-3">
+              <div className="todos-scheduled-panel rounded-[24px] bg-[#ECEFF4] p-3">
                 <div
                   className="mb-3 grid grid-cols-3 rounded-full border border-[#D8DEE8] bg-[#F6F6F6] p-1 text-[14px]"
                   style={{ boxShadow: "0px 4px 4px 0px rgba(0, 0, 0, 0)" }}

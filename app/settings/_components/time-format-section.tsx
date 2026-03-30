@@ -18,13 +18,13 @@ export function TimeFormatSection({
         description="Use 24-hour time in all pages."
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+            <p className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
               24-hour format
             </p>
-            <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[#727C8E]">
+            <p className="font-poppins mt-1 text-[16px] leading-[120%] font-normal text-[var(--text-muted)]">
               {use24Hour ? "Enabled" : "Disabled"}
             </p>
           </div>
@@ -34,3 +34,4 @@ export function TimeFormatSection({
     </section>
   );
 }
+

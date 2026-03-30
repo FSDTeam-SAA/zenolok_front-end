@@ -20,7 +20,7 @@ import {
   UserPlus,
   Trash2,
 } from "lucide-react";
-import { endOfDay, format, startOfDay } from "date-fns";
+import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 import {
@@ -490,6 +490,18 @@ export default function EventDetailsPage() {
   const jamPreviewMessages = messages.slice(-2);
   const startDate = new Date(event.startTime);
   const endDate = new Date(event.endTime);
+  const hasValidSchedule =
+    !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
+  const eventDateLabel = hasValidSchedule
+    ? isSameDay(startDate, endDate)
+      ? format(startDate, "dd MMM yyyy").toUpperCase()
+      : `${format(startDate, "dd MMM yyyy").toUpperCase()} - ${format(endDate, "dd MMM yyyy").toUpperCase()}`
+    : "INVALID DATE";
+  const eventTimeLabel = event.isAllDay
+    ? "All day"
+    : hasValidSchedule
+      ? `${format(startDate, "hh:mm a")} - ${format(endDate, "hh:mm a")}`
+      : "Invalid time";
   const allUsers = usersQuery.data?.users || [];
   const isEventOwner = viewerId === event.createdBy;
 
@@ -587,11 +599,11 @@ export default function EventDetailsPage() {
   };
 
   return (
-    <div className="space-y-3 ">
+    <div className="event-details-page space-y-3 ">
       <div className=" flex items-center justify-between pt-1">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 text-[12px] text-[#4D5463]"
+          className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]"
         >
           <ArrowLeft className="size-4" /> Back
         </button>
@@ -612,7 +624,7 @@ export default function EventDetailsPage() {
           </button>
           <button
             type="button"
-            className="rounded p-1 text-[#0088FF] transition hover:bg-[#E8F4FF] cursor-pointer"
+            className="rounded p-1 text-[#0088FF] transition hover:bg-[var(--surface-3)] cursor-pointer"
             onClick={() => {
               if (!isEventOwner) {
                 toast.error("Only the event creator can edit this event");
@@ -630,11 +642,11 @@ export default function EventDetailsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-sm rounded-[22px] space-y-2">
           <DialogHeader>
-            <DialogTitle className="!text-[24px] font-medium text-[#4D4D4D]">
+            <DialogTitle className="!text-[24px] font-medium text-[var(--text-strong)]">
               Delete this event?
             </DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-[#6F7789]">
+          <p className="text-sm text-[var(--text-muted)]">
             This action cannot be undone.
           </p>
           <DialogFooter className="gap-2 sm:justify-end">
@@ -694,21 +706,21 @@ export default function EventDetailsPage() {
             <div className="space-y-2">
               <button
                 type="button"
-                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D]"
+                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[var(--text-strong)]"
                 onClick={() => setEditDatePopupOpen(true)}
               >
                 <CalendarDays className="size-5" />
                 Choose a date
               </button>
               {editDateSummary ? (
-                <p className="text-[12px] text-[#8890A0]">{editDateSummary}</p>
+                <p className="text-[12px] text-[var(--text-muted)]">{editDateSummary}</p>
               ) : null}
             </div>
             {!editIsAllDay ? (
               <div className="space-y-2">
                 <button
                   type="button"
-                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() => setEditTimePopupOpen(true)}
                   disabled={!editHasDateRange}
                 >
@@ -716,14 +728,14 @@ export default function EventDetailsPage() {
                   Set time
                 </button>
                 {editHasTimeRange ? (
-                  <p className="text-[12px] text-[#8890A0]">
+                  <p className="text-[12px] text-[var(--text-muted)]">
                     {editStartTime} - {editEndTime}
                   </p>
                 ) : null}
               </div>
             ) : null}
-            <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
-              <p className="fs-pop-16-regular text-[#3A404D]">All day</p>
+            <div className="flex items-center justify-between rounded-xl border border-[var(--border)] p-3">
+              <p className="fs-pop-16-regular text-[var(--text-default)]">All day</p>
               <Switch
                 checked={editIsAllDay}
                 onCheckedChange={(checked) => {
@@ -790,13 +802,13 @@ export default function EventDetailsPage() {
         }}
       />
 
-      <section className=" rounded-[16px] border border-[#E4E9F1] bg-[#F6F8FB] p-2">
-        <div className="rounded-[14px] border border-[#D8DEE8] bg-[#ECEFF4] p-3.5">
+      <section className="event-details-shell rounded-[16px] border border-[var(--border)] bg-[var(--surface-1)] p-2">
+        <div className="event-details-card rounded-[14px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-start gap-2">
                 <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
-                <p className="truncate text-[25px] font-medium leading-tight text-[#4D4D4D]">
+                <p className="truncate text-[25px] font-medium leading-tight text-[var(--text-strong)]">
                   {event.title}
                 </p>
               </div>
@@ -818,7 +830,7 @@ export default function EventDetailsPage() {
                 {participants.slice(0, 4).map((participant, index) => (
                   <Avatar
                     key={participant._id}
-                    className={`size-6 border-2 border-[#ECEFF4] ${
+                    className={`size-6 border-2 border-[var(--border)] ${
                       index === 0 ? "" : "-ml-2"
                     }`}
                   >
@@ -829,7 +841,7 @@ export default function EventDetailsPage() {
                   </Avatar>
                 ))}
                 {participants.length > 4 ? (
-                  <span className="-ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[#ECEFF4] bg-[#D7DDE8] px-1 text-[10px] font-medium text-[#4F5767]">
+                  <span className="-ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[var(--border)] bg-[var(--surface-3)] px-1 text-[10px] font-medium text-[var(--text-muted)]">
                     +{participants.length - 4}
                   </span>
                 ) : null}
@@ -839,7 +851,7 @@ export default function EventDetailsPage() {
                 <DialogTrigger asChild>
                   <button
                     type="button"
-                    className="rounded-full p-1 text-[#6F7789] transition hover:bg-white hover:text-[#2E333B] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)] hover:text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Add participants"
                     disabled={!isEventOwner}
                   >
@@ -854,11 +866,11 @@ export default function EventDetailsPage() {
                   </DialogHeader>
                   <div className="space-y-3">
                     <div className="space-y-2">
-                      <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-[#D7DDE8] bg-white p-2">
+                      <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
                         {usersQuery.isLoading ? (
                           <SectionLoading rows={3} />
                         ) : usersQuery.isError ? (
-                          <p className="px-2 py-3 text-center text-xs text-[#8F96A5]">
+                          <p className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
                             Failed to load users
                           </p>
                         ) : allUsers.length ? (
@@ -873,7 +885,7 @@ export default function EventDetailsPage() {
                             return (
                               <label
                                 key={user._id}
-                                className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-[#F3F6FB]"
+                                className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--surface-3)]"
                               >
                                 <div className="flex min-w-0 items-center gap-2">
                                   <Checkbox
@@ -882,7 +894,7 @@ export default function EventDetailsPage() {
                                       toggleShareUser(user._id, Boolean(next))
                                     }
                                   />
-                                  <Avatar className="size-7 border border-[#d2d8e5]">
+                                  <Avatar className="size-7 border border-[var(--border)]">
                                     <AvatarImage src={user.avatar?.url} />
                                     <AvatarFallback>
                                       {getParticipantDisplayName(user).slice(
@@ -892,16 +904,16 @@ export default function EventDetailsPage() {
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="min-w-0">
-                                    <p className="truncate text-sm text-[#4C5463]">
+                                    <p className="truncate text-sm text-[var(--text-default)]">
                                       {getParticipantDisplayName(user)}
                                     </p>
-                                    <p className="truncate text-[11px] text-[#8F96A5]">
+                                    <p className="truncate text-[11px] text-[var(--text-muted)]">
                                       {user.email}
                                     </p>
                                   </div>
                                 </div>
                                 {alreadyAdded ? (
-                                  <span className="shrink-0 text-[11px] text-[#7F8796]">
+                                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
                                     Added
                                   </span>
                                 ) : null}
@@ -909,7 +921,7 @@ export default function EventDetailsPage() {
                             );
                           })
                         ) : (
-                          <p className="px-2 py-3 text-center text-xs text-[#8F96A5]">
+                          <p className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
                             No users found
                           </p>
                         )}
@@ -932,39 +944,34 @@ export default function EventDetailsPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-start justify-between gap-3 text-[#4D4D4D]">
+          <div className="mt-4 flex items-start justify-between gap-3 text-[var(--text-strong)]">
             <div className="space-y-2.5">
               <div className="flex items-center gap-2 text-left">
-                <CalendarDays className="size-4 text-[#8C93A2]" />
-                <p className="text-[13px] font-medium tracking-[0.02em] text-[#5A6272]">
-                  {format(startDate, "dd MMM yyyy").toUpperCase()}
+                <CalendarDays className="size-4 text-[var(--text-muted)]" />
+                <p className="text-[13px] font-medium tracking-[0.02em] text-[var(--text-default)]">
+                  {eventDateLabel}
                 </p>
               </div>
-              <p className="flex items-center gap-2 text-[13px] text-[#5A6272]">
-                <Clock3 className="size-4 text-[#8C93A2]" />
-                {event.isAllDay
-                  ? "All day"
-                  : `${format(startDate, "hh:mm a")} - ${format(
-                      endDate,
-                      "hh:mm a",
-                    )}`}
+              <p className="flex items-center gap-2 text-[13px] text-[var(--text-default)]">
+                <Clock3 className="size-4 text-[var(--text-muted)]" />
+                {eventTimeLabel}
               </p>
-              <p className="flex items-center gap-2 text-[13px] text-[#5A6272]">
-                <Locate className="size-4 text-[#8C93A2]" />
+              <p className="flex items-center gap-2 text-[13px] text-[var(--text-default)]">
+                <Locate className="size-4 text-[var(--text-muted)]" />
                 {event.location || "No location"}
               </p>
             </div>
             <div className="flex flex-col items-end gap-2">
               <button
                 type="button"
-                className="rounded-full p-1 text-[#7E8696] transition hover:bg-white"
+                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
                 aria-label="Notification"
               >
                 <Bell className="size-4" />
               </button>
               <Badge
                 variant="neutral"
-                className="rounded-full border border-[#7E8696] bg-transparent px-2.5 py-1 !text-[14px] text-[#4D4D4D]"
+                className="rounded-full border border-[var(--border)] bg-transparent px-2.5 py-1 !text-[14px] text-[var(--text-strong)]"
               >
                 {event.isAllDay ? "All day" : "Scheduled"}
               </Badge>
@@ -1005,12 +1012,12 @@ export default function EventDetailsPage() {
           </div>
         ) : null}
 
-        <Card className="mt-3 rounded-[22px] border border-[#DCE2EB] bg-[#ECEFF4] p-3.5 shadow-none">
+        <Card className="mt-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 shadow-none">
           {jamView === "jam" ? (
             <div className="mb-2 flex items-center justify-end gap-1">
               <button
                 type="button"
-                className="rounded-full p-1 text-[#8E95A3] transition hover:bg-white"
+                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
                 onClick={() => router.push(`/events/${id}/messages`)}
                 aria-label="Open messages page"
               >
@@ -1018,7 +1025,7 @@ export default function EventDetailsPage() {
               </button>
               <button
                 type="button"
-                className="rounded-full p-1 text-[#8E95A3] transition hover:bg-white"
+                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
                 onClick={() => {
                   setLibraryTab("media");
                   setJamView("media");
@@ -1032,24 +1039,24 @@ export default function EventDetailsPage() {
 
           {jamView === "media" ? (
             <>
-              <div className="mb-3 flex items-center gap-2 text-[#8E95A3]">
+              <div className="mb-3 flex items-center gap-2 text-[var(--text-muted)]">
                 <button
                   type="button"
-                  className="rounded-full p-1 transition hover:bg-white"
+                  className="rounded-full p-1 transition hover:bg-[var(--surface-3)]"
                   onClick={() => setJamView("jam")}
                   aria-label="Back to JAM"
                 >
                   <ArrowLeft className="size-5" />
                 </button>
-                <div className="grid flex-1 grid-cols-3 rounded-full bg-[#E4E7ED] p-1 text-sm">
+                <div className="grid flex-1 grid-cols-3 rounded-full bg-[var(--surface-3)] p-1 text-sm">
                   {(["media", "files", "link"] as const).map((tab) => (
                     <button
                       key={tab}
                       type="button"
                       className={`rounded-full px-2 py-1 capitalize transition ${
                         tab === libraryTab
-                          ? "bg-white text-[#4D4D4D]"
-                          : "text-[#9AA1AE]"
+                          ? "bg-[var(--surface-1)] text-[var(--text-strong)]"
+                          : "text-[var(--text-muted)]"
                       }`}
                       onClick={() => setLibraryTab(tab)}
                     >
@@ -1065,7 +1072,7 @@ export default function EventDetailsPage() {
                     {mediaMessages.map((message) => (
                       <div
                         key={message._id}
-                        className="overflow-hidden rounded-sm bg-white"
+                        className="overflow-hidden rounded-sm bg-[var(--surface-1)]"
                       >
                         {message.mediaUrl ? (
                           <Image
@@ -1077,7 +1084,7 @@ export default function EventDetailsPage() {
                             unoptimized
                           />
                         ) : (
-                          <div className="flex h-[88px] items-center justify-center px-2 text-center text-xs text-[#8B93A2]">
+                          <div className="flex h-[88px] items-center justify-center px-2 text-center text-xs text-[var(--text-muted)]">
                             {getMessageLabel(message)}
                           </div>
                         )}
@@ -1098,17 +1105,17 @@ export default function EventDetailsPage() {
                     {fileMessages.map((message) => (
                       <div
                         key={message._id}
-                        className="flex items-center justify-between rounded-xl bg-white px-3 py-2"
+                        className="flex items-center justify-between rounded-xl bg-[var(--surface-1)] px-3 py-2"
                       >
                         <div className="min-w-0">
-                          <p className="truncate text-sm text-[#4D4D4D]">
+                          <p className="truncate text-sm text-[var(--text-strong)]">
                             {message.fileName || getMessageLabel(message)}
                           </p>
-                          <p className="text-xs text-[#9AA1AE]">
+                          <p className="text-xs text-[var(--text-muted)]">
                             {formatMessageStamp(message.createdAt)}
                           </p>
                         </div>
-                        <Paperclip className="size-4 text-[#9AA1AE]" />
+                        <Paperclip className="size-4 text-[var(--text-muted)]" />
                       </div>
                     ))}
                   </div>
@@ -1131,17 +1138,17 @@ export default function EventDetailsPage() {
                           href={linkValue}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center justify-between rounded-xl bg-white px-3 py-2"
+                          className="flex items-center justify-between rounded-xl bg-[var(--surface-1)] px-3 py-2"
                         >
                           <div className="min-w-0">
-                            <p className="truncate text-sm text-[#4D4D4D]">
+                            <p className="truncate text-sm text-[var(--text-strong)]">
                               {linkValue || "Link"}
                             </p>
-                            <p className="text-xs text-[#9AA1AE]">
+                            <p className="text-xs text-[var(--text-muted)]">
                               {formatMessageStamp(message.createdAt)}
                             </p>
                           </div>
-                          <Link2 className="size-4 text-[#9AA1AE]" />
+                          <Link2 className="size-4 text-[var(--text-muted)]" />
                         </a>
                       );
                     })}
@@ -1158,7 +1165,7 @@ export default function EventDetailsPage() {
 
           {jamView === "jam" ? (
             <>
-              <div className="max-h-[300px] space-y-3 overflow-auto rounded-[22px] bg-[#E6E8EC] p-2">
+              <div className="max-h-[300px] space-y-3 overflow-auto rounded-[22px] bg-[var(--surface-3)] p-2">
                 {messagesQuery.isLoading ? (
                   <SectionLoading rows={3} />
                 ) : jamPreviewMessages.length ? (
@@ -1177,7 +1184,7 @@ export default function EventDetailsPage() {
                         }`}
                       >
                         {!isMe ? (
-                          <Avatar className="size-10 border border-[#D4DAE5]">
+                          <Avatar className="size-10 border border-[var(--border)]">
                             <AvatarImage src={getMessageAvatarUrl(message)} />
                             <AvatarFallback>
                               {displayName.slice(0, 1)}
@@ -1191,7 +1198,7 @@ export default function EventDetailsPage() {
                         >
                           <p
                             className={`mb-1 text-[14px] leading-none font-medium ${
-                              isMe ? "text-[#31A8E8]" : "text-[#4D4D4D]"
+                              isMe ? "text-[#31A8E8]" : "text-[var(--text-strong)]"
                             }`}
                           >
                             {displayName}
@@ -1202,26 +1209,26 @@ export default function EventDetailsPage() {
                             }`}
                           >
                             {isMe ? (
-                              <p className="pb-0.5 text-[10px] text-[#B3B9C6]">
+                              <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
                                 {formatMessageStamp(message.createdAt)}
                               </p>
                             ) : null}
                             <div
-                              className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[#4D4D4D] ${
-                                isMe ? "bg-[#E9F5FF]" : "bg-white"
+                              className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[var(--text-strong)] ${
+                                isMe ? "bg-[#E9F5FF]" : "bg-[var(--surface-1)]"
                               }`}
                             >
                               {getMessageLabel(message)}
                             </div>
                             {!isMe ? (
-                              <p className="pb-0.5 text-[10px] text-[#B3B9C6]">
+                              <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
                                 {formatMessageStamp(message.createdAt)}
                               </p>
                             ) : null}
                           </div>
                         </div>
                         {isMe ? (
-                          <Avatar className="size-10 border border-[#D4DAE5]">
+                          <Avatar className="size-10 border border-[var(--border)]">
                             <AvatarImage src={getMessageAvatarUrl(message)} />
                             <AvatarFallback>
                               {displayName.slice(0, 1)}
@@ -1259,7 +1266,7 @@ export default function EventDetailsPage() {
         <div className="flex items-center justify-center">
           <Button
             variant="ghost"
-            className="rounded-full text-[#80889A]"
+            className="rounded-full text-[var(--text-muted)]"
             onClick={() => setJamView("jam")}
           >
             <ArrowLeft className="mr-1 size-4" /> Back to JAM
@@ -1269,3 +1276,5 @@ export default function EventDetailsPage() {
     </div>
   );
 }
+
+

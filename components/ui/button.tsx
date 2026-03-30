@@ -9,11 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[#2DAA46] text-white hover:bg-[#24913b]",
-        secondary: "bg-[#EAF0FF] text-[#2F5AA8] hover:bg-[#dce5ff]",
-        outline: "border border-[#A3A8B3] bg-transparent text-[#2A2D33] hover:bg-[#F2F4F8]",
-        ghost: "text-[#495061] hover:bg-[#ECEFF5]",
-        destructive: "bg-[#FF3B30] text-white hover:bg-[#e13127]",
+        default:
+          "bg-[var(--ui-btn-primary-bg)] text-[var(--ui-btn-primary-text)] hover:bg-[var(--ui-btn-primary-hover)]",
+        secondary:
+          "bg-[var(--ui-btn-secondary-bg)] text-[var(--ui-btn-secondary-text)] hover:bg-[var(--ui-btn-secondary-hover)]",
+        outline:
+          "border border-[var(--ui-btn-outline-border)] bg-[var(--ui-btn-outline-bg)] text-[var(--ui-btn-outline-text)] hover:bg-[var(--ui-btn-outline-hover)]",
+        ghost:
+          "text-[var(--ui-btn-ghost-text)] hover:bg-[var(--ui-btn-ghost-hover)]",
+        destructive:
+          "bg-[var(--ui-btn-danger-bg)] text-white hover:bg-[var(--ui-btn-danger-hover)]",
       },
       size: {
         default: "h-11 px-5",

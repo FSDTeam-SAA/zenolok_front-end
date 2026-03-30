@@ -56,19 +56,22 @@ export default function SearchPage() {
   const paged = useMemo(() => paginateArray(results, safePage, SEARCH_PAGE_SIZE), [results, safePage]);
 
   return (
-    <div className="space-y-4">
+    <div className="search-page space-y-4">
       <section className="flex items-center justify-between">
-        <button onClick={() => router.back()} className="flex items-center gap-2 text-xl font-medium text-[#2E333B]">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-xl font-medium text-[var(--text-default)]"
+        >
           <ArrowLeft className="size-5" /> Search
         </button>
       </section>
 
-      <section className="rounded-[28px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-6">
+      <section className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="relative min-w-[260px] flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[#979FB0]" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--text-muted)]" />
             <Input
-              className="h-11 rounded-xl bg-white pl-9"
+              className="h-11 rounded-xl pl-9"
               placeholder="Search by name or location"
               value={query}
               onChange={(event) => {
@@ -84,10 +87,13 @@ export default function SearchPage() {
         ) : results.length ? (
           <div className="space-y-3">
             {paged.items.map((event) => (
-              <Card key={event._id} className="rounded-2xl bg-[#E7EBF2] p-4 shadow-none">
-                <p className="text-2xl font-semibold text-[#3A3F49]">{event.title}</p>
-                <p className="text-xl text-[#5F6677]">{event.location || "No location"}</p>
-                <p className="mt-1 text-sm text-[#8E95A4]">{new Date(event.startTime).toLocaleString()}</p>
+              <Card
+                key={event._id}
+                className="rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-[var(--text-default)] shadow-none"
+              >
+                <p className="text-2xl font-semibold text-[var(--text-strong)]">{event.title}</p>
+                <p className="text-xl text-[var(--text-default)]">{event.location || "No location"}</p>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">{new Date(event.startTime).toLocaleString()}</p>
               </Card>
             ))}
             <PaginationControls page={paged.page} totalPages={paged.totalPages} onPageChange={setPage} />
@@ -99,3 +105,4 @@ export default function SearchPage() {
     </div>
   );
 }
+

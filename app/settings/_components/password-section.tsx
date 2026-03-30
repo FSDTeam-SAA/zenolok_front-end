@@ -31,7 +31,7 @@ export function PasswordSection({
         description="Use your current password and set a strong new password."
       />
 
-      <div className="max-w-[560px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="space-y-3">
           <PasswordInput
             value={oldPassword}
@@ -64,3 +64,4 @@ export function PasswordSection({
     </section>
   );
 }
+

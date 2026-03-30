@@ -12,7 +12,7 @@ import {
   MessageCircle,
   Plus,
 } from "lucide-react";
-import { endOfDay, format, startOfDay } from "date-fns";
+import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ import { queryKeys } from "@/lib/query-keys";
 
 const eventFilters = [
   { label: "Upcoming", value: "upcoming" },
+  { label: "On-going", value: "today" },
   { label: "Past", value: "past" },
   { label: "All", value: "all" },
 ] as const;
@@ -164,19 +165,29 @@ export default function EventsPage() {
   const filteredEvents = useMemo(() => {
     const now = eventsQuery.dataUpdatedAt || 0;
     const todayStart = startOfDay(new Date(now)).getTime();
+    const todayEnd = endOfDay(new Date(now)).getTime();
     const events = (eventsQuery.data || [])
       .filter((event) => {
         const startTime = new Date(event.startTime).getTime();
+        const endTime = new Date(event.endTime).getTime();
         if (Number.isNaN(startTime)) {
           return false;
         }
+        if (Number.isNaN(endTime)) {
+          return false;
+        }
 
+        const eventStartDay = startOfDay(new Date(startTime)).getTime();
+
+        if (filter === "today") {
+          return startTime <= todayEnd && endTime >= todayStart;
+        }
         if (filter === "upcoming") {
-          return startOfDay(new Date(startTime)).getTime() >= todayStart;
+          return eventStartDay >= todayStart;
         }
 
         if (filter === "past") {
-          return startOfDay(new Date(startTime)).getTime() < todayStart;
+          return eventStartDay < todayStart;
         }
 
         return true;
@@ -245,8 +256,8 @@ export default function EventsPage() {
   }, [hasDateRange]);
 
   return (
-    <div className="space-y-4">
-      <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="events-page space-y-4">
+      <section className="events-toolbar flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
           <button type="button" className="shrink-0 rounded-full" onClick={() => setSelectedBrickIds([])}>
             <Badge
@@ -260,9 +271,9 @@ export default function EventsPage() {
                       color: "white",
                     }
                   : {
-                      backgroundColor: "white",
-                      borderColor: "#C2C9D6",
-                      color: "#4C5361",
+                      backgroundColor: "var(--ui-badge-neutral-bg)",
+                      borderColor: "var(--ui-badge-neutral-border)",
+                      color: "var(--ui-badge-neutral-text)",
                     }
               }
             >
@@ -293,7 +304,7 @@ export default function EventsPage() {
                       ? {
                           color: brick.color,
                           borderColor: brick.color,
-                          backgroundColor: "white",
+                          backgroundColor: "var(--ui-badge-neutral-bg)",
                         }
                       : {
                           backgroundColor: brick.color,
@@ -310,17 +321,17 @@ export default function EventsPage() {
 
           <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
             <DialogTrigger asChild>
-              <button className="flex size-9 shrink-0 items-center justify-center rounded-full border border-[#B2B8C6] text-[#7B8395] hover:bg-[#ECF0F7]">
+              <button className="events-toolbar-create-brick-btn flex size-9 shrink-0 items-center justify-center rounded-full border border-[#B2B8C6] text-[#7B8395] hover:bg-[#ECF0F7]">
                 <Plus className="size-4" />
               </button>
             </DialogTrigger>
-            <DialogContent className="max-w-5xl rounded-[28px] border border-[#DCE2ED] bg-[#F5F7FB] p-4 sm:p-6 space-y-2">
+            <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
               <DialogHeader>
-                <DialogTitle>Create Brick</DialogTitle>
+                <DialogTitle className="text-[var(--text-strong)]">Create Brick</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
-                <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+                <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
                   <div className="grid grid-cols-10 gap-2 sm:gap-3">
                     {colorPalette.map((color) => (
                       <button
@@ -340,7 +351,7 @@ export default function EventsPage() {
                   <div>
                     <p className="text-sm">Brick Icon</p>
                   </div>
-                  <div className="rounded-3xl border border-[#DFE4EE] bg-[#EEF2F8] p-3 sm:p-4">
+                  <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
                     <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5 md:grid-cols-10">
                     {brickIconOptions.map((option) => (
                       <button
@@ -350,7 +361,7 @@ export default function EventsPage() {
                         className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
                           brickIcon === option.value
                             ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
-                            : "border-transparent bg-white text-[#5A6070] hover:border-[#C8D0E0]"
+                            : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-default)] hover:border-[var(--ring)]"
                         }`}
                         aria-label={option.label}
                         title={option.label}
@@ -361,10 +372,10 @@ export default function EventsPage() {
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-[#D6DCE8] bg-[#F5F7FB] px-3 py-2">
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
                   <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
                   <BrickIcon name={brickIcon} className="size-4" />
-                  <span className="fs-pop-14-regular-right text-left text-[#2E3542]">{brickName.trim() || "Preview"}</span>
+                  <span className="fs-pop-14-regular-right text-left text-[var(--text-default)]">{brickName.trim() || "Preview"}</span>
                 </div>
               </div>
               <DialogFooter>
@@ -378,19 +389,21 @@ export default function EventsPage() {
 
         <div className="flex flex-col items-end gap-2">
           <Input
-            className="h-10 w-full min-w-[220px] rounded-xl bg-white sm:w-[260px]"
+            className="h-10 w-full rounded-xl sm:w-[260px]"
             placeholder="Search events..."
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
           />
-          <div className="flex items-center rounded-xl border border-[#CCD2DE]">
+          <div className="events-filter-tabs flex items-center rounded-xl border border-[#CCD2DE]">
             {eventFilters.map((item) => (
               <button
                 key={item.value}
                 type="button"
                 onClick={() => setFilter(item.value)}
-                className={`font-poppins px-4 py-2 text-[20px] leading-[120%] font-medium ${
-                  filter === item.value ? "bg-[#DFE5F2] text-[#252932]" : "text-[#727A8A]"
+                className={`font-poppins whitespace-nowrap px-4 py-2 text-[20px] leading-[120%] font-medium ${
+                  filter === item.value
+                    ? "bg-[var(--surface-3)] text-[var(--text-strong)]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text-default)]"
                 }`}
               >
                 {item.label}
@@ -400,13 +413,13 @@ export default function EventsPage() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-6">
+      <section className="events-content-shell rounded-[28px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <p className="font-poppins text-[32px] leading-[120%] font-semibold text-[#3D414A]">Events</p>
           <button
             type="button"
             onClick={() => setCreateEventOpen(true)}
-            className="flex size-9 items-center justify-center rounded-full border border-[#B2B8C6] bg-white text-[#7B8395] hover:bg-[#ECF0F7]"
+            className="events-create-btn flex size-9 items-center justify-center rounded-full border border-[#B2B8C6] bg-white text-[#7B8395] hover:bg-[#ECF0F7]"
             aria-label="Create event"
           >
             <Plus className="size-4" />
@@ -419,10 +432,24 @@ export default function EventsPage() {
             <div className="space-y-3">
               {paged.items.map((event) => {
                 const messageCount = jamCountByEventId[event._id] ?? 0;
+                const startDate = new Date(event.startTime);
+                const endDate = new Date(event.endTime);
+                const hasValidRange =
+                  !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
+                const dateLabel = hasValidRange
+                  ? isSameDay(startDate, endDate)
+                    ? format(startDate, "dd MMM yyyy")
+                    : `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
+                  : "Invalid date";
+                const timeLabel = event.isAllDay
+                  ? "All day"
+                  : hasValidRange
+                    ? `${format(startDate, "hh:mm a")} - ${format(endDate, "hh:mm a")}`
+                    : "Invalid time";
 
                 return (
                   <Link key={event._id} href={`/events/${event._id}`}>
-                    <Card className="rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]">
+                    <Card className="events-list-card rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]">
                       <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-start gap-3">
                           <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
@@ -430,16 +457,13 @@ export default function EventsPage() {
                             <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
                             <div className="font-poppins mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[#4D5463]">
                               <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                <CalendarDays className="size-4" /> {format(new Date(event.startTime), "dd MMM yyyy")}
+                                <CalendarDays className="size-4" /> {dateLabel}
                               </span>
                               <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
                                 <MapPin className="size-4" /> {event.location || "No location"}
                               </span>
                               <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                <Clock3 className="size-4" />
-                                {event.isAllDay
-                                  ? "All day"
-                                  : `${format(new Date(event.startTime), "hh:mm a")} - ${format(new Date(event.endTime), "hh:mm a")}`}
+                                <Clock3 className="size-4" /> {timeLabel}
                               </span>
                             </div>
                           </div>
@@ -519,7 +543,7 @@ export default function EventsPage() {
                         ? {
                             color: brick.color,
                             borderColor: brick.color,
-                            backgroundColor: "white",
+                            backgroundColor: "var(--ui-badge-neutral-bg)",
                           }
                         : {
                             backgroundColor: brick.color,

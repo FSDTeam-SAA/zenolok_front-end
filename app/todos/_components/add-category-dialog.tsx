@@ -54,16 +54,16 @@ export function AddCategoryDialog({
         <DialogTrigger asChild>
           <button
             type="button"
-            className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-[#BEC6D7] text-[#8C94A6] transition hover:bg-[#ECF1F9]"
+            className="flex size-16 items-center justify-center rounded-2xl border-2 border-dashed border-[var(--border)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
             aria-label="Add category"
           >
             <Plus className="size-7" />
           </button>
         </DialogTrigger>
       ) : null}
-      <DialogContent className="max-w-5xl rounded-[30px] border border-[#DAE0EB] bg-[#F5F7FC] p-4 sm:p-6">
+      <DialogContent className="max-w-5xl rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
         <DialogHeader className="mb-4">
-          <DialogTitle className="text-center text-[40px]">{title}</DialogTitle>
+          <DialogTitle className="text-center text-[40px] text-[var(--text-strong)]">{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -77,7 +77,7 @@ export function AddCategoryDialog({
             />
           </div>
 
-          <div className="rounded-3xl border border-[#DEE4EF] bg-[#EEF2F8] p-4">
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
             <div className="grid grid-cols-10 gap-2 sm:gap-3">
               {colorPalette.map((color) => (
                 <button
@@ -86,7 +86,7 @@ export function AddCategoryDialog({
                   onClick={() => onNewCategoryColorChange(color)}
                   className={`size-8 rounded-full border-2 sm:size-10 ${
                     newCategoryColor === color
-                      ? "border-[#283040]"
+                      ? "border-[var(--text-strong)]"
                       : "border-transparent"
                   }`}
                   style={{ backgroundColor: color }}

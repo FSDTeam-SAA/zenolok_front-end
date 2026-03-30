@@ -26,7 +26,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 w-72 rounded-xl border border-[#E0E6F1] bg-white p-3 shadow-[0_14px_35px_rgba(18,22,31,0.14)]",
+          "z-50 w-72 rounded-xl border border-[var(--ui-popover-border)] bg-[var(--ui-popover-bg)] p-3 text-[var(--text-default)] shadow-[var(--ui-popover-shadow)]",
           className
         )}
         {...props}

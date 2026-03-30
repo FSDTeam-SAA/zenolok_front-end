@@ -26,14 +26,14 @@ export function NotificationsSection({
         description="Configure which alerts you want to receive."
       />
 
-      <div className="max-w-[760px] rounded-3xl border border-[#DEE3ED] bg-[#e1e3e7] p-4 sm:p-5">
+      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
         <div className="space-y-3">
           {notificationOptions.map((item) => (
             <div
               key={item.key}
-              className="flex items-center justify-between rounded-2xl border border-[#E2E7F0] bg-[#e1e3e7] px-3 py-3"
+              className="flex items-center justify-between rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3"
             >
-              <span className="font-poppins text-[20px] leading-[120%] font-medium text-[#2E3648]">
+              <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
                 {item.label}
               </span>
               <Switch
@@ -47,3 +47,4 @@ export function NotificationsSection({
     </section>
   );
 }
+

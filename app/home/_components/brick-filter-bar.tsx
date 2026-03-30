@@ -24,7 +24,7 @@ export function BrickFilterBar({
   const isAllSelected = selectedBrickIds.length === 0;
 
   return (
-    <section className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+    <section className="home-brick-filter flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
       <button
         type="button"
         className="shrink-0"
@@ -41,9 +41,9 @@ export function BrickFilterBar({
                   color: "white",
                 }
               : {
-                  backgroundColor: "white",
-                  borderColor: "#C2C9D6",
-                  color: "#4C5361",
+                  backgroundColor: "var(--ui-badge-neutral-bg)",
+                  borderColor: "var(--ui-badge-neutral-border)",
+                  color: "var(--ui-badge-neutral-text)",
                 }
           }
         >
@@ -68,7 +68,7 @@ export function BrickFilterBar({
                   ? {
                       color: brick.color,
                       borderColor: brick.color,
-                      backgroundColor: "white",
+                      backgroundColor: "var(--ui-badge-neutral-bg)",
                     }
                   : {
                       backgroundColor: brick.color,
@@ -89,7 +89,7 @@ export function BrickFilterBar({
         onClick={onCreateBrick}
         aria-label="Create brick"
       >
-        <span className="flex size-8 items-center justify-center rounded-full border border-[#B9BFCA] bg-white text-[#7D8597]">
+        <span className="flex size-8 items-center justify-center rounded-full border border-[var(--ui-badge-neutral-border)] bg-[var(--ui-badge-neutral-bg)] text-[var(--ui-badge-neutral-text)]">
           <Plus className="size-4" />
         </span>
       </button>
