@@ -112,6 +112,29 @@ export interface JamMessage {
   updatedAt: string;
 }
 
+export interface FeedbackMedia {
+  public_id: string;
+  url: string;
+}
+
+export interface FeedbackUser {
+  _id: string;
+  name?: string;
+  email?: string;
+  username?: string;
+  avatar?: AvatarData;
+}
+
+export interface FeedbackData {
+  _id: string;
+  user: string | FeedbackUser;
+  message: string;
+  photos: FeedbackMedia[];
+  videos: FeedbackMedia[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface NotificationData {
   _id: string;
   title: string;
@@ -285,6 +308,14 @@ export const jamApi = {
     })),
   getByEvent: (eventId: string) => unwrap<JamMessage[]>(apiClient.get(`/jam-messages/event/${eventId}`)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/jam-messages/${id}`)),
+};
+
+export const feedbackApi = {
+  create: (payload: FormData) =>
+    unwrap<FeedbackData>(apiClient.post("/feedbacks", payload, {
+      headers: { "Content-Type": "multipart/form-data" },
+    })),
+  getAll: () => unwrap<FeedbackData[]>(apiClient.get("/feedbacks")),
 };
 
 export const notificationApi = {

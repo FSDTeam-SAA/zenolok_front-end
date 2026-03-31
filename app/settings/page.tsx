@@ -17,7 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { authApi, eventApi, userApi } from "@/lib/api";
+import { authApi, eventApi, feedbackApi, userApi } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { weekStartDayOptions, type WeekStartDay } from "@/lib/settings";
 
@@ -307,6 +307,8 @@ export default function SettingsPage() {
 
   const [alarmPreset, setAlarmPreset] = React.useState<AlarmPreset>("none");
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
+  const [feedbackPhotos, setFeedbackPhotos] = React.useState<File[]>([]);
+  const [feedbackVideos, setFeedbackVideos] = React.useState<File[]>([]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = React.useState(false);
   const [bricksManageModalOpen, setBricksManageModalOpen] =
@@ -324,6 +326,11 @@ export default function SettingsPage() {
   const profileQuery = useQuery({
     queryKey: queryKeys.profile,
     queryFn: userApi.getProfile,
+  });
+
+  const feedbackQuery = useQuery({
+    queryKey: queryKeys.feedbacks,
+    queryFn: feedbackApi.getAll,
   });
 
   React.useEffect(() => {
@@ -589,18 +596,103 @@ export default function SettingsPage() {
     changePasswordMutation.mutate();
   };
 
+  const feedbackMutation = useMutation({
+    mutationFn: () => {
+      const nextMessage = feedbackMessage.trim();
+      if (!nextMessage) {
+        throw new Error("Please write feedback");
+      }
+
+      const formData = new FormData();
+      formData.append("message", nextMessage);
+
+      feedbackPhotos.forEach((photo) => {
+        formData.append("photos", photo);
+      });
+      feedbackVideos.forEach((video) => {
+        formData.append("videos", video);
+      });
+
+      return feedbackApi.create(formData);
+    },
+    onSuccess: () => {
+      toast.success("Feedback sent");
+      setFeedbackMessage("");
+      setFeedbackPhotos([]);
+      setFeedbackVideos([]);
+      queryClient.invalidateQueries({ queryKey: queryKeys.feedbacks });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to submit feedback");
+    },
+  });
+
   const updateNotification = (key: NotificationKey, value: boolean) => {
     setNotificationPrefs((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleFeedbackSubmit = () => {
-    if (!feedbackMessage.trim()) {
-      toast.error("Please write feedback");
+  const handleAddFeedbackPhotos = (files: FileList | null) => {
+    if (!files?.length) {
       return;
     }
 
-    toast.success("Feedback sent");
-    setFeedbackMessage("");
+    const nextPhotos = Array.from(files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+
+    if (!nextPhotos.length) {
+      toast.error("Please choose image files");
+      return;
+    }
+
+    setFeedbackPhotos((previous) => {
+      const slots = 5 - previous.length;
+      if (slots <= 0) {
+        toast.error("Maximum 5 photos allowed");
+        return previous;
+      }
+
+      const filesToAdd = nextPhotos.slice(0, slots);
+      if (filesToAdd.length < nextPhotos.length) {
+        toast.error("Maximum 5 photos allowed");
+      }
+
+      return [...previous, ...filesToAdd];
+    });
+  };
+
+  const handleAddFeedbackVideos = (files: FileList | null) => {
+    if (!files?.length) {
+      return;
+    }
+
+    const nextVideos = Array.from(files).filter((file) =>
+      file.type.startsWith("video/"),
+    );
+
+    if (!nextVideos.length) {
+      toast.error("Please choose video files");
+      return;
+    }
+
+    setFeedbackVideos((previous) => {
+      const slots = 5 - previous.length;
+      if (slots <= 0) {
+        toast.error("Maximum 5 videos allowed");
+        return previous;
+      }
+
+      const filesToAdd = nextVideos.slice(0, slots);
+      if (filesToAdd.length < nextVideos.length) {
+        toast.error("Maximum 5 videos allowed");
+      }
+
+      return [...previous, ...filesToAdd];
+    });
+  };
+
+  const handleFeedbackSubmit = () => {
+    feedbackMutation.mutate();
   };
 
   const profileName =
@@ -699,8 +791,25 @@ export default function SettingsPage() {
       case "feedback":
         return (
           <FeedbackSection
+            feedbacks={feedbackQuery.data || []}
+            isFeedbacksLoading={feedbackQuery.isLoading}
+            isSubmitting={feedbackMutation.isPending}
             message={feedbackMessage}
+            photos={feedbackPhotos}
+            videos={feedbackVideos}
+            onAddPhotos={handleAddFeedbackPhotos}
+            onAddVideos={handleAddFeedbackVideos}
             onChangeMessage={setFeedbackMessage}
+            onRemovePhoto={(index) =>
+              setFeedbackPhotos((previous) =>
+                previous.filter((_, currentIndex) => currentIndex !== index),
+              )
+            }
+            onRemoveVideo={(index) =>
+              setFeedbackVideos((previous) =>
+                previous.filter((_, currentIndex) => currentIndex !== index),
+              )
+            }
             onSubmit={handleFeedbackSubmit}
           />
         );
