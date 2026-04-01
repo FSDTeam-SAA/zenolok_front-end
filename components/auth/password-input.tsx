@@ -18,7 +18,7 @@ export function PasswordInput({ className, inputClassName, ...props }: PasswordI
       <Input type={visible ? "text" : "password"} className={cn("pr-11", inputClassName)} {...props} />
       <button
         type="button"
-        className="absolute top-1/2 right-3 -translate-y-1/2 text-[#6F7687] transition hover:text-[#2A2F37]"
+        className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--ui-input-placeholder)] transition hover:text-[var(--ui-input-text)]"
         onClick={() => setVisible((state) => !state)}
         aria-label={visible ? "Hide password" : "Show password"}
       >

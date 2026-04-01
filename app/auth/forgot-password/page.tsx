@@ -41,16 +41,16 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-[1180px] rounded-[42px] bg-[#F4F6FA] p-10 sm:p-16">
+      <Card className="w-full max-w-[1180px] rounded-[42px] p-10 sm:p-16">
         <div className="mx-auto w-full max-w-[560px] py-16 text-center">
-          <h1 className="fs-pop-60-bold text-[#070910]">Forgot Password</h1>
-          <p className="fs-pop-20-medium-center mt-5 text-[#2F323A]">Enter your email to receive the OTP</p>
+          <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Forgot Password</h1>
+          <p className="fs-pop-20-medium-center mt-5 text-[var(--text-default)]">Enter your email to receive the OTP</p>
 
           <form className="mt-8 space-y-6" onSubmit={form.handleSubmit((values) => mutation.mutate(values))}>
             <div>
               <div className="relative">
                 <Input placeholder="Email Address" className="fs-pop-16-regular h-14 pr-12" {...form.register("email")} />
-                <Mail className="pointer-events-none absolute top-1/2 right-4 size-6 -translate-y-1/2 text-[#6F7584]" />
+                <Mail className="pointer-events-none absolute top-1/2 right-4 size-6 -translate-y-1/2 text-[var(--ui-input-placeholder)]" />
               </div>
               {form.formState.errors.email ? (
                 <p className="mt-1 text-left text-sm text-[#EA4335]">{form.formState.errors.email.message}</p>

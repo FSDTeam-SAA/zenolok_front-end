@@ -20,14 +20,16 @@ export function LogoutConfirmDialog({ isPending, open, onConfirm, onOpenChange }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-3xl">
         <DialogHeader>
-          <DialogTitle className="text-[32px]">Confirm Logout</DialogTitle>
-          <DialogDescription>Are you sure you want to logout from your account?</DialogDescription>
+          <DialogTitle className="!text-[24px]">Confirm Logout</DialogTitle>
+          <DialogDescription className="!text-[14px] leading-[120%] text-[#6B7280]">
+            Are you sure you want to logout from your account?
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-3">
           <Button
             type="button"
             variant="outline"
-            className="font-poppins h-10 min-w-[92px] rounded-xl text-[16px] leading-[120%] font-medium"
+            className="font-poppins h-10 min-w-[92px] rounded-xl !text-[14px] leading-[120%] font-medium"
             onClick={() => onOpenChange(false)}
           >
             No
@@ -35,7 +37,7 @@ export function LogoutConfirmDialog({ isPending, open, onConfirm, onOpenChange }
           <Button
             type="button"
             variant="destructive"
-            className="font-poppins h-10 min-w-[92px] rounded-xl text-[16px] leading-[120%] font-medium"
+            className="font-poppins h-10 min-w-[92px] rounded-xl !text-[14px] leading-[120%] font-medium"
             onClick={onConfirm}
             disabled={isPending}
           >

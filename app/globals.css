@@ -104,6 +104,31 @@ body {
   color: var(--text-default);
 }
 
+.auth-shell {
+  background: rgba(248, 250, 253, 0.62);
+  border-color: #dce3ef;
+  box-shadow: 4px 0px 32px 0px rgba(0, 0, 0, 0.15);
+}
+
+.auth-split-panel {
+  background: #f6f7f9;
+}
+
+.auth-split-glass {
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: -8px 0 22px rgba(0, 0, 0, 0.08);
+}
+
+.auth-split-glass-reverse {
+  box-shadow: 8px 0 22px rgba(0, 0, 0, 0.08);
+}
+
+.auth-alert-error {
+  border-color: rgba(224, 179, 179, 0.8);
+  background: rgba(255, 242, 242, 0.95);
+  color: #8c3a3a;
+}
+
 body.theme-dark {
   --background: #070b12;
   --foreground: #e8eef9;
@@ -179,6 +204,31 @@ body.theme-dark {
   --ui-checkbox-bg: #162337;
   --ui-checkbox-border: #496082;
   --ui-checkbox-ring: #8bbaff;
+}
+
+body.theme-dark .auth-shell {
+  background: rgba(9, 15, 24, 0.72);
+  border-color: #24364f;
+  box-shadow: 0 22px 60px rgba(2, 7, 15, 0.62);
+}
+
+body.theme-dark .auth-split-panel {
+  background: #121d2c;
+}
+
+body.theme-dark .auth-split-glass {
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: -8px 0 22px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .auth-split-glass-reverse {
+  box-shadow: 8px 0 22px rgba(0, 0, 0, 0.3);
+}
+
+body.theme-dark .auth-alert-error {
+  border-color: rgba(226, 122, 122, 0.45);
+  background: rgba(104, 43, 43, 0.2);
+  color: #ffc5c5;
 }
 
 .app-top-nav {

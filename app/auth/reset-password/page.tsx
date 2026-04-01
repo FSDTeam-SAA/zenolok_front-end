@@ -62,13 +62,13 @@ function ResetPasswordContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-[1180px] rounded-[42px] bg-[#F4F6FA] p-10 sm:p-16">
+      <Card className="w-full max-w-[1180px] rounded-[42px] p-10 sm:p-16">
         <div className="mx-auto w-full max-w-[560px] py-16 text-center">
-          <h1 className="fs-pop-60-bold text-[#070910]">Reset Password</h1>
-          <p className="fs-pop-20-medium-center mt-5 text-[#2F323A]">Please kindly set your new password</p>
+          <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Reset Password</h1>
+          <p className="fs-pop-20-medium-center mt-5 text-[var(--text-default)]">Please kindly set your new password</p>
 
           {missingParams ? (
-            <div className="mt-8 rounded-xl border border-[#E0B3B3] bg-[#FFF2F2] p-4 text-left text-[#8C3A3A]">
+            <div className="auth-alert-error mt-8 rounded-xl border p-4 text-left">
               Missing reset session. Please request OTP again.
             </div>
           ) : null}
@@ -108,9 +108,9 @@ export default function ResetPasswordPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center p-4">
-          <Card className="w-full max-w-[1180px] rounded-[42px] bg-[#F4F6FA] p-10 sm:p-16">
+          <Card className="w-full max-w-[1180px] rounded-[42px] p-10 sm:p-16">
             <div className="mx-auto w-full max-w-[560px] py-16 text-center">
-              <h1 className="fs-pop-60-bold text-[#070910]">Reset Password</h1>
+              <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Reset Password</h1>
             </div>
           </Card>
         </div>

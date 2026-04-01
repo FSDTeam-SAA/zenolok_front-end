@@ -46,7 +46,7 @@ function OtpInput({ value, onChange }: { value: string; onChange: (value: string
               refs.current[index - 1]?.focus();
             }
           }}
-          className="font-poppins h-16 w-14 rounded-xl border border-[#8B93A4] bg-white text-center text-[40px] leading-[120%] font-semibold"
+          className="font-poppins h-16 w-14 rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] text-center text-[40px] leading-[120%] font-semibold text-[var(--ui-input-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
           inputMode="numeric"
           maxLength={1}
         />
@@ -101,21 +101,21 @@ function VerifyEmailContent() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-[1180px] rounded-[42px] bg-[#F4F6FA] p-10 sm:p-16">
+      <Card className="w-full max-w-[1180px] rounded-[42px] p-10 sm:p-16">
         <div className="mx-auto w-full max-w-[560px] py-16 text-center">
-          <h1 className="fs-pop-60-bold text-[#070910]">Verify Email</h1>
-          <p className="fs-pop-20-medium-center mt-5 text-[#2F323A]">An OTP has been sent to your email address please verify it below</p>
+          <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Verify Email</h1>
+          <p className="fs-pop-20-medium-center mt-5 text-[var(--text-default)]">An OTP has been sent to your email address please verify it below</p>
 
           <div className="mt-8">
             <OtpInput value={otp} onChange={setOtp} />
           </div>
 
-          <p className="fs-pop-16-regular mt-6 text-center text-[#2F323A]">
+          <p className="fs-pop-16-regular mt-6 text-center text-[var(--text-default)]">
             Didn&apos;t Receive OTP?{" "}
             <button
               type="button"
               onClick={() => resendMutation.mutate()}
-              className="font-semibold text-[#2DAA46] hover:underline"
+              className="font-semibold text-[var(--ui-btn-primary-bg)] hover:underline"
             >
               RESEND OTP
             </button>
@@ -139,9 +139,9 @@ export default function VerifyEmailPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center p-4">
-          <Card className="w-full max-w-[1180px] rounded-[42px] bg-[#F4F6FA] p-10 sm:p-16">
+          <Card className="w-full max-w-[1180px] rounded-[42px] p-10 sm:p-16">
             <div className="mx-auto w-full max-w-[560px] py-16 text-center">
-              <h1 className="fs-pop-60-bold text-[#070910]">Verify Email</h1>
+              <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Verify Email</h1>
             </div>
           </Card>
         </div>
@@ -151,4 +151,3 @@ export default function VerifyEmailPage() {
     </Suspense>
   );
 }
-

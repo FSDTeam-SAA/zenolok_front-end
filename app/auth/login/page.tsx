@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
@@ -71,33 +70,37 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-8">
-      <div className="relative w-full max-w-[1172px] overflow-hidden rounded-[40px] bg-[rgba(248,250,253,0.6)] shadow-[4px_0px_32px_0px_rgba(0,0,0,0.15)] lg:h-[777.9995px]">
+      <div className="auth-shell relative w-full max-w-[1172px] overflow-hidden rounded-[40px] border lg:h-[777.9995px]">
         <div className="pointer-events-none absolute inset-0 hidden lg:block">
-          <div className="absolute left-0 top-0 h-[777.9995px] w-[696.5px] bg-[#f6f7f9]" style={{ clipPath: "polygon(0 0, 100% 0, 68% 100%, 0 100%)" }} />
-          <div className="absolute right-0 top-0 h-[777.9995px] w-[696.5px] bg-[#f6f7f9]" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 32% 100%)" }} />
-          <div className="absolute left-4/5 top-0 h-[777.9995px] w-[696.5px] -translate-x-1/2 skew-x-[165deg] bg-[rgba(255,255,255,0.55)] shadow-[-8px_0_22px_rgba(0,0,0,0.08)]" />
+          <div className="auth-split-panel absolute left-0 top-0 h-[777.9995px] w-[696.5px]" style={{ clipPath: "polygon(0 0, 100% 0, 68% 100%, 0 100%)" }} />
+          <div className="auth-split-panel absolute right-0 top-0 h-[777.9995px] w-[696.5px]" style={{ clipPath: "polygon(0 0, 100% 0, 100% 100%, 32% 100%)" }} />
+          <div className="auth-split-glass absolute left-4/5 top-0 h-[777.9995px] w-[696.5px] -translate-x-1/2 skew-x-[165deg]" />
         </div>
 
         <div className="relative z-10 grid h-full lg:grid-cols-2">
           <div className="flex items-center justify-center px-5 py-10 text-center sm:px-10">
             <div className="w-full max-w-[500px]">
-              <h1 className="fs-pop-60-bold text-[#090b12]">Welcome Back!</h1>
-              <p className="font-poppins mx-auto mt-8 max-w-[430px] text-[22px] leading-[1.2] font-semibold text-[#1f232d]">To keep connected with us please login with your personal info</p>
+              <h1 className="fs-pop-60-bold text-[var(--text-strong)]">Welcome Back!</h1>
+              <p className="font-poppins mx-auto mt-8 max-w-[430px] text-[22px] leading-[1.2] font-semibold text-[var(--text-default)]">To keep connected with us please login with your personal info</p>
             </div>
           </div>
 
           <div className="flex items-center justify-center px-5 py-10 sm:px-10">
             <div className="w-full max-w-[468px]">
               <div className="mb-8 text-center">
-                <h2 className="fs-pop-60-bold text-[#090b12]">Login</h2>
-                <p className="font-poppins mt-7 text-[20px] font-normal text-[#2f323a]">Use your username for login</p>
+                <h2 className="fs-pop-60-bold text-[var(--text-strong)]">Login</h2>
+                <p className="font-poppins mt-7 text-[20px] font-normal text-[var(--text-default)]">Use your username for login</p>
               </div>
 
               <form className="space-y-[18px]" onSubmit={form.handleSubmit(onSubmit)}>
                 <div>
                   <div className="relative">
-                    <Input placeholder="User Email" {...form.register("email")} className="h-[56px] rounded-[4px] border-[#8f9399] bg-transparent pr-12 font-poppins text-[16px] text-[#2f323a] placeholder:text-[16px] placeholder:text-[#666]" />
-                    <UserRound className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[#666]" />
+                    <Input
+                      placeholder="User Email"
+                      {...form.register("email")}
+                      className="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent pr-12 font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                    />
+                    <UserRound className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[var(--ui-input-placeholder)]" />
                   </div>
                   {form.formState.errors.email ? <p className="mt-1 text-xs text-red-500">{form.formState.errors.email.message}</p> : null}
                 </div>
@@ -109,8 +112,8 @@ export default function LoginPage() {
                     render={({ field }) => (
                       <PasswordInput
                         placeholder="Password"
-                        className="h-[56px] rounded-[4px] border-[#8f9399] bg-transparent"
-                        inputClassName="h-[56px] rounded-[4px] border-[#8f9399] bg-transparent font-poppins text-[16px] text-[#2f323a] placeholder:text-[16px] placeholder:text-[#666]"
+                        className="h-[56px] rounded-[4px]"
+                        inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
                         {...field}
                       />
                     )}
@@ -118,17 +121,17 @@ export default function LoginPage() {
                   {form.formState.errors.password ? <p className="mt-1 text-xs text-red-500">{form.formState.errors.password.message}</p> : null}
                 </div>
 
-                <Link className="font-poppins block text-center text-[20px] font-normal text-[#2f323a] hover:underline" href="/auth/forgot-password">
+                <Link className="font-poppins block text-center text-[20px] font-normal text-[var(--text-default)] hover:underline" href="/auth/forgot-password">
                   Forget Password?
                 </Link>
 
-                <Button type="submit" className="font-poppins h-[56px] w-full rounded-[8px] bg-[#2DAA46] text-[18px] font-medium text-white hover:bg-[#24943a]" disabled={loginMutation.isPending}>
+                <Button type="submit" className="font-poppins h-[56px] w-full rounded-[8px] text-[18px] font-medium" disabled={loginMutation.isPending}>
                   {loginMutation.isPending ? "Logging in..." : "Login"}
                 </Button>
 
-                <p className="font-poppins text-center text-[15px] text-[#5D6473]">
+                <p className="font-poppins text-center text-[15px] text-[var(--text-muted)]">
                   New here?{" "}
-                  <Link href="/auth/register" className="font-semibold text-[#2DAA46] hover:underline">
+                  <Link href="/auth/register" className="font-semibold text-[var(--ui-btn-primary-bg)] hover:underline">
                     Create account
                   </Link>
                 </p>
