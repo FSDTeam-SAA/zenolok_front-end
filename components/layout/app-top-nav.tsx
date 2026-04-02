@@ -77,6 +77,12 @@ export function AppTopNav() {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
+  const markAllReadMutation = useMutation({
+    mutationFn: notificationApi.markAllRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
   const notifications = notificationsQuery.data ?? [];
   const unreadCount = notifications.filter((item) => !item.read).length;
   const messageNotifications = notifications.filter((item) =>
@@ -232,6 +238,16 @@ export function AppTopNav() {
                     ) : null}
                   </button>
                 ))}
+              </div>
+              <div className="mb-2 flex justify-end">
+                <button
+                  type="button"
+                  className="text-[12px] text-[var(--text-muted)] transition hover:text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => markAllReadMutation.mutate()}
+                  disabled={!unreadCount || markAllReadMutation.isPending}
+                >
+                  {markAllReadMutation.isPending ? "Marking..." : "Mark all read"}
+                </button>
               </div>
 
               <div className="max-h-[300px] space-y-2 overflow-y-auto pr-1">

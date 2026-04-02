@@ -40,6 +40,7 @@ export interface Brick {
   color: string;
   icon: string;
   participants: string[];
+  members?: string[];
   createdBy: string;
 }
 
@@ -145,6 +146,32 @@ export interface NotificationData {
   updatedAt: string;
 }
 
+export type SearchResultType =
+  | "event"
+  | "eventTodo"
+  | "todoItem"
+  | "brick"
+  | "category";
+
+export interface SearchResultItem {
+  type: SearchResultType;
+  item: {
+    _id?: string;
+    eventId?: string;
+    title?: string;
+    name?: string;
+    text?: string;
+    location?: string;
+    createdAt?: string;
+    startTime?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface SearchResultsPayload {
+  items: SearchResultItem[];
+}
+
 export interface PaginatedResult<T> {
   items: T[];
   page: number;
@@ -214,8 +241,12 @@ export const userApi = {
 export const brickApi = {
   getAll: () => unwrap<Brick[]>(apiClient.get("/bricks")),
   getById: (id: string) => unwrap<Brick>(apiClient.get(`/bricks/${id}`)),
-  create: (payload: Pick<Brick, "name" | "color" | "icon">) => unwrap<Brick>(apiClient.post("/bricks", payload)),
-  update: (id: string, payload: Partial<Pick<Brick, "name" | "color" | "icon">>) =>
+  create: (payload: Pick<Brick, "name" | "color" | "icon"> & { members?: string[] }) =>
+    unwrap<Brick>(apiClient.post("/bricks", payload)),
+  update: (
+    id: string,
+    payload: Partial<Pick<Brick, "name" | "color" | "icon">> & { members?: string[] },
+  ) =>
     unwrap<Brick>(apiClient.patch(`/bricks/${id}`, payload)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/bricks/${id}`)),
 };
@@ -298,7 +329,7 @@ export const eventTodoApi = {
   getByEvent: (eventId: string) => unwrap<EventTodo[]>(apiClient.get(`/event-todos/event/${eventId}`)),
   update: (id: string, payload: Partial<Pick<EventTodo, "text" | "isCompleted">>) =>
     unwrap<EventTodo>(apiClient.patch(`/event-todos/${id}`, payload)),
-  delete: (id: string) => unwrap<null>(apiClient.delete(`/event-todos/${id}`)),
+  delete: (eventId: string, id: string) => unwrap<null>(apiClient.delete(`/event-todos/${eventId}/todo/${id}`)),
 };
 
 export const jamApi = {
@@ -318,8 +349,17 @@ export const feedbackApi = {
   getAll: () => unwrap<FeedbackData[]>(apiClient.get("/feedbacks")),
 };
 
+export const searchApi = {
+  search: (q: string) =>
+    unwrap<SearchResultsPayload>(
+      apiClient.get("/search", withParams(undefined, { q })),
+    ),
+};
+
 export const notificationApi = {
   getAll: () => unwrap<NotificationData[]>(apiClient.get("/notifications")),
   markAsRead: (id: string) => unwrap<NotificationData>(apiClient.patch(`/notifications/${id}/read`)),
+  markAllRead: () =>
+    unwrap<{ modifiedCount: number }>(apiClient.patch("/notifications/mark-read")),
   clearAll: () => unwrap<null>(apiClient.delete("/notifications/clear")),
 };

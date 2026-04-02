@@ -9,6 +9,7 @@ import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { brickApi, paginateArray, type Brick } from "@/lib/api";
+import { brickApi, paginateArray, userApi, type Brick } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -37,10 +38,25 @@ export function BricksManagePanel() {
   const [name, setName] = React.useState(defaultBrickForm.name);
   const [color, setColor] = React.useState(defaultBrickForm.color);
   const [icon, setIcon] = React.useState(defaultBrickForm.icon);
+  const [selectedMemberIds, setSelectedMemberIds] = React.useState<string[]>([]);
 
   const bricksQuery = useQuery({
     queryKey: queryKeys.bricks,
     queryFn: brickApi.getAll,
+  });
+  const usersQuery = useQuery({
+    queryKey: ["users-for-bricks-manage"],
+    queryFn: async () => {
+      const firstPage = await userApi.getAll({ page: 1, limit: 200 });
+      const totalUsers = firstPage.meta.total;
+
+      if (totalUsers > firstPage.users.length) {
+        return userApi.getAll({ page: 1, limit: totalUsers });
+      }
+
+      return firstPage;
+    },
+    enabled: dialogOpen,
   });
 
   const saveMutation = useMutation({
@@ -53,6 +69,7 @@ export function BricksManagePanel() {
         name: name.trim(),
         color,
         icon,
+        members: selectedMemberIds,
       };
 
       if (editingBrick) {
@@ -69,6 +86,7 @@ export function BricksManagePanel() {
       setName(defaultBrickForm.name);
       setColor(defaultBrickForm.color);
       setIcon(defaultBrickForm.icon);
+      setSelectedMemberIds([]);
     },
     onError: (error: Error) => toast.error(error.message || "Failed to save brick"),
   });
@@ -89,11 +107,13 @@ export function BricksManagePanel() {
       setName(defaultBrickForm.name);
       setColor(defaultBrickForm.color);
       setIcon(defaultBrickForm.icon);
+      setSelectedMemberIds([]);
     },
     onError: (error: Error) => toast.error(error.message || "Failed to delete brick"),
   });
 
   const bricks = React.useMemo(() => bricksQuery.data || [], [bricksQuery.data]);
+  const allUsers = React.useMemo(() => usersQuery.data?.users || [], [usersQuery.data]);
   const paged = React.useMemo(() => paginateArray(bricks, page, 12), [bricks, page]);
 
   React.useEffect(() => {
@@ -105,6 +125,7 @@ export function BricksManagePanel() {
     setName(defaultBrickForm.name);
     setColor(defaultBrickForm.color);
     setIcon(defaultBrickForm.icon);
+    setSelectedMemberIds([]);
     setDialogOpen(true);
   };
 
@@ -113,7 +134,28 @@ export function BricksManagePanel() {
     setName(brick.name);
     setColor(brick.color);
     setIcon(brick.icon || "layout-grid");
+    setSelectedMemberIds(
+      Array.from(
+        new Set(
+          (brick.members?.length ? brick.members : brick.participants || []).map(
+            (memberId) => memberId.toString(),
+          ),
+        ),
+      ),
+    );
     setDialogOpen(true);
+  };
+
+  const toggleMember = (userId: string, checked: boolean) => {
+    setSelectedMemberIds((previous) => {
+      if (checked) {
+        if (previous.includes(userId)) {
+          return previous;
+        }
+        return [...previous, userId];
+      }
+      return previous.filter((memberId) => memberId !== userId);
+    });
   };
 
   const previewLabel = name.trim() || "Work";
@@ -222,6 +264,47 @@ export function BricksManagePanel() {
                     <option.Icon className="size-4 sm:size-5" />
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="font-poppins text-[16px] leading-[120%] font-medium text-[var(--text-default)]">
+                Collaborators
+              </p>
+              <div className="max-h-44 space-y-1 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-2">
+                {usersQuery.isLoading ? (
+                  <Skeleton className="h-16 w-full rounded-xl" />
+                ) : usersQuery.isError ? (
+                  <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                    Failed to load users
+                  </p>
+                ) : allUsers.length ? (
+                  allUsers.map((user) => (
+                    <label
+                      key={user._id}
+                      className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--surface-1)]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] text-[var(--text-default)]">
+                          {user.name || user.username || user.email}
+                        </p>
+                        <p className="truncate text-[11px] text-[var(--text-muted)]">
+                          {user.email}
+                        </p>
+                      </div>
+                      <Checkbox
+                        checked={selectedMemberIds.includes(user._id)}
+                        onCheckedChange={(next) =>
+                          toggleMember(user._id, Boolean(next))
+                        }
+                      />
+                    </label>
+                  ))
+                ) : (
+                  <p className="px-2 py-2 text-[12px] text-[var(--text-muted)]">
+                    No users found
+                  </p>
+                )}
               </div>
             </div>
           </div>

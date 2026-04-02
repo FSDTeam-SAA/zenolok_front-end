@@ -365,7 +365,7 @@ export default function EventDetailsPage() {
   });
 
   const deleteTodoMutation = useMutation({
-    mutationFn: (todoId: string) => eventTodoApi.delete(todoId),
+    mutationFn: (todoId: string) => eventTodoApi.delete(id, todoId),
     onSuccess: refreshEverything,
     onError: (error: Error) =>
       toast.error(error.message || "Failed to delete todo"),
@@ -523,17 +523,21 @@ export default function EventDetailsPage() {
       return;
     }
 
-    const participantIdsToAdd = selectedShareUserIds.filter(
-      (participantId) => !currentParticipantIds.has(participantId),
-    );
+    const nextParticipantIds = Array.from(new Set(selectedShareUserIds));
+    const currentParticipantList = Array.from(currentParticipantIds);
+    const hasChanges =
+      nextParticipantIds.length !== currentParticipantList.length ||
+      nextParticipantIds.some(
+        (participantId) => !currentParticipantIds.has(participantId),
+      );
 
-    if (!participantIdsToAdd.length) {
-      toast.info("No new users selected");
+    if (!hasChanges) {
+      toast.info("No participant changes");
       return;
     }
 
     updateEventMutation.mutate(
-      { participants: participantIdsToAdd },
+      { participants: nextParticipantIds },
       {
         onSuccess: () => {
           setShareDialogOpen(false);
@@ -934,8 +938,8 @@ export default function EventDetailsPage() {
                         }
                       >
                         {updateEventMutation.isPending
-                          ? "Adding..."
-                          : "Add selected participants"}
+                          ? "Saving..."
+                          : "Save participants"}
                       </Button>
                     </div>
                   </div>
