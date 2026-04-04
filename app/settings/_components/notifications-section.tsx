@@ -6,13 +6,13 @@ import type { NotificationKey } from "./settings-types";
 const notificationOptions: Array<{ key: NotificationKey; label: string }> = [
   { key: "anyMessages", label: "Any messages" },
   { key: "taggedMessages", label: "Tagged messages" },
-  { key: "eventAlarms", label: "Events alarm" },
-  { key: "todoAlarms", label: "Todos alarm" },
+  { key: "eventsAlarm", label: "Events alarm" },
+  { key: "todosAlarm", label: "Todos alarm" },
 ];
 
 interface NotificationsSectionProps {
   prefs: Record<NotificationKey, boolean>;
-  onToggle: (key: NotificationKey, value: boolean) => void;
+  onToggle: (key: NotificationKey, value: boolean, optionName: string) => void;
 }
 
 export function NotificationsSection({
@@ -38,7 +38,7 @@ export function NotificationsSection({
               </span>
               <Switch
                 checked={prefs[item.key]}
-                onCheckedChange={(value) => onToggle(item.key, value)}
+                onCheckedChange={(value) => onToggle(item.key, value, item.label)}
               />
             </div>
           ))}

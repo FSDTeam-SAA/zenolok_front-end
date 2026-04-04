@@ -57,6 +57,10 @@ import {
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  formatTimeRangeByPreference,
+  formatTimeStringByPreference,
+} from "@/lib/time-format";
 
 type CalendarEvent = {
   id: string;
@@ -102,24 +106,6 @@ const weekStartsOnMap: Record<string, 0 | 1 | 2 | 3 | 4 | 5 | 6> = {
 };
 
 const exhibitionColor = "#E9DB95";
-
-function hexToRgba(hex: string, alpha: number) {
-  const normalized = hex.replace("#", "");
-  const valid =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => `${char}${char}`)
-          .join("")
-      : normalized;
-
-  const value = Number.parseInt(valid, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 function splitIntoWeeks(days: Date[]) {
   const weeks: Date[][] = [];
@@ -177,17 +163,12 @@ function formatDateInputSummary(value: string) {
   return format(parsed, "yyyy-MM-dd");
 }
 
-function formatTimeInputSummary(value: string) {
+function formatTimeInputSummary(value: string, use24Hour: boolean) {
   if (!value) {
     return "";
   }
 
-  const parsed = new Date(`1970-01-01T${value}:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return format(parsed, "HH:mm");
+  return formatTimeStringByPreference(value, use24Hour);
 }
 
 function buildWeekSegments(
@@ -235,25 +216,6 @@ function buildWeekSegments(
   }
 
   return { segments, laneCount: laneEnds.length };
-}
-
-function getSegmentTextColor(hex: string) {
-  const normalized = hex.replace("#", "");
-  const valid =
-    normalized.length === 3
-      ? normalized
-          .split("")
-          .map((char) => `${char}${char}`)
-          .join("")
-      : normalized;
-
-  const value = Number.parseInt(valid, 16);
-  const r = (value >> 16) & 255;
-  const g = (value >> 8) & 255;
-  const b = value & 255;
-
-  const darken = (channel: number) => Math.max(0, Math.round(channel * 0.58));
-  return `rgb(${darken(r)}, ${darken(g)}, ${darken(b)})`;
 }
 
 export default function HomePage() {
@@ -459,7 +421,7 @@ export default function HomePage() {
     : "";
   const hasEventTimeRange = Boolean(eventStartTime && eventEndTime);
   const eventTimeSummary = hasEventTimeRange
-    ? `${formatTimeInputSummary(eventStartTime)} - ${formatTimeInputSummary(eventEndTime)}`
+    ? `${formatTimeInputSummary(eventStartTime, preferences.use24Hour)} - ${formatTimeInputSummary(eventEndTime, preferences.use24Hour)}`
     : "";
 
   const createBrickMutation = useMutation({
@@ -645,7 +607,11 @@ export default function HomePage() {
                       : `${format(event.startAt, "yyyy-MM-dd")} - ${format(event.endAt, "yyyy-MM-dd")}`;
                     const eventTimeLabel = event.isAllDay
                       ? "All day"
-                      : `${format(event.startAt, "hh:mm a")} - ${format(event.endAt, "hh:mm a")}`;
+                      : formatTimeRangeByPreference(
+                          event.startAt,
+                          event.endAt,
+                          preferences.use24Hour,
+                        );
 
                     return (
                       <div
@@ -894,24 +860,15 @@ export default function HomePage() {
                                 style={{
                                   gridColumn: `${segment.startCol} / ${segment.endCol + 1}`,
                                   gridRow: segment.lane + 1,
-                                  backgroundColor: hexToRgba(
-                                    segment.color,
-                                    0.45,
-                                  ),
-                                  color: getSegmentTextColor(segment.color),
+                                  backgroundColor: segment.color,
+                                  color: "#FFFFFF",
                                 }}
                                 className="mx-[1px] flex h-[18px] items-center overflow-hidden rounded-[1px]"
                               >
                                 {segment.isStart ? (
-                                  <>
-                                    <span
-                                      className="h-full w-1.5 shrink-0 "
-                                      style={{ backgroundColor: segment.color }}
-                                    />
-                                    <span className="truncate pl-1 font-poppins text-[14px] leading-[120%] font-medium">
-                                      {segment.title}
-                                    </span>
-                                  </>
+                                  <span className="truncate px-1 font-poppins text-[14px] leading-[120%] font-medium text-white">
+                                    {segment.title}
+                                  </span>
                                 ) : null}
                               </div>
                             ))}

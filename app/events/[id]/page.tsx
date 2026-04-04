@@ -23,6 +23,7 @@ import {
 import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import {
   brickApi,
   eventApi,
@@ -34,6 +35,11 @@ import {
   type JamMessage,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  formatIsoTimeByPreference,
+  formatTimeRangeByPreference,
+  formatTimeStringByPreference,
+} from "@/lib/time-format";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
@@ -110,12 +116,12 @@ function getMessageAvatarUrl(message: JamMessage) {
   return message.user.avatar?.url || message.user.profilePicture;
 }
 
-function formatMessageStamp(value: string) {
+function formatMessageStamp(value: string, use24Hour: boolean) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  return format(date, "hh:mm a");
+  return formatIsoTimeByPreference(value, use24Hour);
 }
 
 function getMessageLabel(message: JamMessage) {
@@ -159,6 +165,7 @@ function toTimeValue(value: string) {
 }
 
 export default function EventDetailsPage() {
+  const { preferences } = useAppState();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -244,6 +251,9 @@ export default function EventDetailsPage() {
   const editHasDateRange = Boolean(editStartDate && editEndDate);
   const editDateSummary = editHasDateRange ? `${editStartDate} - ${editEndDate}` : "";
   const editHasTimeRange = Boolean(editStartTime && editEndTime);
+  const editTimeSummary = editHasTimeRange
+    ? `${formatTimeStringByPreference(editStartTime, preferences.use24Hour)} - ${formatTimeStringByPreference(editEndTime, preferences.use24Hour)}`
+    : "";
 
   React.useEffect(() => {
     if (!id || !socketServerUrl) {
@@ -500,7 +510,7 @@ export default function EventDetailsPage() {
   const eventTimeLabel = event.isAllDay
     ? "All day"
     : hasValidSchedule
-      ? `${format(startDate, "hh:mm a")} - ${format(endDate, "hh:mm a")}`
+      ? formatTimeRangeByPreference(startDate, endDate, preferences.use24Hour)
       : "Invalid time";
   const allUsers = usersQuery.data?.users || [];
   const isEventOwner = viewerId === event.createdBy;
@@ -733,7 +743,7 @@ export default function EventDetailsPage() {
                 </button>
                 {editHasTimeRange ? (
                   <p className="text-[12px] text-[var(--text-muted)]">
-                    {editStartTime} - {editEndTime}
+                    {editTimeSummary}
                   </p>
                 ) : null}
               </div>
@@ -1116,7 +1126,7 @@ export default function EventDetailsPage() {
                             {message.fileName || getMessageLabel(message)}
                           </p>
                           <p className="text-xs text-[var(--text-muted)]">
-                            {formatMessageStamp(message.createdAt)}
+                            {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                           </p>
                         </div>
                         <Paperclip className="size-4 text-[var(--text-muted)]" />
@@ -1149,7 +1159,7 @@ export default function EventDetailsPage() {
                               {linkValue || "Link"}
                             </p>
                             <p className="text-xs text-[var(--text-muted)]">
-                              {formatMessageStamp(message.createdAt)}
+                              {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                             </p>
                           </div>
                           <Link2 className="size-4 text-[var(--text-muted)]" />
@@ -1214,7 +1224,7 @@ export default function EventDetailsPage() {
                           >
                             {isMe ? (
                               <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                                {formatMessageStamp(message.createdAt)}
+                                {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                               </p>
                             ) : null}
                             <div
@@ -1226,7 +1236,7 @@ export default function EventDetailsPage() {
                             </div>
                             {!isMe ? (
                               <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                                {formatMessageStamp(message.createdAt)}
+                                {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                               </p>
                             ) : null}
                           </div>

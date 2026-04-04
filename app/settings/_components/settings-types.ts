@@ -25,8 +25,8 @@ export type SettingsSection =
   | "feedback"
   | "logout";
 
-export type AlarmPreset = "none" | "preset1" | "preset2" | "preset3";
-export type NotificationKey = "anyMessages" | "taggedMessages" | "eventAlarms" | "todoAlarms";
+export type AlarmPreset = "none" | "preset_1" | "preset_2" | "preset_3";
+export type NotificationKey = "anyMessages" | "taggedMessages" | "eventsAlarm" | "todosAlarm";
 
 export interface SidebarSection {
   id: SettingsSection;

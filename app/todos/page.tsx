@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
@@ -35,6 +36,7 @@ import {
   type RepeatValue,
   type TodoEditorMode,
 } from "./_components/todo-editor-dialog";
+import { formatTimeStringByPreference } from "@/lib/time-format";
 
 interface CategoryWithItems extends TodoCategory {
   items: TodoItem[];
@@ -141,6 +143,7 @@ function CategoryCard({
   onDeleteTodoRequest,
   onEditCategoryRequest,
   onDeleteCategoryRequest,
+  use24Hour,
 }: {
   category: CategoryWithItems;
   pendingDeleteMap: Record<string, true>;
@@ -151,6 +154,7 @@ function CategoryCard({
   onDeleteTodoRequest: (todoId: string) => void;
   onEditCategoryRequest: (category: CategoryWithItems) => void;
   onDeleteCategoryRequest: (categoryId: string) => void;
+  use24Hour: boolean;
 }) {
   const items = category.items || [];
   const unfinished = items.filter((item) => !item.isCompleted);
@@ -254,7 +258,7 @@ function CategoryCard({
                   {item.scheduledTime ? (
                     <span className="inline-flex items-center gap-1 text-[11px] leading-none">
                       <Clock3 className="size-3.5" />
-                      {item.scheduledTime}
+                      {formatTimeStringByPreference(item.scheduledTime, use24Hour)}
                     </span>
                   ) : null}
                   {item.alarm ? <Bell className="size-3.5 cursor-pointer" /> : null}
@@ -297,6 +301,7 @@ function CategoryCard({
 }
 
 export default function TodosPage() {
+  const { preferences } = useAppState();
   const queryClient = useQueryClient();
 
   const [page, setPage] = React.useState(1);
@@ -958,6 +963,7 @@ export default function TodosPage() {
                       key={category._id}
                       category={category}
                       pendingDeleteMap={scheduledAutoDeleteMap}
+                      use24Hour={preferences.use24Hour}
                       onOpen={(categoryId) => {
                         setSelectedCategoryId(categoryId);
                         setCategoryDetailOpen(true);

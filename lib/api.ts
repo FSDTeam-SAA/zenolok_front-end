@@ -9,9 +9,22 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
+export type AlarmPresetKey = "none" | "preset_1" | "preset_2" | "preset_3";
+
 export interface AvatarData {
   public_id: string;
   url: string;
+}
+
+export interface UserPreferences {
+  alarmPreset: AlarmPresetKey;
+  use24HourFormat: boolean;
+  notificationSettings: {
+    anyMessages: boolean;
+    taggedMessages: boolean;
+    eventsAlarm: boolean;
+    todosAlarm: boolean;
+  };
 }
 
 export interface UserProfile {
@@ -22,6 +35,7 @@ export interface UserProfile {
   role: "user" | "admin";
   weekend?: string[];
   avatar?: AvatarData;
+  preferences?: UserPreferences;
 }
 
 export interface UserListData {
@@ -228,12 +242,20 @@ export const authApi = {
 
 export const userApi = {
   getProfile: () => unwrap<UserProfile>(apiClient.get("/user/profile")),
+  getPreferences: () => unwrap<UserPreferences>(apiClient.get("/user/preferences")),
   getAll: (params?: { page?: number; limit?: number; role?: string; q?: string }) =>
     unwrap<UserListData>(apiClient.get("/user", withParams(undefined, params || {}))),
   updateProfile: (payload: FormData) =>
     unwrap<UserProfile>(apiClient.patch("/user/update-profile", payload, {
       headers: { "Content-Type": "multipart/form-data" },
     })),
+  updateAlarmPreset: (payload: { alarmPreset: AlarmPresetKey }) =>
+    unwrap<UserPreferences>(apiClient.patch("/user/preferences/alarm-preset", payload)),
+  updateNotificationPreferences: (
+    payload: Partial<UserPreferences["notificationSettings"]>,
+  ) => unwrap<UserPreferences>(apiClient.patch("/user/preferences/notifications", payload)),
+  updateTimeFormatPreference: (payload: { use24HourFormat: boolean }) =>
+    unwrap<UserPreferences>(apiClient.patch("/user/preferences/time-format", payload)),
   searchUsers: (query: string) =>
     unwrap<UserProfile[]>(apiClient.get("/user/search", withParams(undefined, { query }))),
 };

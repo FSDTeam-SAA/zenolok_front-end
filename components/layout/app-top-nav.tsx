@@ -59,7 +59,7 @@ export function AppTopNav() {
   const { data: session } = useSession();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [activeNotificationTab, setActiveNotificationTab] = useState<
-    "messages" | "system" | "all"
+    "messages" | "system" | "all" | "unread"
   >("all");
   const { monthCursor, goToToday, goToPreviousMonth, goToNextMonth } =
     useAppState();
@@ -91,16 +91,20 @@ export function AppTopNav() {
   const systemNotifications = notifications.filter(
     (item) => !/(message|chat)/i.test(item.type ?? ""),
   );
+  const unreadNotifications = notifications.filter((item) => !item.read);
   const displayedNotifications =
     activeNotificationTab === "messages"
       ? messageNotifications
       : activeNotificationTab === "system"
       ? systemNotifications
+      : activeNotificationTab === "unread"
+      ? unreadNotifications
       : notifications;
   const unreadByTab = {
     messages: messageNotifications.filter((item) => !item.read).length,
     system: systemNotifications.filter((item) => !item.read).length,
     all: unreadCount,
+    unread: unreadCount,
   };
 
   return (
@@ -218,6 +222,7 @@ export function AppTopNav() {
                   { key: "messages" as const, label: "Messages" },
                   { key: "system" as const, label: "System" },
                   { key: "all" as const, label: "All" },
+                  { key: "unread" as const, label: "Unread" },
                 ].map((tab) => (
                   <button
                     key={tab.key}

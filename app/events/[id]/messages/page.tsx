@@ -5,9 +5,9 @@ import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ImagePlus } from "lucide-react";
-import { format } from "date-fns";
 import { toast } from "sonner";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import {
   eventApi,
   jamApi,
@@ -16,6 +16,7 @@ import {
   type JamMessage,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
+import { formatIsoTimeByPreference } from "@/lib/time-format";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -53,15 +54,16 @@ function getMessageAvatarUrl(message: JamMessage) {
   return message.user.avatar?.url || message.user.profilePicture;
 }
 
-function formatMessageStamp(value: string) {
+function formatMessageStamp(value: string, use24Hour: boolean) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  return format(date, "hh:mm a");
+  return formatIsoTimeByPreference(value, use24Hour);
 }
 
 export default function EventMessagesPage() {
+  const { preferences } = useAppState();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -223,7 +225,7 @@ export default function EventMessagesPage() {
                       >
                         {isMe ? (
                           <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                            {formatMessageStamp(message.createdAt)}
+                            {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                           </p>
                         ) : null}
                         <div
@@ -235,7 +237,7 @@ export default function EventMessagesPage() {
                         </div>
                         {!isMe ? (
                           <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                            {formatMessageStamp(message.createdAt)}
+                            {formatMessageStamp(message.createdAt, preferences.use24Hour)}
                           </p>
                         ) : null}
                       </div>

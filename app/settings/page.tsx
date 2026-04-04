@@ -20,6 +20,7 @@ import {
 import { authApi, eventApi, feedbackApi, userApi } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { weekStartDayOptions, type WeekStartDay } from "@/lib/settings";
+import { getTimeChangedMessage } from "@/lib/time-format";
 
 import { AlarmPresetSection } from "./_components/alarm-preset-section";
 import { BricksManageSection } from "./_components/bricks-manage-section";
@@ -67,6 +68,12 @@ const GOOGLE_GSI_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.readonly";
 const GOOGLE_CALENDAR_EVENTS_LIMIT = 100;
+const ALARM_PRESET_LABELS: Record<AlarmPreset, string> = {
+  none: "No alert",
+  preset_1: "Preset 1",
+  preset_2: "Preset 2",
+  preset_3: "Preset 3",
+};
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -293,6 +300,9 @@ export default function SettingsPage() {
   const { preferences, updatePreferences } = useAppState();
   const initialParamsHandled = React.useRef(false);
   const didSyncWeekStartFromProfile = React.useRef(false);
+  const didSyncTimeFormatFromProfile = React.useRef(false);
+  const didSyncAlarmPresetFromProfile = React.useRef(false);
+  const didSyncNotificationsFromProfile = React.useRef(false);
 
   const [activeSection, setActiveSection] =
     React.useState<SettingsSection>("profile");
@@ -319,8 +329,8 @@ export default function SettingsPage() {
   >({
     anyMessages: true,
     taggedMessages: true,
-    eventAlarms: true,
-    todoAlarms: true,
+    eventsAlarm: true,
+    todosAlarm: true,
   });
 
   const profileQuery = useQuery({
@@ -356,6 +366,57 @@ export default function SettingsPage() {
       updatePreferences({ weekStartDay: backendWeekStartDay });
     }
   }, [profileQuery.data, updatePreferences]);
+
+  React.useEffect(() => {
+    if (!profileQuery.data || didSyncTimeFormatFromProfile.current) {
+      return;
+    }
+
+    didSyncTimeFormatFromProfile.current = true;
+    const backendTimeFormat = profileQuery.data.preferences?.use24HourFormat;
+
+    if (typeof backendTimeFormat === "boolean") {
+      updatePreferences({ use24Hour: backendTimeFormat });
+    }
+  }, [profileQuery.data, updatePreferences]);
+
+  React.useEffect(() => {
+    if (!profileQuery.data || didSyncAlarmPresetFromProfile.current) {
+      return;
+    }
+
+    didSyncAlarmPresetFromProfile.current = true;
+    const backendAlarmPreset = profileQuery.data.preferences?.alarmPreset;
+
+    if (
+      backendAlarmPreset === "none" ||
+      backendAlarmPreset === "preset_1" ||
+      backendAlarmPreset === "preset_2" ||
+      backendAlarmPreset === "preset_3"
+    ) {
+      setAlarmPreset(backendAlarmPreset);
+    }
+  }, [profileQuery.data]);
+
+  React.useEffect(() => {
+    if (!profileQuery.data || didSyncNotificationsFromProfile.current) {
+      return;
+    }
+
+    didSyncNotificationsFromProfile.current = true;
+    const backendNotifications = profileQuery.data.preferences?.notificationSettings;
+
+    if (!backendNotifications) {
+      return;
+    }
+
+    setNotificationPrefs({
+      anyMessages: backendNotifications.anyMessages,
+      taggedMessages: backendNotifications.taggedMessages,
+      eventsAlarm: backendNotifications.eventsAlarm,
+      todosAlarm: backendNotifications.todosAlarm,
+    });
+  }, [profileQuery.data]);
 
   React.useEffect(() => {
     if (!selectedAvatar) {
@@ -453,6 +514,119 @@ export default function SettingsPage() {
       updatePreferences,
       updateWeekStartDayMutation,
     ],
+  );
+
+  const updateTimeFormatMutation = useMutation({
+    mutationFn: ({
+      use24HourFormat,
+    }: {
+      use24HourFormat: boolean;
+      previousUse24Hour: boolean;
+    }) => userApi.updateTimeFormatPreference({ use24HourFormat }),
+    onSuccess: (_data, variables) => {
+      toast.success(getTimeChangedMessage(variables.use24HourFormat));
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: (error: Error, variables) => {
+      updatePreferences({ use24Hour: variables.previousUse24Hour });
+      toast.error(error.message || "Failed to update time format");
+    },
+  });
+
+  const handleTimeFormatToggle = React.useCallback(
+    (value: boolean) => {
+      if (value === preferences.use24Hour) {
+        return;
+      }
+
+      const previousUse24Hour = preferences.use24Hour;
+      updatePreferences({ use24Hour: value });
+      updateTimeFormatMutation.mutate({
+        use24HourFormat: value,
+        previousUse24Hour,
+      });
+    },
+    [
+      preferences.use24Hour,
+      updatePreferences,
+      updateTimeFormatMutation,
+    ],
+  );
+
+  const updateAlarmPresetMutation = useMutation({
+    mutationFn: ({
+      alarmPreset,
+    }: {
+      alarmPreset: AlarmPreset;
+      previousAlarmPreset: AlarmPreset;
+    }) => userApi.updateAlarmPreset({ alarmPreset }),
+    onSuccess: (_data, variables) => {
+      toast.success(`Changed to ${ALARM_PRESET_LABELS[variables.alarmPreset]}`);
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: (error: Error, variables) => {
+      setAlarmPreset(variables.previousAlarmPreset);
+      toast.error(error.message || "Failed to update alarm preset");
+    },
+  });
+
+  const handleAlarmPresetChange = React.useCallback(
+    (nextPreset: AlarmPreset) => {
+      if (nextPreset === alarmPreset) {
+        return;
+      }
+
+      const previousAlarmPreset = alarmPreset;
+      setAlarmPreset(nextPreset);
+      updateAlarmPresetMutation.mutate({
+        alarmPreset: nextPreset,
+        previousAlarmPreset,
+      });
+    },
+    [alarmPreset, updateAlarmPresetMutation],
+  );
+
+  const updateNotificationMutation = useMutation({
+    mutationFn: ({
+      key,
+      value,
+    }: {
+      key: NotificationKey;
+      value: boolean;
+      previousValue: boolean;
+      optionName: string;
+    }) =>
+      userApi.updateNotificationPreferences({
+        [key]: value,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: (error: Error, variables) => {
+      setNotificationPrefs((prev) => ({ ...prev, [variables.key]: variables.previousValue }));
+      toast.error(error.message || "Failed to update notification preference");
+    },
+  });
+
+  const handleNotificationToggle = React.useCallback(
+    (key: NotificationKey, value: boolean, optionName: string) => {
+      const previousValue = notificationPrefs[key];
+      if (previousValue === value) {
+        return;
+      }
+
+      setNotificationPrefs((prev) => ({ ...prev, [key]: value }));
+      toast.success(
+        `Notifications ${value ? "enabled" : "disabled"} for ${optionName}`,
+      );
+      updateNotificationMutation.mutate({
+        key,
+        value,
+        previousValue,
+        optionName,
+      });
+    },
+    [notificationPrefs, updateNotificationMutation],
   );
 
   const googleCalendarSyncMutation = useMutation({
@@ -627,10 +801,6 @@ export default function SettingsPage() {
     },
   });
 
-  const updateNotification = (key: NotificationKey, value: boolean) => {
-    setNotificationPrefs((prev) => ({ ...prev, [key]: value }));
-  };
-
   const handleAddFeedbackPhotos = (files: FileList | null) => {
     if (!files?.length) {
       return;
@@ -759,12 +929,15 @@ export default function SettingsPage() {
         return (
           <TimeFormatSection
             use24Hour={preferences.use24Hour}
-            onToggle={(value) => updatePreferences({ use24Hour: value })}
+            onToggle={handleTimeFormatToggle}
           />
         );
       case "alarmPreset":
         return (
-          <AlarmPresetSection value={alarmPreset} onChange={setAlarmPreset} />
+          <AlarmPresetSection
+            value={alarmPreset}
+            onChange={handleAlarmPresetChange}
+          />
         );
       case "darkMode":
         return (
@@ -777,7 +950,7 @@ export default function SettingsPage() {
         return (
           <NotificationsSection
             prefs={notificationPrefs}
-            onToggle={updateNotification}
+            onToggle={handleNotificationToggle}
           />
         );
       case "calendar":

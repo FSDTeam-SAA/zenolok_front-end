@@ -15,6 +15,7 @@ import {
 import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -37,15 +38,19 @@ import { eventApi, brickApi, jamApi, paginateArray } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  formatTimeRangeByPreference,
+  formatTimeStringByPreference,
+} from "@/lib/time-format";
 
 const eventFilters = [
   { label: "Upcoming", value: "upcoming" },
-  { label: "On-going", value: "today" },
   { label: "Past", value: "past" },
   { label: "All", value: "all" },
 ] as const;
 
 export default function EventsPage() {
+  const { preferences } = useAppState();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<(typeof eventFilters)[number]["value"]>("upcoming");
   const [selectedBrickIds, setSelectedBrickIds] = useState<string[]>([]);
@@ -78,7 +83,10 @@ export default function EventsPage() {
     queryKey: queryKeys.events({
       filter,
     }),
-    queryFn: () => eventApi.getAll({ filter }),
+    queryFn: () =>
+      eventApi.getAll({
+        filter: filter === "upcoming" ? "all" : filter,
+      }),
   });
 
   const createEventMutation = useMutation({
@@ -165,7 +173,6 @@ export default function EventsPage() {
   const filteredEvents = useMemo(() => {
     const now = eventsQuery.dataUpdatedAt || 0;
     const todayStart = startOfDay(new Date(now)).getTime();
-    const todayEnd = endOfDay(new Date(now)).getTime();
     const events = (eventsQuery.data || [])
       .filter((event) => {
         const startTime = new Date(event.startTime).getTime();
@@ -177,17 +184,12 @@ export default function EventsPage() {
           return false;
         }
 
-        const eventStartDay = startOfDay(new Date(startTime)).getTime();
-
-        if (filter === "today") {
-          return startTime <= todayEnd && endTime >= todayStart;
-        }
         if (filter === "upcoming") {
-          return eventStartDay >= todayStart;
+          return endTime >= todayStart;
         }
 
         if (filter === "past") {
-          return eventStartDay < todayStart;
+          return endTime < todayStart;
         }
 
         return true;
@@ -232,6 +234,9 @@ export default function EventsPage() {
   const hasDateRange = Boolean(startDate && endDate);
   const dateSummary = hasDateRange ? `${startDate} - ${endDate}` : "";
   const hasTimeRange = Boolean(startTime && endTime);
+  const timeSummary = hasTimeRange
+    ? `${formatTimeStringByPreference(startTime, preferences.use24Hour)} - ${formatTimeStringByPreference(endTime, preferences.use24Hour)}`
+    : "";
 
   React.useEffect(() => {
     setPage(1);
@@ -444,7 +449,11 @@ export default function EventsPage() {
                 const timeLabel = event.isAllDay
                   ? "All day"
                   : hasValidRange
-                    ? `${format(startDate, "hh:mm a")} - ${format(endDate, "hh:mm a")}`
+                    ? formatTimeRangeByPreference(
+                        startDate,
+                        endDate,
+                        preferences.use24Hour,
+                      )
                     : "Invalid time";
 
                 return (
@@ -518,7 +527,7 @@ export default function EventsPage() {
                   <Clock3 className="size-5" />
                   Set time
                 </button>
-                {hasTimeRange ? <p className="text-[12px] text-[#8890A0]">{startTime} - {endTime}</p> : null}
+                {hasTimeRange ? <p className="text-[12px] text-[#8890A0]">{timeSummary}</p> : null}
               </div>
             ) : null}
             <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">

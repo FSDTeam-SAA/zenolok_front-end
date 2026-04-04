@@ -5,9 +5,9 @@ import type { AlarmPreset } from "./settings-types";
 
 const alarmOptions: Array<{ id: AlarmPreset; label: string }> = [
   { id: "none", label: "No alert" },
-  { id: "preset1", label: "Preset 1" },
-  { id: "preset2", label: "Preset 2" },
-  { id: "preset3", label: "Preset 3" },
+  { id: "preset_1", label: "Preset 1" },
+  { id: "preset_2", label: "Preset 2" },
+  { id: "preset_3", label: "Preset 3" },
 ];
 
 interface AlarmPresetSectionProps {

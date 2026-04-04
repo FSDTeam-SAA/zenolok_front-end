@@ -3,11 +3,13 @@
 import { format } from "date-fns";
 import { Bell, CalendarDays, Clock3, Repeat2, SlidersHorizontal, Trash2 } from "lucide-react";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
 import type { TodoItem } from "@/lib/api";
+import { formatTimeStringByPreference } from "@/lib/time-format";
 
 type SelectedCategory = {
   _id: string;
@@ -36,6 +38,8 @@ export function CategoryDetailDialog({
   onEditTodo,
   onDeleteTodo,
 }: CategoryDetailDialogProps) {
+  const { preferences } = useAppState();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[820px] rounded-[30px] border border-[#DDE3EC] bg-[#F7F8FB] p-4 sm:p-5">
@@ -94,7 +98,10 @@ export function CategoryDetailDialog({
                       {item.scheduledTime ? (
                         <span className="inline-flex items-center gap-1 text-[11px] leading-none">
                           <Clock3 className="size-4" />
-                          {item.scheduledTime}
+                          {formatTimeStringByPreference(
+                            item.scheduledTime,
+                            preferences.use24Hour,
+                          )}
                         </span>
                       ) : null}
                       {item.alarm ? <Bell className="size-4" /> : null}

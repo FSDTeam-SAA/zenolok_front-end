@@ -4,11 +4,16 @@ import * as React from "react";
 import { format } from "date-fns";
 import { Bell, CalendarDays, ChevronLeft, Clock3, Repeat2, Trash2 } from "lucide-react";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import {
+  formatDateTimeByPreference,
+  formatTimeStringByPreference,
+} from "@/lib/time-format";
 
 export type TodoEditorMode = "create" | "edit";
 export type RepeatValue = "daily" | "weekly" | "monthly" | "yearly";
@@ -26,20 +31,15 @@ function formatDateDisplay(value: string) {
   return format(date, "MM/dd/yyyy");
 }
 
-function formatTimeDisplay(value: string) {
+function formatTimeDisplay(value: string, use24Hour: boolean) {
   if (!value) {
     return "";
   }
 
-  const date = new Date(`1970-01-01T${value}:00`);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return format(date, "hh:mm a");
+  return formatTimeStringByPreference(value, use24Hour);
 }
 
-function formatDateTimeDisplay(value: string) {
+function formatDateTimeDisplay(value: string, use24Hour: boolean) {
   if (!value) {
     return "";
   }
@@ -49,7 +49,7 @@ function formatDateTimeDisplay(value: string) {
     return value;
   }
 
-  return format(date, "MM/dd/yyyy hh:mm a");
+  return formatDateTimeByPreference(date, use24Hour);
 }
 
 function getDateFromDateTimeInput(value: string) {
@@ -157,10 +157,12 @@ export function TodoEditorDialog({
   repeatValue,
   onRepeatValueChange,
 }: TodoEditorDialogProps) {
+  const { preferences } = useAppState();
   const [datePopupOpen, setDatePopupOpen] = React.useState(false);
   const [timePopupOpen, setTimePopupOpen] = React.useState(false);
   const [alarmDatePopupOpen, setAlarmDatePopupOpen] = React.useState(false);
   const [alarmTimePopupOpen, setAlarmTimePopupOpen] = React.useState(false);
+  const alarmDateTimePlaceholder = `MM/DD/YYYY ${preferences.use24Hour ? "HH:mm" : "hh:mm A"}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -263,7 +265,7 @@ export function TodoEditorDialog({
                       scheduledTimeInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
                     }`}
                   >
-                    {scheduledTimeInput ? formatTimeDisplay(scheduledTimeInput) : "Set time"}
+                    {scheduledTimeInput ? formatTimeDisplay(scheduledTimeInput, preferences.use24Hour) : "Set time"}
                   </span>
                   <Clock3 className="size-6 text-[#101621]" />
                 </button>
@@ -284,11 +286,11 @@ export function TodoEditorDialog({
                     className="flex h-12 w-full items-center justify-between rounded-xl border border-[#D5DBE6] bg-white px-4"
                   >
                     <span
-                      className={`text-[24px] leading-[120%] ${
-                        alarmDateTimeInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
-                      }`}
-                    >
-                      {alarmDateTimeInput ? formatDateTimeDisplay(alarmDateTimeInput) : "MM/DD/YYYY hh:mm A"}
+                    className={`text-[24px] leading-[120%] ${
+                      alarmDateTimeInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
+                    }`}
+                  >
+                      {alarmDateTimeInput ? formatDateTimeDisplay(alarmDateTimeInput, preferences.use24Hour) : alarmDateTimePlaceholder}
                     </span>
                     <CalendarDays className="size-6 text-[#101621]" />
                   </button>
