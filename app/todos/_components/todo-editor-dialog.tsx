@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { format } from "date-fns";
-import { Bell, CalendarDays, ChevronLeft, Clock3, Repeat2, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, Bell, CalendarDays, ChevronLeft, Clock3, Repeat2, Trash2 } from "lucide-react";
 
 import { useAppState } from "@/components/providers/app-state-provider";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
@@ -11,12 +11,27 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
-  formatDateTimeByPreference,
   formatTimeStringByPreference,
 } from "@/lib/time-format";
+import type { AlarmPresetKey } from "@/lib/api";
 
 export type TodoEditorMode = "create" | "edit";
 export type RepeatValue = "daily" | "weekly" | "monthly" | "yearly";
+export type TodoAlarmPreset = AlarmPresetKey;
+
+const ALARM_PRESET_OPTIONS: Array<{ id: TodoAlarmPreset; label: string }> = [
+  { id: "none", label: "No alert" },
+  { id: "preset_1", label: "Preset 1" },
+  { id: "preset_2", label: "Preset 2" },
+  { id: "preset_3", label: "Preset 3" },
+];
+
+const ALARM_PRESET_LABELS: Record<TodoAlarmPreset, string> = {
+  none: "No alert",
+  preset_1: "Preset 1",
+  preset_2: "Preset 2",
+  preset_3: "Preset 3",
+};
 
 function formatDateDisplay(value: string) {
   if (!value) {
@@ -39,65 +54,6 @@ function formatTimeDisplay(value: string, use24Hour: boolean) {
   return formatTimeStringByPreference(value, use24Hour);
 }
 
-function formatDateTimeDisplay(value: string, use24Hour: boolean) {
-  if (!value) {
-    return "";
-  }
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return formatDateTimeByPreference(date, use24Hour);
-}
-
-function getDateFromDateTimeInput(value: string) {
-  if (!value) {
-    return "";
-  }
-
-  const rawDate = value.slice(0, 10);
-  if (rawDate.length === 10) {
-    return rawDate;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return format(parsed, "yyyy-MM-dd");
-}
-
-function getTimeFromDateTimeInput(value: string) {
-  if (!value) {
-    return "";
-  }
-
-  const rawTime = value.slice(11, 16);
-  if (rawTime.length === 5) {
-    return rawTime;
-  }
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) {
-    return "";
-  }
-
-  return format(parsed, "HH:mm");
-}
-
-function mergeDateAndTime(dateValue: string, timeValue: string) {
-  if (!dateValue && !timeValue) {
-    return "";
-  }
-
-  const safeDate = dateValue || format(new Date(), "yyyy-MM-dd");
-  const safeTime = timeValue || "00:00";
-  return `${safeDate}T${safeTime}`;
-}
-
 type TodoEditorDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -118,10 +74,8 @@ type TodoEditorDialogProps = {
   onTimeEnabledChange: (checked: boolean) => void;
   scheduledTimeInput: string;
   onScheduledTimeChange: (value: string) => void;
-  alarmEnabled: boolean;
-  onAlarmEnabledChange: (checked: boolean) => void;
-  alarmDateTimeInput: string;
-  onAlarmDateTimeChange: (value: string) => void;
+  alarmPreset: TodoAlarmPreset;
+  onAlarmPresetChange: (value: TodoAlarmPreset) => void;
   repeatEnabled: boolean;
   onRepeatEnabledChange: (checked: boolean) => void;
   repeatValue: RepeatValue;
@@ -148,10 +102,8 @@ export function TodoEditorDialog({
   onTimeEnabledChange,
   scheduledTimeInput,
   onScheduledTimeChange,
-  alarmEnabled,
-  onAlarmEnabledChange,
-  alarmDateTimeInput,
-  onAlarmDateTimeChange,
+  alarmPreset,
+  onAlarmPresetChange,
   repeatEnabled,
   onRepeatEnabledChange,
   repeatValue,
@@ -160,21 +112,19 @@ export function TodoEditorDialog({
   const { preferences } = useAppState();
   const [datePopupOpen, setDatePopupOpen] = React.useState(false);
   const [timePopupOpen, setTimePopupOpen] = React.useState(false);
-  const [alarmDatePopupOpen, setAlarmDatePopupOpen] = React.useState(false);
-  const [alarmTimePopupOpen, setAlarmTimePopupOpen] = React.useState(false);
-  const alarmDateTimePlaceholder = `MM/DD/YYYY ${preferences.use24Hour ? "HH:mm" : "hh:mm A"}`;
+  const [alarmPresetOpen, setAlarmPresetOpen] = React.useState(false);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[820px] rounded-[30px] border border-[#DDE3EC] bg-[#F7F8FB] p-4 sm:p-5">
+      <DialogContent className="max-w-[820px] rounded-[30px] border border-[var(--ui-dialog-border)] bg-[var(--ui-dialog-bg)] p-4 text-[var(--text-default)] sm:p-5">
         {mode === "create" ? (
-          <div className="rounded-[30px] border border-[#E1E5ED] bg-[#F3F5F9] p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-2 text-[#4A505A]">
+          <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-2 text-[var(--text-default)]">
               <button
                 type="button"
                 aria-label="Back to category"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex items-center justify-center text-[#8E95A4]"
+                className="inline-flex items-center justify-center text-[var(--text-muted)]"
               >
                 <ChevronLeft className="size-5" />
               </button>
@@ -188,7 +138,7 @@ export function TodoEditorDialog({
                   }
                 }}
                 placeholder="New todo"
-                className="h-11 border border-[#D5DBE6] bg-white text-[24px] leading-[120%] text-[#4A505A]"
+                className="h-11 border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] text-[24px] leading-[120%] text-[var(--ui-input-text)] placeholder:text-[var(--ui-input-placeholder)]"
               />
             </div>
 
@@ -199,13 +149,13 @@ export function TodoEditorDialog({
             </div>
           </div>
         ) : (
-          <div className="rounded-[30px] border border-[#E1E5ED] bg-[#F3F5F9] p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-2 text-[#4A505A]">
+          <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-5">
+            <div className="mb-4 flex items-center gap-2 text-[var(--text-default)]">
               <button
                 type="button"
                 aria-label="Back to category"
                 onClick={() => onOpenChange(false)}
-                className="inline-flex items-center justify-center text-[#8E95A4]"
+                className="inline-flex items-center justify-center text-[var(--text-muted)]"
               >
                 <ChevronLeft className="size-5" />
               </button>
@@ -218,11 +168,11 @@ export function TodoEditorDialog({
                     onSubmit();
                   }
                 }}
-                className="h-10 border-none bg-transparent px-0 text-[36px] leading-[120%] text-[#4A505A] shadow-none"
+                className="h-10 border-none bg-transparent px-0 text-[36px] leading-[120%] text-[var(--text-default)] shadow-none"
               />
             </div>
 
-            <div className="space-y-3 text-[#C0C6D1]">
+            <div className="space-y-3 text-[var(--text-muted)]">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <CalendarDays className="size-5" />
@@ -234,16 +184,16 @@ export function TodoEditorDialog({
                 <button
                   type="button"
                   onClick={() => setDatePopupOpen(true)}
-                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[#D5DBE6] bg-white px-4"
+                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
                 >
                   <span
                     className={`text-[24px] leading-[120%] ${
-                      scheduledDateInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
+                      scheduledDateInput ? "text-[var(--ui-input-text)]" : "text-[var(--ui-input-placeholder)]"
                     }`}
                   >
                     {scheduledDateInput ? formatDateDisplay(scheduledDateInput) : "MM/DD/YYYY"}
                   </span>
-                  <CalendarDays className="size-6 text-[#101621]" />
+                  <CalendarDays className="size-6 text-[var(--text-default)]" />
                 </button>
               ) : null}
 
@@ -258,44 +208,33 @@ export function TodoEditorDialog({
                 <button
                   type="button"
                   onClick={() => setTimePopupOpen(true)}
-                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[#D5DBE6] bg-white px-4"
+                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
                 >
                   <span
                     className={`text-[24px] leading-[120%] ${
-                      scheduledTimeInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
+                      scheduledTimeInput ? "text-[var(--ui-input-text)]" : "text-[var(--ui-input-placeholder)]"
                     }`}
                   >
                     {scheduledTimeInput ? formatTimeDisplay(scheduledTimeInput, preferences.use24Hour) : "Set time"}
                   </span>
-                  <Clock3 className="size-6 text-[#101621]" />
+                  <Clock3 className="size-6 text-[var(--text-default)]" />
                 </button>
               ) : null}
 
-              <div className="flex items-center justify-between gap-4">
+              <button
+                type="button"
+                onClick={() => setAlarmPresetOpen(true)}
+                className="flex w-full items-center justify-between gap-4 text-left"
+              >
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <Bell className="size-5" />
                   <span>Alarm</span>
                 </div>
-                <Switch checked={alarmEnabled} onCheckedChange={onAlarmEnabledChange} />
-              </div>
-              {alarmEnabled ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setAlarmDatePopupOpen(true)}
-                    className="flex h-12 w-full items-center justify-between rounded-xl border border-[#D5DBE6] bg-white px-4"
-                  >
-                    <span
-                    className={`text-[24px] leading-[120%] ${
-                      alarmDateTimeInput ? "text-[#4D5463]" : "text-[#B7BFCC]"
-                    }`}
-                  >
-                      {alarmDateTimeInput ? formatDateTimeDisplay(alarmDateTimeInput, preferences.use24Hour) : alarmDateTimePlaceholder}
-                    </span>
-                    <CalendarDays className="size-6 text-[#101621]" />
-                  </button>
-                </>
-              ) : null}
+                <div className="flex items-center gap-2 text-[18px] leading-[120%] text-[var(--text-muted)]">
+                  <span>{ALARM_PRESET_LABELS[alarmPreset]}</span>
+                  <ChevronDown className="size-4" />
+                </div>
+              </button>
 
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
@@ -308,7 +247,7 @@ export function TodoEditorDialog({
                 <select
                   value={repeatValue}
                   onChange={(event) => onRepeatValueChange(event.target.value as RepeatValue)}
-                  className="h-12 w-full rounded-xl border border-[#D5DBE6] bg-white px-3 text-[16px] text-[#5A6070]"
+                  className="h-12 w-full rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-3 text-[16px] text-[var(--ui-input-text)]"
                 >
                   <option value="daily">Daily</option>
                   <option value="weekly">Weekly</option>
@@ -322,7 +261,7 @@ export function TodoEditorDialog({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-[#B4BAC7] hover:text-[#8D94A3]"
+                className="text-[var(--text-muted)] hover:text-[var(--text-default)]"
                 onClick={onDelete}
                 disabled={isDeleting}
               >
@@ -332,7 +271,7 @@ export function TodoEditorDialog({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-[#B4BAC7] hover:text-[#8D94A3]"
+                className="text-[var(--text-muted)] hover:text-[var(--text-default)]"
                 onClick={onSubmit}
                 disabled={!canSubmit || isUpdating}
               >
@@ -355,30 +294,48 @@ export function TodoEditorDialog({
               selectionMode="single"
               onApply={({ startTime }) => onScheduledTimeChange(startTime)}
             />
-            <EventDateRangePopup
-              open={alarmDatePopupOpen}
-              onOpenChange={setAlarmDatePopupOpen}
-              startDate={getDateFromDateTimeInput(alarmDateTimeInput)}
-              endDate={getDateFromDateTimeInput(alarmDateTimeInput)}
-              onApply={({ startDate }) => {
-                const currentTime = getTimeFromDateTimeInput(alarmDateTimeInput);
-                onAlarmDateTimeChange(mergeDateAndTime(startDate, currentTime));
-                setAlarmDatePopupOpen(false);
-                setAlarmTimePopupOpen(true);
-              }}
-            />
-            <EventTimeRangePopup
-              open={alarmTimePopupOpen}
-              onOpenChange={setAlarmTimePopupOpen}
-              startTime={getTimeFromDateTimeInput(alarmDateTimeInput)}
-              endTime={getTimeFromDateTimeInput(alarmDateTimeInput)}
-              selectionMode="single"
-              onApply={({ startTime }) => {
-                const currentDate = getDateFromDateTimeInput(alarmDateTimeInput);
-                onAlarmDateTimeChange(mergeDateAndTime(currentDate, startTime));
-                setAlarmTimePopupOpen(false);
-              }}
-            />
+            <Dialog open={alarmPresetOpen} onOpenChange={setAlarmPresetOpen}>
+              <DialogContent className="max-w-[380px] rounded-[26px] border-[var(--ui-popover-border)] bg-[var(--ui-popover-bg)] p-4 text-[var(--text-default)]">
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-2 text-[var(--text-default)]"
+                    onClick={() => setAlarmPresetOpen(false)}
+                  >
+                    <ChevronLeft className="size-4" />
+                    <span className="text-[30px] leading-[120%]">Select Alarm</span>
+                  </button>
+
+                  <div className="space-y-2 rounded-[22px] bg-[var(--surface-2)] p-3">
+                    {ALARM_PRESET_OPTIONS.map((option) => {
+                      const active = alarmPreset === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => {
+                            onAlarmPresetChange(option.id);
+                            setAlarmPresetOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition ${
+                            active
+                              ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.10)]"
+                              : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]"
+                          }`}
+                        >
+                          <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
+                            {option.label}
+                          </span>
+                          {active ? (
+                            <CheckCircle2 className="size-5 text-[#31C65B]" />
+                          ) : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </DialogContent>

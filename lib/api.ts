@@ -75,6 +75,7 @@ export interface TodoItem {
   scheduledDate?: string;
   scheduledTime?: string;
   alarm?: string;
+  alarmPreset?: AlarmPresetKey;
   repeat?: "daily" | "weekly" | "monthly" | "yearly";
   createdAt: string;
   updatedAt: string;
@@ -291,6 +292,7 @@ export const todoItemApi = {
     scheduledTime?: string | null;
     repeat?: TodoItem["repeat"] | null;
     alarm?: string | null;
+    alarmPreset?: AlarmPresetKey;
   }) => unwrap<TodoItem>(apiClient.post("/todo-items", payload)),
   getByCategory: (categoryId: string) => unwrap<TodoItem[]>(apiClient.get(`/todo-items/category/${categoryId}`)),
   getScheduled: (params: {
@@ -310,6 +312,7 @@ export const todoItemApi = {
       scheduledDate?: string | null;
       scheduledTime?: string | null;
       alarm?: string | null;
+      alarmPreset?: AlarmPresetKey;
       repeat?: TodoItem["repeat"] | null;
     }
   ) => unwrap<TodoItem>(apiClient.patch(`/todo-items/${id}`, payload)),

@@ -24,6 +24,7 @@ import {
   paginateArray,
   todoItemApi,
   todoCategoryApi,
+  type AlarmPresetKey,
   type TodoCategory,
   type TodoItem,
 } from "@/lib/api";
@@ -33,6 +34,7 @@ import { CategoryDetailDialog } from "./_components/category-detail-dialog";
 import { DeleteConfirmDialog } from "./_components/delete-confirm-dialog";
 import {
   TodoEditorDialog,
+  type TodoAlarmPreset,
   type RepeatValue,
   type TodoEditorMode,
 } from "./_components/todo-editor-dialog";
@@ -55,6 +57,13 @@ const SCHEDULED_TAB_OPTIONS: ScheduledTabOption[] = [
   { value: "all", label: "All" },
 ];
 
+const TODO_ALARM_PRESET_OFFSET_MINUTES: Record<TodoAlarmPreset, number | null> = {
+  none: null,
+  preset_1: 10,
+  preset_2: 30,
+  preset_3: 1440,
+};
+
 function toDateInputValue(value?: string) {
   if (!value) {
     return "";
@@ -68,19 +77,45 @@ function toDateInputValue(value?: string) {
   return date.toISOString().slice(0, 10);
 }
 
-function toLocalDateTimeInputValue(value?: string) {
-  if (!value) {
-    return "";
+function buildTodoAlarmFromPreset({
+  alarmPreset,
+  dateEnabled,
+  scheduledDateInput,
+  timeEnabled,
+  scheduledTimeInput,
+}: {
+  alarmPreset: AlarmPresetKey;
+  dateEnabled: boolean;
+  scheduledDateInput: string;
+  timeEnabled: boolean;
+  scheduledTimeInput: string;
+}) {
+  const presetOffset = TODO_ALARM_PRESET_OFFSET_MINUTES[alarmPreset];
+  if (presetOffset === null) {
+    return null;
   }
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
+  if (!dateEnabled || !scheduledDateInput) {
+    return null;
   }
 
-  const local = new Date(date);
-  local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
-  return local.toISOString().slice(0, 16);
+  const baseDate = new Date(
+    `${scheduledDateInput}T${timeEnabled && scheduledTimeInput ? scheduledTimeInput : "00:00"}:00`,
+  );
+
+  if (Number.isNaN(baseDate.getTime())) {
+    return null;
+  }
+
+  return new Date(baseDate.getTime() - presetOffset * 60 * 1000).toISOString();
+}
+
+function hasTodoAlarmConfigured(todo: Pick<TodoItem, "alarm" | "alarmPreset">) {
+  if (todo.alarmPreset) {
+    return todo.alarmPreset !== "none";
+  }
+
+  return Boolean(todo.alarm);
 }
 
 function getTodoCategoryMeta(todo: TodoItem, categoryMetaLookup?: CategoryMetaLookup) {
@@ -261,7 +296,7 @@ function CategoryCard({
                       {formatTimeStringByPreference(item.scheduledTime, use24Hour)}
                     </span>
                   ) : null}
-                  {item.alarm ? <Bell className="size-3.5 cursor-pointer" /> : null}
+                  {hasTodoAlarmConfigured(item) ? <Bell className="size-3.5 cursor-pointer" /> : null}
                   {item.repeat ? <Repeat2 className="size-3.5 cursor-pointer" /> : null}
                   <button
                     type="button"
@@ -322,11 +357,10 @@ export default function TodosPage() {
   const [todoText, setTodoText] = React.useState("");
   const [dateEnabled, setDateEnabled] = React.useState(false);
   const [timeEnabled, setTimeEnabled] = React.useState(false);
-  const [alarmEnabled, setAlarmEnabled] = React.useState(false);
+  const [alarmPreset, setAlarmPreset] = React.useState<TodoAlarmPreset>("none");
   const [repeatEnabled, setRepeatEnabled] = React.useState(false);
   const [scheduledDateInput, setScheduledDateInput] = React.useState("");
   const [scheduledTimeInput, setScheduledTimeInput] = React.useState("");
-  const [alarmDateTimeInput, setAlarmDateTimeInput] = React.useState("");
   const [repeatValue, setRepeatValue] = React.useState<RepeatValue>("daily");
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [newCategoryColor, setNewCategoryColor] = React.useState("#F7C700");
@@ -649,11 +683,10 @@ export default function TodosPage() {
       setTodoText("");
       setDateEnabled(false);
       setTimeEnabled(false);
-      setAlarmEnabled(false);
+      setAlarmPreset("none");
       setRepeatEnabled(false);
       setScheduledDateInput("");
       setScheduledTimeInput("");
-      setAlarmDateTimeInput("");
       setRepeatValue("daily");
       return;
     }
@@ -665,11 +698,10 @@ export default function TodosPage() {
     setTodoText(selectedTodo.text || "");
     setDateEnabled(Boolean(selectedTodo.scheduledDate));
     setTimeEnabled(Boolean(selectedTodo.scheduledTime));
-    setAlarmEnabled(Boolean(selectedTodo.alarm));
+    setAlarmPreset(selectedTodo.alarmPreset ?? (selectedTodo.alarm ? "preset_1" : "none"));
     setRepeatEnabled(Boolean(selectedTodo.repeat));
     setScheduledDateInput(toDateInputValue(selectedTodo.scheduledDate));
     setScheduledTimeInput(selectedTodo.scheduledTime || "");
-    setAlarmDateTimeInput(toLocalDateTimeInputValue(selectedTodo.alarm));
     setRepeatValue((selectedTodo.repeat || "daily") as RepeatValue);
   }, [todoEditorMode, todoEditorOpen, selectedTodo]);
 
@@ -700,6 +732,14 @@ export default function TodosPage() {
       return;
     }
 
+    const alarmValue = buildTodoAlarmFromPreset({
+      alarmPreset,
+      dateEnabled,
+      scheduledDateInput,
+      timeEnabled,
+      scheduledTimeInput,
+    });
+
     if (todoEditorMode === "create") {
       createTodoMutation.mutate(
         {
@@ -710,10 +750,8 @@ export default function TodosPage() {
               ? new Date(`${scheduledDateInput}T00:00:00`).toISOString()
               : null,
           scheduledTime: timeEnabled && scheduledTimeInput ? scheduledTimeInput : null,
-          alarm:
-            alarmEnabled && alarmDateTimeInput
-              ? new Date(alarmDateTimeInput).toISOString()
-              : null,
+          alarm: alarmValue,
+          alarmPreset,
           repeat: repeatEnabled ? repeatValue : null,
         },
         {
@@ -734,14 +772,14 @@ export default function TodosPage() {
       text: trimmedText || selectedTodo?.text || "",
       scheduledDate: dateEnabled && scheduledDateInput ? new Date(`${scheduledDateInput}T00:00:00`).toISOString() : null,
       scheduledTime: timeEnabled && scheduledTimeInput ? scheduledTimeInput : null,
-      alarm: alarmEnabled && alarmDateTimeInput ? new Date(alarmDateTimeInput).toISOString() : null,
+      alarm: alarmValue,
+      alarmPreset,
       repeat: repeatEnabled ? repeatValue : null,
     };
 
     updateTodoMutation.mutate({ id: selectedTodoId, payload });
   }, [
-    alarmDateTimeInput,
-    alarmEnabled,
+    alarmPreset,
     createTodoMutation,
     dateEnabled,
     repeatEnabled,
@@ -930,7 +968,11 @@ export default function TodosPage() {
                           ) : (
                             <div className="flex shrink-0 items-center gap-1 text-[#BCC2CE]">
                               <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[rgba(203,203,203,1)] p-[2px]">
-                                <Bell className={`size-4 cursor-pointer ${todo.alarm ? "opacity-100" : "opacity-35"}`} />
+                                <Bell
+                                  className={`size-4 cursor-pointer ${
+                                    hasTodoAlarmConfigured(todo) ? "opacity-100" : "opacity-35"
+                                  }`}
+                                />
                               </span>
                               <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[rgba(203,203,203,1)] p-[2px]">
                                 <Repeat2 className={`size-4 cursor-pointer ${todo.repeat ? "opacity-100" : "opacity-35"}`} />
@@ -1039,10 +1081,8 @@ export default function TodosPage() {
         onTimeEnabledChange={setTimeEnabled}
         scheduledTimeInput={scheduledTimeInput}
         onScheduledTimeChange={setScheduledTimeInput}
-        alarmEnabled={alarmEnabled}
-        onAlarmEnabledChange={setAlarmEnabled}
-        alarmDateTimeInput={alarmDateTimeInput}
-        onAlarmDateTimeChange={setAlarmDateTimeInput}
+        alarmPreset={alarmPreset}
+        onAlarmPresetChange={setAlarmPreset}
         repeatEnabled={repeatEnabled}
         onRepeatEnabledChange={setRepeatEnabled}
         repeatValue={repeatValue}
