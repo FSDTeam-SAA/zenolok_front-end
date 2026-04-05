@@ -7,7 +7,6 @@ import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/rea
 import {
   CalendarDays,
   Clock3,
-  LayoutGrid,
   MapPin,
   MessageCircle,
   Plus,
@@ -25,11 +24,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { BrickIcon } from "@/components/shared/brick-icon";
+import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
 import { PaginationControls } from "@/components/shared/pagination-controls";
@@ -53,7 +52,7 @@ export default function EventsPage() {
   const { preferences } = useAppState();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<(typeof eventFilters)[number]["value"]>("upcoming");
-  const [selectedBrickIds, setSelectedBrickIds] = useState<string[]>([]);
+  const [selectedBrickIds, setSelectedBrickIds] = useState<string[] | null>(null);
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
 
@@ -156,19 +155,32 @@ export default function EventsPage() {
         icon: brickIcon,
       });
     },
-    onSuccess: (createdBrick) => {
+    onSuccess: () => {
       toast.success("Brick created");
       setCreateBrickOpen(false);
       setBrickName("");
       setBrickColor("#36A9E1");
       setBrickIcon("home");
-      setSelectedBrickIds([createdBrick._id]);
       queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
     },
     onError: (error: Error) => toast.error(error.message || "Failed to create brick"),
   });
 
   const bricks = useMemo(() => bricksQuery.data ?? [], [bricksQuery.data]);
+  const allBrickIds = useMemo(() => bricks.map((brick) => brick._id), [bricks]);
+  const effectiveSelectedBrickIds = useMemo(
+    () => selectedBrickIds ?? allBrickIds,
+    [allBrickIds, selectedBrickIds],
+  );
+  const allBricksSelected = useMemo(() => {
+    if (!allBrickIds.length) {
+      return false;
+    }
+
+    return allBrickIds.every((brickId) =>
+      effectiveSelectedBrickIds.includes(brickId),
+    );
+  }, [allBrickIds, effectiveSelectedBrickIds]);
 
   const filteredEvents = useMemo(() => {
     const now = eventsQuery.dataUpdatedAt || 0;
@@ -195,10 +207,17 @@ export default function EventsPage() {
         return true;
       })
       .filter((event) => {
-        if (!selectedBrickIds.length) {
+        if (!effectiveSelectedBrickIds.length) {
+          return false;
+        }
+
+        if (allBricksSelected) {
           return true;
         }
-        return Boolean(event.brick?._id && selectedBrickIds.includes(event.brick._id));
+
+        return Boolean(
+          event.brick?._id && effectiveSelectedBrickIds.includes(event.brick._id),
+        );
       });
 
     if (!searchText.trim()) {
@@ -213,7 +232,14 @@ export default function EventsPage() {
         event.location?.toLowerCase().includes(q) ||
         event.brick?.name?.toLowerCase().includes(q)
     );
-  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, filter, searchText, selectedBrickIds]);
+  }, [
+    allBricksSelected,
+    effectiveSelectedBrickIds,
+    eventsQuery.data,
+    eventsQuery.dataUpdatedAt,
+    filter,
+    searchText,
+  ]);
 
   const paged = useMemo(() => paginateArray(filteredEvents, page, 10), [filteredEvents, page]);
   const jamCountQueries = useQueries({
@@ -240,7 +266,18 @@ export default function EventsPage() {
 
   React.useEffect(() => {
     setPage(1);
-  }, [filter, searchText, selectedBrickIds]);
+  }, [effectiveSelectedBrickIds, filter, searchText]);
+
+  React.useEffect(() => {
+    setSelectedBrickIds((previous) => {
+      if (previous === null) {
+        return null;
+      }
+
+      const filtered = previous.filter((brickId) => allBrickIds.includes(brickId));
+      return filtered.length === previous.length ? previous : filtered;
+    });
+  }, [allBrickIds]);
 
   React.useEffect(() => {
     if (!createEventOpen) {
@@ -263,133 +300,35 @@ export default function EventsPage() {
   return (
     <div className="events-page space-y-4">
       <section className="events-toolbar flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
-          <button type="button" className="shrink-0 rounded-full" onClick={() => setSelectedBrickIds([])}>
-            <Badge
-              variant="neutral"
-              className="shrink-0 rounded-full px-4 py-2"
-              style={
-                selectedBrickIds.length === 0
-                  ? {
-                      backgroundColor: "#CBD7E9",
-                      borderColor: "#CBD7E9",
-                      color: "white",
-                    }
-                  : {
-                      backgroundColor: "var(--ui-badge-neutral-bg)",
-                      borderColor: "var(--ui-badge-neutral-border)",
-                      color: "var(--ui-badge-neutral-text)",
-                    }
-              }
-            >
-              <LayoutGrid className="size-4" /> All
-            </Badge>
-          </button>
-          {bricks.map((brick) => {
-            const active = selectedBrickIds.includes(brick._id);
+        <div className="min-w-0 flex-1">
+          <BrickFilterBar
+            bricks={bricks}
+            selectedBrickIds={effectiveSelectedBrickIds}
+            onToggleBrick={(brickId) =>
+              setSelectedBrickIds((previous) => {
+                const currentSelection = previous ?? allBrickIds;
+                const nextSelection = currentSelection.includes(brickId)
+                  ? currentSelection.filter((id) => id !== brickId)
+                  : [...currentSelection, brickId];
 
-            return (
-              <button
-                type="button"
-                key={brick._id}
-                className="shrink-0 rounded-full"
-                onClick={() =>
-                  setSelectedBrickIds((previous) =>
-                    previous.includes(brick._id)
-                      ? previous.filter((id) => id !== brick._id)
-                      : [...previous, brick._id],
-                  )
-                }
-              >
-                <Badge
-                  variant="neutral"
-                  className="rounded-full px-4 py-2 !text-[16px]"
-                  style={
-                    active
-                      ? {
-                          color: brick.color,
-                          borderColor: brick.color,
-                          backgroundColor: "var(--ui-badge-neutral-bg)",
-                        }
-                      : {
-                          backgroundColor: brick.color,
-                          color: "white",
-                          borderColor: brick.color,
-                        }
-                  }
-                >
-                  <BrickIcon name={brick.icon} className="size-4" /> {brick.name}
-                </Badge>
-              </button>
-            );
-          })}
+                return allBrickIds.length &&
+                  allBrickIds.every((id) => nextSelection.includes(id))
+                  ? null
+                  : nextSelection;
+              })
+            }
+            onSelectAll={() =>
+              setSelectedBrickIds((previous) => {
+                const currentSelection = previous ?? allBrickIds;
 
-          <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
-            <DialogTrigger asChild>
-              <button className="events-toolbar-create-brick-btn flex size-9 shrink-0 items-center justify-center rounded-full border border-[#B2B8C6] text-[#7B8395] hover:bg-[#ECF0F7]">
-                <Plus className="size-4" />
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
-              <DialogHeader>
-                <DialogTitle className="text-[var(--text-strong)]">Create Brick</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
-                <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
-                  <div className="grid grid-cols-10 gap-2 sm:gap-3">
-                    {colorPalette.map((color) => (
-                      <button
-                        type="button"
-                        key={color}
-                        onClick={() => setBrickColor(color)}
-                        className={`size-8 rounded-full border-2 transition sm:size-10 ${
-                          brickColor === color ? "border-[#283040] scale-[1.05]" : "border-transparent"
-                        }`}
-                        style={{ backgroundColor: color }}
-                        aria-label={`Select ${color} color`}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-sm">Brick Icon</p>
-                  </div>
-                  <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
-                    <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5 md:grid-cols-10">
-                    {brickIconOptions.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setBrickIcon(option.value)}
-                        className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
-                          brickIcon === option.value
-                            ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
-                            : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-default)] hover:border-[var(--ring)]"
-                        }`}
-                        aria-label={option.label}
-                        title={option.label}
-                      >
-                        <option.Icon className="size-4 sm:size-5" />
-                      </button>
-                    ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
-                  <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
-                  <BrickIcon name={brickIcon} className="size-4" />
-                  <span className="fs-pop-14-regular-right text-left text-[var(--text-default)]">{brickName.trim() || "Preview"}</span>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={() => createBrickMutation.mutate()} disabled={createBrickMutation.isPending}>
-                  {createBrickMutation.isPending ? "Creating..." : "Create Brick"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                return allBrickIds.length &&
+                  allBrickIds.every((brickId) => currentSelection.includes(brickId))
+                  ? []
+                  : null;
+              })
+            }
+            onCreateBrick={() => setCreateBrickOpen(true)}
+          />
         </div>
 
         <div className="flex flex-col items-end gap-2">
@@ -496,6 +435,68 @@ export default function EventsPage() {
           />
         )}
       </section>
+
+      <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
+        <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
+          <DialogHeader>
+            <DialogTitle className="text-[var(--text-strong)]">Create Brick</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
+            <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
+              <div className="grid grid-cols-10 gap-2 sm:gap-3">
+                {colorPalette.map((color) => (
+                  <button
+                    type="button"
+                    key={color}
+                    onClick={() => setBrickColor(color)}
+                    className={`size-8 rounded-full border-2 transition sm:size-10 ${
+                      brickColor === color ? "border-[#283040] scale-[1.05]" : "border-transparent"
+                    }`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Select ${color} color`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm">Brick Icon</p>
+              </div>
+              <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
+                <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 sm:gap-2.5 md:grid-cols-10">
+                  {brickIconOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setBrickIcon(option.value)}
+                      className={`flex h-9 items-center justify-center rounded-xl border transition sm:h-10 ${
+                        brickIcon === option.value
+                          ? "border-[#36A9E1] bg-[#DDECFF] text-[#1B5FB8]"
+                          : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-default)] hover:border-[var(--ring)]"
+                      }`}
+                      aria-label={option.label}
+                      title={option.label}
+                    >
+                      <option.Icon className="size-4 sm:size-5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
+              <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
+              <BrickIcon name={brickIcon} className="size-4" />
+              <span className="fs-pop-14-regular-right text-left text-[var(--text-default)]">{brickName.trim() || "Preview"}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => createBrickMutation.mutate()} disabled={createBrickMutation.isPending}>
+              {createBrickMutation.isPending ? "Creating..." : "Create Brick"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={createEventOpen} onOpenChange={setCreateEventOpen}>
         <DialogContent className="max-w-2xl rounded-[26px] space-y-3">

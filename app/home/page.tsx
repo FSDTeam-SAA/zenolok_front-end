@@ -38,9 +38,9 @@ import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
 import { SectionLoading } from "@/components/shared/section-loading";
-import { BrickFilterBar } from "./_components/brick-filter-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
 import {
   Dialog,
   DialogContent,
@@ -223,7 +223,9 @@ function buildWeekSegments(
 export default function HomePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedBrickIds, setSelectedBrickIds] = React.useState<string[]>([]);
+  const [selectedBrickIds, setSelectedBrickIds] = React.useState<string[] | null>(
+    null,
+  );
   const { monthCursor, selectedDate, setSelectedDate, preferences } =
     useAppState();
   const [createBrickOpen, setCreateBrickOpen] = React.useState(false);
@@ -299,6 +301,27 @@ export default function HomePage() {
     () => bricksQuery.data ?? [],
     [bricksQuery.data],
   );
+  const allBrickIds = React.useMemo(
+    () => bricks.map((brick) => brick._id),
+    [bricks],
+  );
+  const effectiveSelectedBrickIds = React.useMemo(() => {
+    if (selectedBrickIds === null) {
+      return allBrickIds;
+    }
+
+    return selectedBrickIds;
+  }, [allBrickIds, selectedBrickIds]);
+
+  const allBricksSelected = React.useMemo(() => {
+    if (!allBrickIds.length) {
+      return false;
+    }
+
+    return allBrickIds.every((brickId) =>
+      effectiveSelectedBrickIds.includes(brickId),
+    );
+  }, [allBrickIds, effectiveSelectedBrickIds]);
 
   const normalizedEvents = React.useMemo<CalendarEvent[]>(() => {
     return (eventsQuery.data || []).reduce<CalendarEvent[]>(
@@ -347,14 +370,21 @@ export default function HomePage() {
   }, [eventsQuery.data]);
 
   const filteredEvents = React.useMemo(() => {
-    if (!selectedBrickIds.length) {
+    if (!effectiveSelectedBrickIds.length) {
+      return [];
+    }
+
+    if (allBricksSelected) {
       return normalizedEvents;
     }
 
     return normalizedEvents.filter(
-      (event) => Boolean(event.brickId && selectedBrickIds.includes(event.brickId)),
+      (event) =>
+        Boolean(
+          event.brickId && effectiveSelectedBrickIds.includes(event.brickId),
+        ),
     );
-  }, [selectedBrickIds, normalizedEvents]);
+  }, [effectiveSelectedBrickIds, normalizedEvents, allBricksSelected]);
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weeks = splitIntoWeeks(days);
@@ -446,11 +476,10 @@ export default function HomePage() {
         icon: brickIcon,
       });
     },
-    onSuccess: (createdBrick) => {
+    onSuccess: () => {
       toast.success("Brick created");
       queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
       setCreateBrickOpen(false);
-      setSelectedBrickIds([createdBrick._id]);
       setBrickName("");
       setBrickColor("#36A9E1");
       setBrickIcon("home");
@@ -519,6 +548,17 @@ export default function HomePage() {
   });
 
   React.useEffect(() => {
+    setSelectedBrickIds((previous) => {
+      if (previous === null) {
+        return null;
+      }
+
+      const filtered = previous.filter((brickId) => allBrickIds.includes(brickId));
+      return filtered.length === previous.length ? previous : filtered;
+    });
+  }, [allBrickIds]);
+
+  React.useEffect(() => {
     if (!createEventOpen) {
       return;
     }
@@ -528,12 +568,12 @@ export default function HomePage() {
 
     setEventDatePopupOpen(false);
     setEventTimePopupOpen(false);
-    setEventStartDate(defaultStartDate);
-    setEventEndDate(defaultEndDate);
-    setEventStartTime("");
-    setEventEndTime("");
-    setNewEventBrickIds(selectedBrickIds);
-  }, [createEventOpen, selectedBrickIds, selectedDateRange]);
+      setEventStartDate(defaultStartDate);
+      setEventEndDate(defaultEndDate);
+      setEventStartTime("");
+      setEventEndTime("");
+      setNewEventBrickIds(effectiveSelectedBrickIds);
+  }, [createEventOpen, effectiveSelectedBrickIds, selectedDateRange]);
 
   React.useEffect(() => {
     if (!isRangeDragging) {
@@ -730,15 +770,30 @@ export default function HomePage() {
     <div className="home-page space-y-4">
       <BrickFilterBar
         bricks={bricks}
-        selectedBrickIds={selectedBrickIds}
+        selectedBrickIds={effectiveSelectedBrickIds}
         onToggleBrick={(brickId) =>
-          setSelectedBrickIds((previous) =>
-            previous.includes(brickId)
-              ? previous.filter((id) => id !== brickId)
-              : [...previous, brickId],
-          )
+          setSelectedBrickIds((previous) => {
+            const currentSelection = previous ?? allBrickIds;
+            const nextSelection = currentSelection.includes(brickId)
+              ? currentSelection.filter((id) => id !== brickId)
+              : [...currentSelection, brickId];
+
+            return allBrickIds.length &&
+              allBrickIds.every((id) => nextSelection.includes(id))
+              ? null
+              : nextSelection;
+          })
         }
-        onSelectAll={() => setSelectedBrickIds([])}
+        onSelectAll={() =>
+          setSelectedBrickIds((previous) => {
+            const currentSelection = previous ?? allBrickIds;
+
+            return allBrickIds.length &&
+              allBrickIds.every((brickId) => currentSelection.includes(brickId))
+              ? []
+              : null;
+          })
+        }
         onCreateBrick={() => setCreateBrickOpen(true)}
       />
 
