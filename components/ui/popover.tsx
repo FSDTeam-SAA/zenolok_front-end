@@ -18,6 +18,7 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 8,
+  children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
@@ -32,7 +33,9 @@ function PopoverContent({
           initial={{ opacity: 0, y: -8, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.22 }}
-        />
+        >
+          {children}
+        </motion.div>
       </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   );
