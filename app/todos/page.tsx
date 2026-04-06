@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
+import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
@@ -846,7 +847,7 @@ export default function TodosPage() {
 
         <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
           <aside className="">
-            <h2 className="font-poppins mb-3 flex items-center gap-2 text-[20px] leading-[120%] font-medium text-[#2F3542]">
+            <h2 className="font-poppins mb-3 flex items-center gap-2 text-[20px] leading-[120%] font-medium text-[var(--text-strong)]">
               <CalendarClock className="size-5" />
               Scheduled
             </h2>
@@ -854,9 +855,9 @@ export default function TodosPage() {
             {categoriesQuery.isLoading ? (
               <SectionLoading rows={4} />
             ) : scheduledItems.length ? (
-              <div className="todos-scheduled-panel rounded-[12px] bg-[#ECEFF4] p-3">
+              <div className="todos-scheduled-panel rounded-[12px] border border-[var(--border)] bg-[var(--surface-2)] p-3">
                 <div
-                  className="mb-3 grid grid-cols-3 rounded-full border border-[#D8DEE8] bg-[#F6F6F6] p-1 text-[14px]"
+                  className="mb-3 grid grid-cols-3 rounded-full border border-[var(--border)] bg-[var(--ui-tabs-list-bg)] p-1 text-[14px]"
                   style={{ boxShadow: "0px 4px 4px 0px rgba(0, 0, 0, 0)" }}
                 >
                   {SCHEDULED_TAB_OPTIONS.map(({ value, label }) => (
@@ -866,8 +867,8 @@ export default function TodosPage() {
                       onClick={() => setScheduledStatusTab(value)}
                       className={`rounded-full px-2 py-1 capitalize transition ${
                         scheduledStatusTab === value
-                          ? "bg-white font-medium text-[#3E4451]"
-                          : "text-[#ADB3BF]"
+                          ? "bg-[var(--ui-tabs-trigger-active-bg)] font-medium text-[var(--ui-tabs-trigger-active-text)]"
+                          : "text-[var(--ui-tabs-trigger-text)]"
                       }`}
                     >
                       {label}
@@ -875,14 +876,14 @@ export default function TodosPage() {
                   ))}
                 </div>
 
-                <div className="mb-3 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+                <DragScrollArea className="mb-3 pb-1">
                   <button
                     type="button"
                     onClick={() => setScheduledCategoryFilter("all")}
                     className={`rounded-full border px-3 py-0.5 text-[18px] ${
                       scheduledCategoryFilter === "all"
-                        ? "border-[#D4D9E3] bg-white text-[#9AA1AE]"
-                        : "border-transparent bg-[#EFF2F7] text-[#B3BAC6]"
+                        ? "border-[var(--border)] bg-[var(--ui-tabs-trigger-active-bg)] text-[var(--text-default)]"
+                        : "border-transparent bg-[var(--surface-1)] text-[var(--text-muted)]"
                     }`}
                   >
                     All
@@ -894,20 +895,22 @@ export default function TodosPage() {
                       onClick={() => setScheduledCategoryFilter(category.id)}
                       className={`rounded-full border px-3 py-0.5 text-[14px] transition ${
                         scheduledCategoryFilter === category.id
-                          ? "text-white"
-                          : "bg-white"
+                          ? ""
+                          : "text-white"
                       }`}
                       style={{
                         borderColor: category.color,
                         backgroundColor:
-                          scheduledCategoryFilter === category.id ? "white" : category.color,
+                          scheduledCategoryFilter === category.id
+                            ? "var(--ui-tabs-trigger-active-bg)"
+                            : category.color,
                         color: scheduledCategoryFilter === category.id ? category.color : "white",
                       }}
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                </DragScrollArea>
 
                 <div className="space-y-2">
                   {visibleScheduledItems.length ? (
@@ -922,7 +925,7 @@ export default function TodosPage() {
                         <div key={todo._id} className="flex items-center gap-2">
                           <p
                             className={`w-[56px] shrink-0 text-right text-[12px] ${
-                              isOverdue ? "text-[#FF6F61]" : "text-[#A6ADBA]"
+                              isOverdue ? "text-[#FF6F61]" : "text-[var(--text-muted)]"
                             }`}
                           >
                             {offsetLabel}
@@ -931,7 +934,7 @@ export default function TodosPage() {
                           <button
                             type="button"
                             onClick={() => handleTodoClickDelete(todo._id)}
-                            className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-white"
+                            className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--ui-checkbox-bg)]"
                             style={{ borderColor: category.color || "#38A8E8" }}
                             aria-label={
                               isAutoDeleting ? `Cancel delete for ${todo.text}` : `Delete ${todo.text} after 3 seconds`
@@ -947,7 +950,7 @@ export default function TodosPage() {
 
                           <p
                             className={`font-poppins min-w-0 flex-1 truncate text-[18px] leading-[120%] ${
-                              isChecked ? "text-[#A4ACBA] line-through" : "text-[#3F4552]"
+                              isChecked ? "text-[var(--text-muted)] line-through" : "text-[var(--text-default)]"
                             }`}
                           >
                             {todo.text}
@@ -956,7 +959,7 @@ export default function TodosPage() {
                           {isChecked ? (
                             <button
                               type="button"
-                              className="inline-flex shrink-0 items-center justify-center text-[#BCC2CE]"
+                              className="inline-flex shrink-0 items-center justify-center text-[var(--text-muted)]"
                               aria-label={`Delete ${todo.text}`}
                               onClick={() => {
                                 setDeleteTargetTodoId(todo._id);
@@ -966,15 +969,15 @@ export default function TodosPage() {
                               <Trash2 className="size-4" />
                             </button>
                           ) : (
-                            <div className="flex shrink-0 items-center gap-1 text-[#BCC2CE]">
-                              <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[rgba(203,203,203,1)] p-[2px]">
+                            <div className="flex shrink-0 items-center gap-1 text-[var(--text-muted)]">
+                              <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[var(--border)] p-[2px]">
                                 <Bell
                                   className={`size-4 cursor-pointer ${
                                     hasTodoAlarmConfigured(todo) ? "opacity-100" : "opacity-35"
                                   }`}
                                 />
                               </span>
-                              <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[rgba(203,203,203,1)] p-[2px]">
+                              <span className="inline-flex items-center justify-center rounded-full border-[1.1px] border-[var(--border)] p-[2px]">
                                 <Repeat2 className={`size-4 cursor-pointer ${todo.repeat ? "opacity-100" : "opacity-35"}`} />
                               </span>
                             </div>
@@ -983,7 +986,7 @@ export default function TodosPage() {
                       );
                     })
                   ) : (
-                    <p className="font-poppins py-2 text-center text-[13px] text-[#98A0AE]">
+                    <p className="font-poppins py-2 text-center text-[13px] text-[var(--text-muted)]">
                       No todo found for this filter.
                     </p>
                   )}

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import {
-  
   addDays,
   differenceInCalendarDays,
   eachDayOfInterval,
@@ -19,7 +18,6 @@ import {
 } from "date-fns";
 import {
   CalendarClock,
-  Clock3,
   ChevronDown,
   ChevronUp,
   MapPin,
@@ -30,13 +28,20 @@ import {
   AlarmClock,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
+import { AllDayTabToggle } from "@/components/shared/all-day-tab-toggle";
 import { BrickIcon } from "@/components/shared/brick-icon";
+import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
-import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
+import {
+  EventDateRangePopup,
+  EventTimeRangePopup,
+} from "@/components/shared/event-date-time-popups";
+import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,20 +54,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import {
-  brickApi,
-  eventApi,
-  userApi,
-  type EventData,
-} from "@/lib/api";
+import { brickApi, eventApi, userApi, type EventData } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
-import {
-  formatTimeRangeByPreference,
-  formatTimeStringByPreference,
-} from "@/lib/time-format";
+import { formatTimeRangeByPreference } from "@/lib/time-format";
 
 type CalendarEvent = {
   id: string;
@@ -152,27 +148,6 @@ function parseDateTimeValue(value: string) {
   return parsed;
 }
 
-function formatDateInputSummary(value: string) {
-  if (!value) {
-    return "";
-  }
-
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) {
-    return value;
-  }
-
-  return format(parsed, "yyyy-MM-dd");
-}
-
-function formatTimeInputSummary(value: string, use24Hour: boolean) {
-  if (!value) {
-    return "";
-  }
-
-  return formatTimeStringByPreference(value, use24Hour);
-}
-
 function buildWeekSegments(
   week: Date[],
   events: CalendarEvent[],
@@ -223,9 +198,9 @@ function buildWeekSegments(
 export default function HomePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [selectedBrickIds, setSelectedBrickIds] = React.useState<string[] | null>(
-    null,
-  );
+  const [selectedBrickIds, setSelectedBrickIds] = React.useState<
+    string[] | null
+  >(null);
   const { monthCursor, selectedDate, setSelectedDate, preferences } =
     useAppState();
   const [createBrickOpen, setCreateBrickOpen] = React.useState(false);
@@ -378,11 +353,10 @@ export default function HomePage() {
       return normalizedEvents;
     }
 
-    return normalizedEvents.filter(
-      (event) =>
-        Boolean(
-          event.brickId && effectiveSelectedBrickIds.includes(event.brickId),
-        ),
+    return normalizedEvents.filter((event) =>
+      Boolean(
+        event.brickId && effectiveSelectedBrickIds.includes(event.brickId),
+      ),
     );
   }, [effectiveSelectedBrickIds, normalizedEvents, allBricksSelected]);
 
@@ -433,21 +407,18 @@ export default function HomePage() {
     [rangeDragAnchor, selectedDateRange.end, setSelectedDate],
   );
 
-  const selectedDateEvents = React.useMemo(
-    () => {
-      const dayEvents = filteredEvents.filter(
-        (event) => event.start <= selectedDate && event.end >= selectedDate,
-      );
+  const selectedDateEvents = React.useMemo(() => {
+    const dayEvents = filteredEvents.filter(
+      (event) => event.start <= selectedDate && event.end >= selectedDate,
+    );
 
-      return dayEvents.sort((a, b) => {
-        if (a.isAllDay !== b.isAllDay) {
-          return a.isAllDay ? -1 : 1;
-        }
-        return a.startAt.getTime() - b.startAt.getTime();
-      });
-    },
-    [filteredEvents, selectedDate],
-  );
+    return dayEvents.sort((a, b) => {
+      if (a.isAllDay !== b.isAllDay) {
+        return a.isAllDay ? -1 : 1;
+      }
+      return a.startAt.getTime() - b.startAt.getTime();
+    });
+  }, [filteredEvents, selectedDate]);
   const handleOpenEventDetails = React.useCallback(
     (eventId: string) => {
       setEventsDrawerOpen(false);
@@ -456,13 +427,6 @@ export default function HomePage() {
     [router],
   );
   const hasEventDateRange = Boolean(eventStartDate && eventEndDate);
-  const eventDateSummary = hasEventDateRange
-    ? `${formatDateInputSummary(eventStartDate)} - ${formatDateInputSummary(eventEndDate)}`
-    : "";
-  const hasEventTimeRange = Boolean(eventStartTime && eventEndTime);
-  const eventTimeSummary = hasEventTimeRange
-    ? `${formatTimeInputSummary(eventStartTime, preferences.use24Hour)} - ${formatTimeInputSummary(eventEndTime, preferences.use24Hour)}`
-    : "";
 
   const createBrickMutation = useMutation({
     mutationFn: () => {
@@ -502,10 +466,15 @@ export default function HomePage() {
         throw new Error("Start and end times are required");
       }
 
-      const startDate = new Date(`${eventStartDate}T${(eventStartTime || "00:00")}:00`);
-      const endDate = new Date(`${eventEndDate}T${(eventEndTime || "00:00")}:00`);
+      const startDate = new Date(
+        `${eventStartDate}T${eventStartTime || "00:00"}:00`,
+      );
+      const endDate = new Date(`${eventEndDate}T${eventEndTime || "00:00"}:00`);
 
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(endDate.getTime())
+      ) {
         throw new Error("Invalid start or end date/time");
       }
 
@@ -553,7 +522,9 @@ export default function HomePage() {
         return null;
       }
 
-      const filtered = previous.filter((brickId) => allBrickIds.includes(brickId));
+      const filtered = previous.filter((brickId) =>
+        allBrickIds.includes(brickId),
+      );
       return filtered.length === previous.length ? previous : filtered;
     });
   }, [allBrickIds]);
@@ -568,11 +539,11 @@ export default function HomePage() {
 
     setEventDatePopupOpen(false);
     setEventTimePopupOpen(false);
-      setEventStartDate(defaultStartDate);
-      setEventEndDate(defaultEndDate);
-      setEventStartTime("");
-      setEventEndTime("");
-      setNewEventBrickIds(effectiveSelectedBrickIds);
+    setEventStartDate(defaultStartDate);
+    setEventEndDate(defaultEndDate);
+    setEventStartTime("");
+    setEventEndTime("");
+    setNewEventBrickIds(effectiveSelectedBrickIds);
   }, [createEventOpen, effectiveSelectedBrickIds, selectedDateRange]);
 
   React.useEffect(() => {
@@ -694,9 +665,7 @@ export default function HomePage() {
                       type="button"
                       className="inline-flex items-center justify-center"
                       aria-label={
-                        expanded
-                          ? "Collapse event todos"
-                          : "Expand event todos"
+                        expanded ? "Collapse event todos" : "Expand event todos"
                       }
                       onClick={(clickEvent) => {
                         clickEvent.stopPropagation();
@@ -803,207 +772,226 @@ export default function HomePage() {
         ) : (
           <>
             <div className="home-calendar-layout grid gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
-            <aside className="home-events-sidebar hidden rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:block">
-              {eventsSidebarContent}
-            </aside>
+              <aside className="home-events-sidebar hidden rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:block">
+                {eventsSidebarContent}
+              </aside>
 
-            <div className="min-w-0 space-y-2">
-              <div className="flex items-center justify-between xl:hidden">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 w-10 rounded-xl p-0"
-                  onClick={() => setEventsDrawerOpen(true)}
-                  aria-label="Open selected events drawer"
-                >
-                  <PanelLeft className="size-5" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 w-10 rounded-xl p-0"
-                  onClick={() => setCreateEventOpen(true)}
-                  aria-label="Create event"
-                >
-                  <Plus className="size-4" />
-                </Button>
-              </div>
-
-              <div className="home-calendar-wrap w-full overflow-x-auto">
-              <div className="home-calendar-board min-w-[840px]">
-                <div className="mb-2 grid grid-cols-7">
-                  {weekdayLabels.map((weekday) => {
-                    const label = format(weekday, "EEE");
-                    const normalizedDay = format(weekday, "EEEE").toLowerCase();
-                    const isWeekendLabel = weekendDaySet.has(normalizedDay);
-
-                    return (
-                    <div key={label} className="px-2 py-1 text-center">
-                      <p
-                        className={`font-poppins text-[16px] leading-[120%] font-medium ${
-                          isWeekendLabel
-                            ? "!text-[#FF3B30]"
-                            : "!text-[var(--text-default)]"
-                        }`}
-                      >
-                        {label}
-                      </p>
-                    </div>
-                  );
-                  })}
+              <div className="min-w-0 space-y-2">
+                <div className="flex items-center justify-between xl:hidden">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-10 rounded-xl p-0"
+                    onClick={() => setEventsDrawerOpen(true)}
+                    aria-label="Open selected events drawer"
+                  >
+                    <PanelLeft className="size-5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 w-10 rounded-xl p-0"
+                    onClick={() => setCreateEventOpen(true)}
+                    aria-label="Create event"
+                  >
+                    <Plus className="size-4" />
+                  </Button>
                 </div>
 
-                <div className="space-y-0 rounded-[18px] border border-[var(--border)] bg-[var(--surface-1)]">
-                  {weeks.map((week, weekIndex) => {
-                    const weekInfo = buildWeekSegments(week, filteredEvents);
-                    const shouldScrollSegments = weekInfo.laneCount > 3;
+                <div className="home-calendar-wrap w-full overflow-x-auto">
+                  <div className="home-calendar-board min-w-[840px]">
+                    <div className="mb-2 grid grid-cols-7">
+                      {weekdayLabels.map((weekday) => {
+                        const label = format(weekday, "EEE");
+                        const normalizedDay = format(
+                          weekday,
+                          "EEEE",
+                        ).toLowerCase();
+                        const isWeekendLabel = weekendDaySet.has(normalizedDay);
 
-                    return (
-                      <div
-                        key={`${format(week[0], "yyyy-MM-dd")}-${weekIndex}`}
-                        className="relative grid grid-cols-7 overflow-hidden border-b border-[var(--border)] last:border-b-0"
-                      >
-                        {week.map((day) => {
-                          const isInSelectedRange =
-                            day >= selectedDateRange.start &&
-                            day <= selectedDateRange.end;
-                          const isWeekendDay = weekendDaySet.has(
-                            format(day, "EEEE").toLowerCase(),
-                          );
-                          return (
-                            <button
-                              key={format(day, "yyyy-MM-dd")}
-                              type="button"
-                              onMouseDown={(mouseEvent) => {
-                                if (mouseEvent.button !== 0) {
-                                  return;
-                                }
-
-                                mouseEvent.preventDefault();
-                                const normalized = startOfDay(day);
-                                setIsRangeDragging(true);
-                                setRangeDragAnchor(normalized);
-                                setSelectedDateRange({
-                                  start: normalized,
-                                  end: normalized,
-                                });
-                              }}
-                              onMouseEnter={() => {
-                                if (!isRangeDragging || !rangeDragAnchor) {
-                                  return;
-                                }
-
-                                setSelectedDateRange(
-                                  normalizeDateRange(rangeDragAnchor, day),
-                                );
-                              }}
-                              onMouseUp={(mouseEvent) => {
-                                mouseEvent.preventDefault();
-                                mouseEvent.stopPropagation();
-                                finishRangeSelection(day);
-                              }}
-                              onKeyDown={(keyEvent) => {
-                                if (
-                                  keyEvent.key !== "Enter" &&
-                                  keyEvent.key !== " "
-                                ) {
-                                  return;
-                                }
-
-                                keyEvent.preventDefault();
-                                const normalized = startOfDay(day);
-                                setSelectedDateRange({
-                                  start: normalized,
-                                  end: normalized,
-                                });
-                                skipRangeSyncRef.current = true;
-                                setSelectedDate(normalized);
-                              }}
-                              className={`home-day-cell h-[136px] select-none border-r border-[var(--border)] px-2 py-2 text-left last:border-r-0 ${
-                                isInSelectedRange ? "bg-[var(--surface-2)]" : ""
+                        return (
+                          <div key={label} className="px-2 py-1 text-center">
+                            <p
+                              className={`font-poppins text-[16px] leading-[120%] font-medium ${
+                                isWeekendLabel
+                                  ? "!text-[#FF3B30]"
+                                  : "!text-[var(--text-default)]"
                               }`}
                             >
-                              <span
-                                className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl pb-6 px-2 text-[20px] leading-[120%] font-medium ${
-                                  isInSelectedRange
-                                    ? "text-[var(--text-strong)]"
-                                    : isWeekendDay
-                                      ? "text-[#FF3B30]"
-                                      : isSameMonth(day, monthCursor)
-                                        ? "text-[var(--text-default)]"
-                                        : "text-[var(--text-muted)]"
+                              {label}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-0 rounded-[18px] border border-[var(--border)] bg-[var(--surface-1)]">
+                      {weeks.map((week, weekIndex) => {
+                        const weekInfo = buildWeekSegments(
+                          week,
+                          filteredEvents,
+                        );
+                        const shouldScrollSegments = weekInfo.laneCount > 3;
+
+                        return (
+                          <div
+                            key={`${format(week[0], "yyyy-MM-dd")}-${weekIndex}`}
+                            className="relative grid grid-cols-7 overflow-hidden border-b border-[var(--border)] last:border-b-0"
+                          >
+                            {week.map((day) => {
+                              const isInSelectedRange =
+                                day >= selectedDateRange.start &&
+                                day <= selectedDateRange.end;
+                              const isWeekendDay = weekendDaySet.has(
+                                format(day, "EEEE").toLowerCase(),
+                              );
+                              return (
+                                <button
+                                  key={format(day, "yyyy-MM-dd")}
+                                  type="button"
+                                  onMouseDown={(mouseEvent) => {
+                                    if (mouseEvent.button !== 0) {
+                                      return;
+                                    }
+
+                                    mouseEvent.preventDefault();
+                                    const normalized = startOfDay(day);
+                                    setIsRangeDragging(true);
+                                    setRangeDragAnchor(normalized);
+                                    setSelectedDateRange({
+                                      start: normalized,
+                                      end: normalized,
+                                    });
+                                  }}
+                                  onMouseEnter={() => {
+                                    if (!isRangeDragging || !rangeDragAnchor) {
+                                      return;
+                                    }
+
+                                    setSelectedDateRange(
+                                      normalizeDateRange(rangeDragAnchor, day),
+                                    );
+                                  }}
+                                  onMouseUp={(mouseEvent) => {
+                                    mouseEvent.preventDefault();
+                                    mouseEvent.stopPropagation();
+                                    finishRangeSelection(day);
+                                  }}
+                                  onKeyDown={(keyEvent) => {
+                                    if (
+                                      keyEvent.key !== "Enter" &&
+                                      keyEvent.key !== " "
+                                    ) {
+                                      return;
+                                    }
+
+                                    keyEvent.preventDefault();
+                                    const normalized = startOfDay(day);
+                                    setSelectedDateRange({
+                                      start: normalized,
+                                      end: normalized,
+                                    });
+                                    skipRangeSyncRef.current = true;
+                                    setSelectedDate(normalized);
+                                  }}
+                                  className={`home-day-cell h-[136px] select-none border-r border-[var(--border)] px-2 py-2 text-left last:border-r-0 ${
+                                    isInSelectedRange
+                                      ? "bg-[var(--surface-2)]"
+                                      : ""
+                                  }`}
+                                >
+                                  <span
+                                    className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl pb-6 px-2 text-[20px] leading-[120%] font-medium ${
+                                      isInSelectedRange
+                                        ? "text-[var(--text-strong)]"
+                                        : isWeekendDay
+                                          ? "text-[#FF3B30]"
+                                          : isSameMonth(day, monthCursor)
+                                            ? "text-[var(--text-default)]"
+                                            : "text-[var(--text-muted)]"
+                                    }`}
+                                  >
+                                    {format(day, "d")}
+                                  </span>
+                                </button>
+                              );
+                            })}
+
+                            <div className="pointer-events-none absolute inset-x-0 top-20 px-[2px]">
+                              <div
+                                className={`grid grid-cols-7 auto-rows-[24px] ${
+                                  shouldScrollSegments
+                                    ? "pointer-events-auto max-h-[72px] overflow-y-auto pr-1"
+                                    : ""
                                 }`}
                               >
-                                {format(day, "d")}
-                              </span>
-                            </button>
-                          );
-                        })}
-
-                        <div className="pointer-events-none absolute inset-x-0 top-20 px-[2px]">
-                          <div
-                            className={`grid grid-cols-7 auto-rows-[24px] ${
-                              shouldScrollSegments
-                                ? "pointer-events-auto max-h-[72px] overflow-y-auto pr-1"
-                                : ""
-                            }`}
-                          >
-                            {weekInfo.segments.map((segment) => (
-                              <div
-                                key={segment.id}
-                                style={{
-                                  gridColumn: `${segment.startCol} / ${segment.endCol + 1}`,
-                                  gridRow: segment.lane + 1,
-                                  backgroundColor: segment.color,
-                                  color: "#FFFFFF",
-                                }}
-                                className="mx-[1px] flex h-[18px] items-center overflow-hidden rounded-[1px]"
-                              >
-                                {segment.isStart ? (
-                                  <span className="truncate px-1 font-poppins text-[14px] leading-[120%] font-medium text-white">
-                                    {segment.title}
-                                  </span>
-                                ) : null}
+                                {weekInfo.segments.map((segment) => (
+                                  <div
+                                    key={segment.id}
+                                    style={{
+                                      gridColumn: `${segment.startCol} / ${segment.endCol + 1}`,
+                                      gridRow: segment.lane + 1,
+                                      backgroundColor: segment.color,
+                                      color: "#FFFFFF",
+                                    }}
+                                    className="mx-[1px] flex h-[18px] items-center overflow-hidden rounded-[1px]"
+                                  >
+                                    {segment.isStart ? (
+                                      <span className="truncate px-1 font-poppins text-[14px] leading-[120%] font-medium text-white">
+                                        {segment.title}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
-              </div>
-            </div>
             </div>
 
-            {eventsDrawerOpen ? (
-              <div className="fixed inset-0 z-50 xl:hidden">
-                <button
-                  type="button"
-                  className="absolute inset-0 bg-black/35"
-                  onClick={() => setEventsDrawerOpen(false)}
-                  aria-label="Close selected events drawer overlay"
-                />
-                <aside className="home-events-sidebar absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-2)] p-4 shadow-[0_16px_44px_rgba(17,24,37,0.20)]">
-                  <div className="mb-4 flex items-center justify-between">
-                    <p className="font-poppins text-[22px] leading-[120%] font-semibold text-[var(--text-strong)]">
-                      Day Events
-                    </p>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 w-10 rounded-xl p-0"
-                      onClick={() => setEventsDrawerOpen(false)}
-                      aria-label="Close selected events drawer"
-                    >
-                      <X className="size-5" />
-                    </Button>
-                  </div>
-                  {eventsSidebarContent}
-                </aside>
-              </div>
-            ) : null}
+            <AnimatePresence>
+              {eventsDrawerOpen ? (
+                <div className="fixed inset-0 z-50 xl:hidden">
+                  <motion.button
+                    type="button"
+                    className="absolute inset-0 bg-black/35"
+                    onClick={() => setEventsDrawerOpen(false)}
+                    aria-label="Close selected events drawer overlay"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  />
+                  <motion.aside
+                    className="home-events-sidebar absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-2)] p-4 shadow-[0_16px_44px_rgba(17,24,37,0.20)]"
+                    initial={{ x: -36, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: -24, opacity: 0 }}
+                    transition={{ duration: 0.24 }}
+                  >
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="font-poppins text-[22px] leading-[120%] font-semibold text-[var(--text-strong)]">
+                        Day Events
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-10 w-10 rounded-xl p-0"
+                        onClick={() => setEventsDrawerOpen(false)}
+                        aria-label="Close selected events drawer"
+                      >
+                        <X className="size-5" />
+                      </Button>
+                    </div>
+                    {eventsSidebarContent}
+                  </motion.aside>
+                </div>
+              ) : null}
+            </AnimatePresence>
           </>
         )}
       </section>
@@ -1011,7 +999,9 @@ export default function HomePage() {
       <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
         <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
           <DialogHeader>
-            <DialogTitle className="text-3xl text-[var(--text-strong)]">Create Brick</DialogTitle>
+            <DialogTitle className="text-3xl text-[var(--text-strong)]">
+              Create Brick
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
@@ -1027,7 +1017,9 @@ export default function HomePage() {
                     key={color}
                     onClick={() => setBrickColor(color)}
                     className={`size-8 rounded-full border-2 transition sm:size-10 ${
-                      brickColor === color ? "border-[#283040] scale-[1.05]" : "border-transparent"
+                      brickColor === color
+                        ? "border-[#283040] scale-[1.05]"
+                        : "border-transparent"
                     }`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select ${color} color`}
@@ -1087,7 +1079,7 @@ export default function HomePage() {
       <Dialog open={createEventOpen} onOpenChange={setCreateEventOpen}>
         <DialogContent className="max-w-2xl rounded-[26px] space-y-4">
           <DialogHeader>
-            <DialogTitle className="text-3xl">Create event</DialogTitle>
+            <DialogTitle className="text-3xl">Create Event</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input
@@ -1100,48 +1092,42 @@ export default function HomePage() {
               value={eventLocation}
               onChange={(event) => setEventLocation(event.target.value)}
             />
-            <div className="space-y-2">
-              <button
-                type="button"
-                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D]"
+            <div className="space-y-3">
+              <EventRangeField
+                kind="date"
+                startValue={eventStartDate}
+                endValue={eventEndDate}
                 onClick={() => setEventDatePopupOpen(true)}
-              >
-                <CalendarClock className="size-5" />
-                Choose a date
-              </button>
-              {eventDateSummary ? <p className="text-[12px] text-[#8890A0]">{eventDateSummary}</p> : null}
-            </div>
-            {!eventIsAllDay ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => setEventTimePopupOpen(true)}
-                  disabled={!hasEventDateRange}
-                >
-                  <Clock3 className="size-5" />
-                  Set time
-                </button>
-                {hasEventTimeRange ? (
-                  <p className="text-[12px] text-[#8890A0]">
-                    {eventTimeSummary}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
-              <p className="font-medium text-[#3A404D]">All day</p>
-              <Switch
-                checked={eventIsAllDay}
-                onCheckedChange={(checked) => {
-                  setEventIsAllDay(checked);
-                  if (checked) {
-                    setEventTimePopupOpen(false);
-                  }
-                }}
               />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                {eventIsAllDay ? (
+                  <EventSingleField kind="time" label="All day" />
+                ) : (
+                  <EventRangeField
+                    kind="time"
+                    startValue={eventStartTime}
+                    endValue={eventEndTime}
+                    use24Hour={preferences.use24Hour}
+                    onClick={() => setEventTimePopupOpen(true)}
+                    disabled={!hasEventDateRange}
+                    className="max-w-full"
+                  />
+                )}
+                <AllDayTabToggle
+                  active={eventIsAllDay}
+                  onToggle={() => {
+                    const next = !eventIsAllDay;
+                    setEventIsAllDay(next);
+                    if (next) {
+                      setEventTimePopupOpen(false);
+                    }
+                  }}
+                  className="self-end sm:self-auto"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+
+            <DragScrollArea className="pb-1">
               {bricks.map((brick) => (
                 <button
                   key={brick._id}
@@ -1177,14 +1163,14 @@ export default function HomePage() {
                   </Badge>
                 </button>
               ))}
-            </div>
+            </DragScrollArea>
           </div>
           <DialogFooter>
             <Button
               onClick={() => createEventMutation.mutate()}
               disabled={createEventMutation.isPending}
             >
-              {createEventMutation.isPending ? "Creating..." : "Create event"}
+              {createEventMutation.isPending ? "Creating..." : "Create Event"}
             </Button>
           </DialogFooter>
         </DialogContent>

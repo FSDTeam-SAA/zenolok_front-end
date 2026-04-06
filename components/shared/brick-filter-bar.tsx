@@ -1,8 +1,10 @@
 "use client";
 
 import { Check, LayoutGrid, Plus } from "lucide-react";
+import { motion } from "motion/react";
 
 import { BrickIcon } from "@/components/shared/brick-icon";
+import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Brick } from "@/lib/api";
 
@@ -26,13 +28,20 @@ export function BrickFilterBar({
     bricks.every((brick) => selectedBrickIds.includes(brick._id));
 
   return (
-    <section className="space-y-2">
-      <div className="home-brick-filter flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
-        <button
+    <motion.section
+      className="space-y-2"
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
+    >
+      <DragScrollArea className="home-brick-filter pb-1">
+        <motion.button
           type="button"
           className="shrink-0"
           onClick={onSelectAll}
           aria-pressed={isAllSelected}
+          whileHover={{ y: -1 }}
+          whileTap={{ scale: 0.97 }}
         >
           <Badge
             variant="neutral"
@@ -55,18 +64,21 @@ export function BrickFilterBar({
             All
             {isAllSelected ? <Check className="size-3.5" /> : null}
           </Badge>
-        </button>
+        </motion.button>
 
         {bricks.map((brick) => {
           const active = selectedBrickIds.includes(brick._id);
 
           return (
-            <button
+            <motion.button
               key={brick._id}
               type="button"
               className="shrink-0"
               onClick={() => onToggleBrick(brick._id)}
               aria-pressed={active}
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.97 }}
+              layout
             >
               <Badge
                 variant="neutral"
@@ -89,21 +101,23 @@ export function BrickFilterBar({
                 <BrickIcon name={brick.icon} className="size-4" />
                 {brick.name}
               </Badge>
-            </button>
+            </motion.button>
           );
         })}
 
-        <button
+        <motion.button
           type="button"
           className="shrink-0"
           onClick={onCreateBrick}
           aria-label="Create brick"
+          whileHover={{ y: -1, rotate: 45 }}
+          whileTap={{ scale: 0.94 }}
         >
           <span className="flex size-8 items-center justify-center rounded-full border border-[var(--ui-badge-neutral-border)] bg-[var(--ui-badge-neutral-bg)] text-[var(--ui-badge-neutral-text)]">
             <Plus className="size-4" />
           </span>
-        </button>
-      </div>
-    </section>
+        </motion.button>
+      </DragScrollArea>
+    </motion.section>
   );
 }

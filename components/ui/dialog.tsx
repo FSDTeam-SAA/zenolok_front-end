@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { motion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 
@@ -24,14 +25,18 @@ function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.C
 
 function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
-    <DialogPrimitive.Overlay
-      data-slot="dialog-overlay"
-      className={cn(
-        "fixed inset-0 z-50 bg-black/35 backdrop-blur-[1px] data-[state=open]:animate-in data-[state=closed]:animate-out",
-        className
-      )}
-      {...props}
-    />
+    <DialogPrimitive.Overlay asChild {...props}>
+      <motion.div
+        data-slot="dialog-overlay"
+        className={cn(
+          "fixed inset-0 z-50 bg-black/35 backdrop-blur-[1px]",
+          className
+        )}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      />
+    </DialogPrimitive.Overlay>
   );
 }
 
@@ -46,14 +51,17 @@ function DialogContent({
   return (
     <DialogPortal>
       <DialogOverlay />
-      <DialogPrimitive.Content
-        data-slot="dialog-content"
-        className={cn(
-          "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[var(--ui-dialog-border)] bg-[var(--ui-dialog-bg)] p-5 text-[var(--text-default)] shadow-[var(--ui-dialog-shadow)] duration-200",
-          className
-        )}
-        {...props}
-      >
+      <DialogPrimitive.Content asChild {...props}>
+        <motion.div
+          data-slot="dialog-content"
+          className={cn(
+            "fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 rounded-[24px] border border-[var(--ui-dialog-border)] bg-[var(--ui-dialog-bg)] p-5 text-[var(--text-default)] shadow-[var(--ui-dialog-shadow)]",
+            className
+          )}
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.28 }}
+        >
         {children}
         {showClose ? (
           <DialogPrimitive.Close className="absolute top-4 right-4 rounded-md text-[var(--ui-dialog-close)] hover:text-[var(--ui-dialog-close-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
@@ -61,6 +69,7 @@ function DialogContent({
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         ) : null}
+        </motion.div>
       </DialogPrimitive.Content>
     </DialogPortal>
   );

@@ -65,8 +65,10 @@ html {
   --ui-popover-bg: #f4f6fa;
   --ui-popover-border: #dde4ef;
   --ui-popover-shadow: 0 14px 35px rgba(18, 22, 31, 0.14);
-  --ui-switch-off: #d9dee7;
+  --ui-switch-off: #dfdfe3;
+  --ui-switch-off-border: #d6d6db;
   --ui-switch-on: #34c759;
+  --ui-switch-thumb: #ffffff;
   --ui-badge-neutral-bg: #ffffff;
   --ui-badge-neutral-border: #b9bfca;
   --ui-badge-neutral-text: #666f83;
@@ -79,6 +81,28 @@ html {
   --ui-checkbox-bg: #ffffff;
   --ui-checkbox-border: #8b93a4;
   --ui-checkbox-ring: #88b4ff;
+  --ui-calendar-popup-bg: #f4f5f7;
+  --ui-calendar-popup-border: #e2e5ec;
+  --ui-calendar-popup-panel-bg: #ececef;
+  --ui-calendar-popup-input-bg: #f8f9fb;
+  --ui-calendar-popup-input-border: #d2d7e0;
+  --ui-calendar-popup-slot-bg: #eff1f5;
+  --ui-calendar-popup-slot-active-bg: #fff6f6;
+  --ui-calendar-popup-title: #444a55;
+  --ui-calendar-popup-strong: #4a4f59;
+  --ui-calendar-popup-year: #6d717b;
+  --ui-calendar-popup-muted: #808692;
+  --ui-calendar-popup-subtle: #8e93a0;
+  --ui-calendar-popup-nav: #767d89;
+  --ui-calendar-popup-weekday: #9ba0aa;
+  --ui-calendar-accent: #f07373;
+  --ui-calendar-accent-hover: #e86868;
+  --ui-calendar-range-bg: #4b4d54;
+  --ui-calendar-neutral-bg: #b6b8bc;
+  --ui-calendar-neutral-hover: #aeb0b4;
+  --ui-calendar-outside-bg: #d4d6db;
+  --ui-calendar-outside-text: #9ca1aa;
+  --ui-calendar-keypad-empty: #c7cbd4;
 }
 
 * {
@@ -190,8 +214,10 @@ body.theme-dark {
   --ui-popover-bg: #121d2e;
   --ui-popover-border: #2d405d;
   --ui-popover-shadow: 0 18px 40px rgba(2, 7, 15, 0.65);
-  --ui-switch-off: #2c3c54;
+  --ui-switch-off: #4b5668;
+  --ui-switch-off-border: #5a6577;
   --ui-switch-on: #34c759;
+  --ui-switch-thumb: #ffffff;
   --ui-badge-neutral-bg: #1a263a;
   --ui-badge-neutral-border: #32445f;
   --ui-badge-neutral-text: #c5d1e5;
@@ -204,6 +230,28 @@ body.theme-dark {
   --ui-checkbox-bg: #162337;
   --ui-checkbox-border: #496082;
   --ui-checkbox-ring: #8bbaff;
+  --ui-calendar-popup-bg: #121d2e;
+  --ui-calendar-popup-border: #2d405d;
+  --ui-calendar-popup-panel-bg: #172233;
+  --ui-calendar-popup-input-bg: #101a29;
+  --ui-calendar-popup-input-border: #31455f;
+  --ui-calendar-popup-slot-bg: #1c2a3f;
+  --ui-calendar-popup-slot-active-bg: #302430;
+  --ui-calendar-popup-title: #e8effb;
+  --ui-calendar-popup-strong: #f0f5ff;
+  --ui-calendar-popup-year: #a7b8d2;
+  --ui-calendar-popup-muted: #93a6c5;
+  --ui-calendar-popup-subtle: #8ea0bc;
+  --ui-calendar-popup-nav: #9fb0cb;
+  --ui-calendar-popup-weekday: #95a8c7;
+  --ui-calendar-accent: #ff7f78;
+  --ui-calendar-accent-hover: #ff918a;
+  --ui-calendar-range-bg: #31425e;
+  --ui-calendar-neutral-bg: #43526d;
+  --ui-calendar-neutral-hover: #51637f;
+  --ui-calendar-outside-bg: #22324a;
+  --ui-calendar-outside-text: #7f95b4;
+  --ui-calendar-keypad-empty: #5a6d8d;
 }
 
 body.theme-dark .auth-shell {
@@ -465,6 +513,15 @@ body.theme-dark ::-webkit-scrollbar-thumb {
 
 body.theme-dark ::-webkit-scrollbar-track {
   background: #101827;
+}
+
+.drag-scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.drag-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
 }
 
 input::-ms-reveal,

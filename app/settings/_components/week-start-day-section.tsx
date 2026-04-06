@@ -14,8 +14,8 @@ export function WeekStartDaySection({
   return (
     <section className="space-y-5">
       <SectionHeader
-        title="Manage weeks start day"
-        description="Choose the first day of your week calendar."
+        title="Manage Week Start Day"
+        description="Choose the first day of your week."
       />
 
       <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">

@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { useSession } from "next-auth/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -108,7 +109,12 @@ export function AppTopNav() {
   };
 
   return (
-    <header className="app-top-nav sticky top-0 z-40 border-b backdrop-blur">
+    <motion.header
+      className="app-top-nav sticky top-0 z-40 border-b backdrop-blur"
+      initial={{ opacity: 0, y: -14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28 }}
+    >
       <div className="mx-auto flex h-[76px] w-full max-w-[1180px] items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-3">
           <Link href="/home" className="flex items-center gap-2">
@@ -162,20 +168,21 @@ export function AppTopNav() {
             const active =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                data-active={active}
-                className={cn(
-                  "app-top-nav-link fs-pop-20-medium-center inline-flex items-center gap-2 rounded-full px-4 py-2 transition",
-                  active
-                    ? "bg-[var(--nav-link-active-bg)] text-[var(--nav-link-active-text)]"
-                    : "text-[var(--nav-link-text)] hover:bg-[var(--nav-link-hover-bg)]",
-                )}
-              >
-                <item.icon className="size-5" />
-                {item.label}
-              </Link>
+              <motion.div key={item.href} layout whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }}>
+                <Link
+                  href={item.href}
+                  data-active={active}
+                  className={cn(
+                    "app-top-nav-link fs-pop-20-medium-center inline-flex items-center gap-2 rounded-full px-4 py-2 transition",
+                    active
+                      ? "bg-[var(--nav-link-active-bg)] text-[var(--nav-link-active-text)]"
+                      : "text-[var(--nav-link-text)] hover:bg-[var(--nav-link-hover-bg)]",
+                  )}
+                >
+                  <item.icon className="size-5" />
+                  {item.label}
+                </Link>
+              </motion.div>
             );
           })}
         </nav>
@@ -277,7 +284,7 @@ export function AppTopNav() {
                       : formatDistanceToNow(createdAt, { addSuffix: true });
 
                     return (
-                      <button
+                      <motion.button
                         key={notification._id}
                         type="button"
                         className="group flex w-full items-start gap-2 rounded-xl p-1 text-left"
@@ -286,6 +293,8 @@ export function AppTopNav() {
                             markAsReadMutation.mutate(notification._id);
                           }
                         }}
+                        whileHover={{ x: 2 }}
+                        whileTap={{ scale: 0.99 }}
                       >
                         <span
                           className={cn(
@@ -310,7 +319,7 @@ export function AppTopNav() {
                             <p className="mt-1 text-[10px] text-[var(--text-muted)]">{timeLabel}</p>
                           ) : null}
                         </div>
-                      </button>
+                      </motion.button>
                     );
                   })
                 ) : (
@@ -396,6 +405,6 @@ export function AppTopNav() {
           })}
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

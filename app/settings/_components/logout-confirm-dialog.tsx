@@ -20,8 +20,8 @@ export function LogoutConfirmDialog({ isPending, open, onConfirm, onOpenChange }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-3xl">
         <DialogHeader>
-          <DialogTitle className="!text-[24px]">Confirm Logout</DialogTitle>
-          <DialogDescription className="!text-[14px] leading-[120%] text-[#6B7280]">
+          <DialogTitle className="!text-[24px] text-[var(--text-strong)]">Confirm Logout</DialogTitle>
+          <DialogDescription className="!text-[14px] leading-[120%] text-[var(--text-muted)]">
             Are you sure you want to logout from your account?
           </DialogDescription>
         </DialogHeader>

@@ -122,7 +122,7 @@ export default function LoginPage() {
                 </div>
 
                 <Link className="font-poppins block text-center text-[20px] font-normal text-[var(--text-default)] hover:underline" href="/auth/forgot-password">
-                  Forget Password?
+                  Forgot Password?
                 </Link>
 
                 <Button type="submit" className="font-poppins h-[56px] w-full rounded-[8px] text-[18px] font-medium" disabled={loginMutation.isPending}>

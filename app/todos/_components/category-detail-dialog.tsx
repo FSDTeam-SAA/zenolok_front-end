@@ -42,7 +42,7 @@ export function CategoryDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[820px] rounded-[30px] border border-[#DDE3EC] bg-[#F7F8FB] p-4 sm:p-5">
+      <DialogContent className="max-w-[820px] rounded-[30px] p-4 text-[var(--text-default)] sm:p-5">
         <div className="space-y-3">
           <p
             className="font-poppins text-[28px] leading-[120%] font-semibold"
@@ -51,7 +51,7 @@ export function CategoryDetailDialog({
             {selectedCategory?.name || "Category"}
           </p>
 
-          <div className="rounded-[30px] border border-[#DDE2EA] bg-[#F3F5F9] p-3 sm:p-4">
+          <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
             <div className="space-y-2">
               {selectedCategoryItems.map((item) => {
                 const isPendingDelete = Boolean(pendingDeleteMap[item._id]);
@@ -61,8 +61,8 @@ export function CategoryDetailDialog({
                   <div key={item._id} className="flex items-center gap-2">
                     <button
                       type="button"
-                      className={`inline-flex size-5 items-center justify-center rounded-full border ${
-                        isChecked ? "border-[#7DC97E] bg-white" : "border-[#C5CBD6] bg-white"
+                      className={`inline-flex size-5 items-center justify-center rounded-full border bg-[var(--ui-checkbox-bg)] ${
+                        isChecked ? "border-[#7DC97E]" : "border-[var(--ui-checkbox-border)]"
                       }`}
                       onClick={() => onToggleTodo(item._id)}
                       aria-label={
@@ -71,60 +71,60 @@ export function CategoryDetailDialog({
                     >
                       {isChecked ? <span className="size-2.5 rounded-full bg-[#7DC97E]" /> : null}
                     </button>
-                  <span
-                    className={`flex-1 truncate text-[30px] leading-[120%] sm:text-[32px] ${
-                      isChecked ? "text-[#A5ACB9] line-through" : "text-[#4B505A]"
-                    }`}
-                  >
-                    {item.text}
-                  </span>
-                  {isChecked ? (
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center text-[#B5BBC8]"
-                      aria-label={`Delete ${item.text}`}
-                      onClick={() => onDeleteTodo(item._id)}
+                    <span
+                      className={`flex-1 truncate text-[30px] leading-[120%] sm:text-[32px] ${
+                        isChecked ? "text-[var(--text-muted)] line-through" : "text-[var(--text-default)]"
+                      }`}
                     >
-                      <Trash2 className="size-4" />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1 text-[#B5BBC8]">
-                      {item.scheduledDate ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] leading-none">
-                          <CalendarDays className="size-4" />
-                          {format(new Date(item.scheduledDate), "dd MMM")}
-                        </span>
-                      ) : null}
-                      {item.scheduledTime ? (
-                        <span className="inline-flex items-center gap-1 text-[11px] leading-none">
-                          <Clock3 className="size-4" />
-                          {formatTimeStringByPreference(
-                            item.scheduledTime,
-                            preferences.use24Hour,
-                          )}
-                        </span>
-                      ) : null}
-                      {item.alarm ? <Bell className="size-4" /> : null}
-                      {item.repeat ? <Repeat2 className="size-4" /> : null}
+                      {item.text}
+                    </span>
+                    {isChecked ? (
                       <button
                         type="button"
-                        className="inline-flex items-center justify-center"
-                        aria-label={`Edit ${item.text}`}
-                        onClick={() => onEditTodo(item._id)}
-                      >
-                        <SlidersHorizontal className="size-4" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center"
+                        className="inline-flex items-center justify-center text-[var(--text-muted)]"
                         aria-label={`Delete ${item.text}`}
                         onClick={() => onDeleteTodo(item._id)}
                       >
                         <Trash2 className="size-4" />
                       </button>
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[var(--text-muted)]">
+                        {item.scheduledDate ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] leading-none">
+                            <CalendarDays className="size-4" />
+                            {format(new Date(item.scheduledDate), "dd MMM")}
+                          </span>
+                        ) : null}
+                        {item.scheduledTime ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] leading-none">
+                            <Clock3 className="size-4" />
+                            {formatTimeStringByPreference(
+                              item.scheduledTime,
+                              preferences.use24Hour,
+                            )}
+                          </span>
+                        ) : null}
+                        {item.alarm ? <Bell className="size-4" /> : null}
+                        {item.repeat ? <Repeat2 className="size-4" /> : null}
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center"
+                          aria-label={`Edit ${item.text}`}
+                          onClick={() => onEditTodo(item._id)}
+                        >
+                          <SlidersHorizontal className="size-4" />
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center"
+                          aria-label={`Delete ${item.text}`}
+                          onClick={() => onDeleteTodo(item._id)}
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

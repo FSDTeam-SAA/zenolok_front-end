@@ -158,7 +158,7 @@ export default function EventMessagesPage() {
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="block h-6 w-1 rounded-sm bg-[#32ADE6]" />
+                <span className="block h-6 w-1 rounded-sm bg-[var(--ui-btn-secondary-text)]" />
                 <p className="truncate text-[34px] font-medium leading-tight text-[var(--text-strong)]">
                   {event.title}
                 </p>
@@ -215,7 +215,9 @@ export default function EventMessagesPage() {
                     <div className={`min-w-0 max-w-[85%] ${isMe ? "text-right" : ""}`}>
                       <p
                         className={`mb-1 text-[14px] leading-none font-medium ${
-                          isMe ? "text-[#31A8E8]" : "text-[var(--text-strong)]"
+                          isMe
+                            ? "text-[var(--ui-btn-secondary-text)]"
+                            : "text-[var(--text-strong)]"
                         }`}
                       >
                         {displayName}
@@ -229,8 +231,10 @@ export default function EventMessagesPage() {
                           </p>
                         ) : null}
                         <div
-                          className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[var(--text-strong)] ${
-                            isMe ? "bg-[#E9F5FF]" : "bg-[var(--surface-1)]"
+                          className={`max-w-[260px] rounded-[18px] border px-3 py-1.5 text-[12px] ${
+                            isMe
+                              ? "border-[color:color-mix(in_srgb,var(--ui-btn-secondary-text)_20%,var(--border)_80%)] bg-[var(--ui-btn-secondary-bg)] text-[var(--ui-btn-secondary-text)]"
+                              : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-strong)]"
                           }`}
                         >
                           {getMessageLabel(message)}

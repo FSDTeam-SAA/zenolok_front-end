@@ -16,7 +16,9 @@ import {
   startOfWeek,
 } from "date-fns";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Delete } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
+import { useAppState } from "@/components/providers/app-state-provider";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 type DateRangeValue = {
@@ -50,10 +52,12 @@ function parseDateValue(value: string) {
   if (!value) {
     return null;
   }
+
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) {
     return null;
   }
+
   return date;
 }
 
@@ -73,9 +77,50 @@ function isValidTimeDigits(digits: string) {
   if (digits.length !== 4) {
     return false;
   }
+
   const hour = Number(digits.slice(0, 2));
   const minute = Number(digits.slice(2, 4));
   return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
+function isValidPartialTimeDigits(digits: string) {
+  if (!/^\d{0,4}$/.test(digits)) {
+    return false;
+  }
+
+  if (digits.length >= 2) {
+    const hour = Number(digits.slice(0, 2));
+    if (hour > 23) {
+      return false;
+    }
+  } else if (digits.length === 1 && Number(digits[0]) > 2) {
+    return false;
+  }
+
+  if (digits.length >= 3 && Number(digits[2]) > 5) {
+    return false;
+  }
+
+  if (digits.length === 4) {
+    const minute = Number(digits.slice(2, 4));
+    if (minute > 59) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function addMinutesToDigits(digits: string, deltaMinutes: number) {
+  const safeDigits = isValidTimeDigits(digits) ? digits : "0000";
+  const hour = Number(safeDigits.slice(0, 2));
+  const minute = Number(safeDigits.slice(2, 4));
+  const baseMinutes = hour * 60 + minute;
+  const normalizedMinutes = (baseMinutes + deltaMinutes + 1440) % 1440;
+  const nextHour = Math.floor(normalizedMinutes / 60);
+  const nextMinute = normalizedMinutes % 60;
+
+  return `${String(nextHour).padStart(2, "0")}${String(nextMinute).padStart(2, "0")}`;
 }
 
 function DayPill({
@@ -102,25 +147,25 @@ function DayPill({
     "flex h-9 items-center justify-center text-[17px] leading-none transition-colors";
 
   if (isRangeStart) {
-    className += " w-full rounded-l-full rounded-r-none bg-[#4B4D54] text-white";
+    className += " w-full rounded-l-full rounded-r-none bg-[var(--ui-calendar-range-bg)] text-white";
   } else if (isRangeEnd) {
-    className += " w-full rounded-r-full rounded-l-none bg-[#4B4D54] text-white";
+    className += " w-full rounded-r-full rounded-l-none bg-[var(--ui-calendar-range-bg)] text-white";
   } else if (inRange) {
-    className += " w-full rounded-none bg-[#4B4D54] text-white";
+    className += " w-full rounded-none bg-[var(--ui-calendar-range-bg)] text-white";
   } else if (isStart || isEnd) {
-    className += " mx-auto size-9 rounded-full bg-[#4B4D54] text-white";
+    className += " mx-auto size-9 rounded-full bg-[var(--ui-calendar-range-bg)] text-white";
   } else if (isSunday) {
-    className += " mx-auto size-9 rounded-full bg-[#F07373] text-white hover:bg-[#ea6a6a]";
+    className += " mx-auto size-9 rounded-full bg-[var(--ui-calendar-accent)] text-white hover:bg-[var(--ui-calendar-accent-hover)]";
   } else if (inCurrentMonth) {
-    className += " mx-auto size-9 rounded-full bg-[#B6B8BC] text-white hover:bg-[#AEB0B4]";
+    className += " mx-auto size-9 rounded-full bg-[var(--ui-calendar-neutral-bg)] text-white hover:bg-[var(--ui-calendar-neutral-hover)]";
   } else {
-    className += " mx-auto size-9 rounded-full bg-[#D4D6DB] text-[#9CA1AA]";
+    className += " mx-auto size-9 rounded-full bg-[var(--ui-calendar-outside-bg)] text-[var(--ui-calendar-outside-text)]";
   }
 
   return (
-    <button type="button" onClick={onClick} className={className}>
+    <motion.button type="button" onClick={onClick} className={className} whileTap={{ scale: 0.95 }}>
       {format(day, "d")}
-    </button>
+    </motion.button>
   );
 }
 
@@ -136,28 +181,64 @@ function TimeDigitSlots({
   onClick: () => void;
 }) {
   const chars = [digits[0] || "", digits[1] || "", digits[2] || "", digits[3] || ""];
+
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onClick}
       className={`w-full rounded-2xl border px-2 py-2 text-left ${
-        active ? "border-[#F07373] bg-[#FFF6F6]" : "border-[#D9DCE3] bg-[#EFF1F5]"
+        active
+          ? "border-[var(--ui-calendar-accent)] bg-[var(--ui-calendar-popup-slot-active-bg)]"
+          : "border-[var(--ui-calendar-popup-input-border)] bg-[var(--ui-calendar-popup-slot-bg)]"
       }`}
+      whileTap={{ scale: 0.98 }}
     >
-      <p className="text-[11px] leading-none text-[#808692]">{label}</p>
-      <div className="mt-1 flex items-center gap-1.5">
+      <p
+        className={`text-[11px] leading-none ${
+          active ? "text-[var(--ui-calendar-accent)]" : "text-[var(--ui-calendar-popup-muted)]"
+        }`}
+      >
+        {label}
+      </p>
+      <div className="mt-1 flex items-center gap-1">
         {chars.map((char, index) => (
-          <span
-            key={`${label}-${index}`}
-            className={`inline-flex size-6 items-center justify-center rounded-full text-[12px] leading-none ${
-              char ? "bg-[#F07373] text-white" : "bg-[#C7CBD4] text-white"
-            }`}
-          >
-            {char || "•"}
-          </span>
+          <React.Fragment key={`${label}-${index}`}>
+            <span
+              className={`inline-flex size-6 items-center justify-center rounded-full text-[12px] leading-none ${
+                char ? "bg-[var(--ui-calendar-accent)] text-white" : "bg-[var(--ui-calendar-keypad-empty)] text-white"
+              }`}
+            >
+              {char || "-"}
+            </span>
+            {index === 1 ? (
+              <span className="inline-flex w-2 items-center justify-center text-[14px] leading-none text-[var(--ui-calendar-popup-subtle)]">
+                :
+              </span>
+            ) : null}
+          </React.Fragment>
         ))}
       </div>
-    </button>
+    </motion.button>
+  );
+}
+
+function PopupTitle({
+  icon: Icon,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <motion.p
+      className="font-poppins inline-flex items-center gap-2 text-[18px] leading-[120%] font-medium text-[var(--ui-calendar-popup-title)]"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.22 }}
+    >
+      <Icon className="size-4" />
+      {children}
+    </motion.p>
   );
 }
 
@@ -298,6 +379,7 @@ export function EventDateRangePopup({
   };
 
   const canApply = Boolean(draftStart);
+
   const applySelection = () => {
     if (!draftStart) {
       return;
@@ -313,161 +395,179 @@ export function EventDateRangePopup({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showClose={false} className="max-w-[380px] rounded-[26px] border-[#E2E5EC] bg-[#F4F5F7] p-4">
+      <DialogContent
+        showClose={false}
+        className="max-w-[380px] rounded-[26px] border-[var(--ui-calendar-popup-border)] bg-[var(--ui-calendar-popup-bg)] p-4 text-[var(--ui-calendar-popup-strong)]"
+      >
         <div className="space-y-3">
-          <p className="font-poppins inline-flex items-center gap-2 text-[18px] leading-[120%] font-medium text-[#444A55]">
-            <CalendarDays className="size-4" />
-            Choose a date
-          </p>
+          <PopupTitle icon={CalendarDays}>Choose a date</PopupTitle>
 
-          <div className="rounded-[22px] bg-[#ECEDEF] p-3">
-            {view === "month" ? (
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={yearSearch}
-                  onChange={(event) =>
-                    setYearSearch(event.target.value.replace(/\D/g, "").slice(0, 4))
-                  }
-                  placeholder="Search year (e.g. 2026)"
-                  className="h-9 w-full rounded-xl border border-[#D2D7E0] bg-[#F8F9FB] px-3 text-[14px] text-[#4A4F59] placeholder:text-[#9AA1AE] focus:border-[#B5BDC9] focus:outline-none"
-                />
-                <div
-                  ref={yearsScrollRef}
-                  className="max-h-[312px] space-y-4 overflow-y-auto pr-1"
+          <div className="rounded-[22px] bg-[var(--ui-calendar-popup-panel-bg)] p-3">
+            <AnimatePresence mode="wait" initial={false}>
+              {view === "month" ? (
+                <motion.div
+                  key="month"
+                  className="space-y-3"
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.22 }}
                 >
-                  {filteredYears.map((year) => (
-                    <div
-                      key={year}
-                      ref={year === scrollTargetYear ? activeYearRef : null}
-                    >
-                      <p className="mb-2 text-[30px] leading-none font-medium text-[#6D717B]">{year}</p>
-                      <div className="grid grid-cols-6 gap-2">
-                        {Array.from({ length: 12 }, (_, index) => {
-                          const monthDate = new Date(year, index, 1);
-                          const active =
-                            cursorMonth.getFullYear() === year && cursorMonth.getMonth() === index;
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={yearSearch}
+                    onChange={(event) =>
+                      setYearSearch(event.target.value.replace(/\D/g, "").slice(0, 4))
+                    }
+                    placeholder="Search year (e.g. 2026)"
+                    className="h-9 w-full rounded-xl border border-[var(--ui-calendar-popup-input-border)] bg-[var(--ui-calendar-popup-input-bg)] px-3 text-[14px] text-[var(--ui-calendar-popup-strong)] placeholder:text-[var(--ui-calendar-popup-subtle)] focus:border-[var(--ui-calendar-popup-input-border)] focus:outline-none"
+                  />
+                  <div ref={yearsScrollRef} className="max-h-[312px] space-y-4 overflow-y-auto pr-1">
+                    {filteredYears.map((year) => (
+                      <div key={year} ref={year === scrollTargetYear ? activeYearRef : null}>
+                        <p className="mb-2 text-[30px] leading-none font-medium text-[var(--ui-calendar-popup-year)]">{year}</p>
+                        <div className="grid grid-cols-6 gap-2">
+                          {Array.from({ length: 12 }, (_, index) => {
+                            const monthDate = new Date(year, index, 1);
+                            const active =
+                              cursorMonth.getFullYear() === year && cursorMonth.getMonth() === index;
 
-                          return (
-                            <button
-                              key={`${year}-${index}`}
-                              type="button"
-                              onClick={() => {
-                                setCursorMonth(monthDate);
-                                setView("day");
-                              }}
-                              className={`flex size-10 items-center justify-center rounded-full text-[20px] leading-none ${
-                                active ? "bg-[#F07373] text-white" : "bg-[#B6B8BC] text-white"
-                              }`}
-                            >
-                              {index + 1}
-                            </button>
-                          );
-                        })}
+                            return (
+                              <motion.button
+                                key={`${year}-${index}`}
+                                type="button"
+                                onClick={() => {
+                                  setCursorMonth(monthDate);
+                                  setView("day");
+                                }}
+                                className={`flex size-10 items-center justify-center rounded-full text-[20px] leading-none text-white ${
+                                  active
+                                    ? "bg-[var(--ui-calendar-accent)]"
+                                    : "bg-[var(--ui-calendar-neutral-bg)] hover:bg-[var(--ui-calendar-neutral-hover)]"
+                                }`}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                {index + 1}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
                       </div>
+                    ))}
+                    {!filteredYears.length ? (
+                      <p className="py-4 text-center text-[13px] text-[var(--text-muted)]">
+                        No year found
+                      </p>
+                    ) : null}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="day"
+                  className="space-y-3"
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 16 }}
+                  transition={{ duration: 0.22 }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <motion.button
+                        type="button"
+                        onClick={() => setCursorMonth(addDays(monthStart, -1))}
+                        className="rounded-full p-1 text-[var(--ui-calendar-popup-nav)] transition hover:bg-[var(--ui-calendar-popup-input-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                        aria-label="Previous month"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <ChevronLeft className="size-4" />
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => setView("month")}
+                        className="text-[24px] leading-none font-medium text-[var(--ui-calendar-popup-strong)]"
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {format(cursorMonth, "MMMM")}
+                      </motion.button>
+                      <motion.button
+                        type="button"
+                        onClick={() => setCursorMonth(addDays(monthEnd, 1))}
+                        className="rounded-full p-1 text-[var(--ui-calendar-popup-nav)] transition hover:bg-[var(--ui-calendar-popup-input-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                        aria-label="Next month"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <ChevronRight className="size-4" />
+                      </motion.button>
                     </div>
-                  ))}
-                  {!filteredYears.length ? (
-                    <p className="py-4 text-center text-[13px] text-[#8B92A0]">
-                      No year found
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <button
+
+                    <motion.button
                       type="button"
-                      onClick={() => setCursorMonth(addDays(monthStart, -1))}
-                      className="rounded-full p-1 text-[#767D89]"
-                      aria-label="Previous month"
+                      disabled={!canApply}
+                      onClick={applySelection}
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[16px] text-[var(--ui-calendar-popup-subtle)] transition hover:text-[var(--ui-calendar-popup-strong)] disabled:opacity-40"
+                      whileTap={{ scale: 0.97 }}
                     >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setView("month")}
-                      className="text-[42px] leading-none font-medium text-[#4A4F59]"
-                    >
-                      {format(cursorMonth, "MMMM")}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCursorMonth(addDays(monthEnd, 1))}
-                      className="rounded-full p-1 text-[#767D89]"
-                      aria-label="Next month"
-                    >
+                      Done
                       <ChevronRight className="size-4" />
-                    </button>
+                    </motion.button>
                   </div>
 
-                  <button
-                    type="button"
-                    disabled={!canApply}
-                    onClick={applySelection}
-                    className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[16px] text-[#A4A9B3] disabled:opacity-40"
-                  >
-                    Done
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-2 px-0.5">
-                  {["S", "M", "T", "W", "T", "F", "S"].map((label, index) => (
-                    <p
-                      key={`${label}-${index}`}
-                      className={`text-center text-[11px] leading-none ${
-                        index === 0 ? "text-[#F07373]" : "text-[#9BA0AA]"
-                      }`}
-                    >
-                      {label}
-                    </p>
-                  ))}
-                </div>
-                <div className="grid grid-cols-7 gap-x-0 gap-y-2">
-                  {days.map((day) => {
-                    const hasRange = Boolean(
-                      draftStart && draftEnd && !isSameDay(draftStart, draftEnd),
-                    );
-                    const isStart = Boolean(draftStart && isSameDay(day, draftStart));
-                    const isEnd = Boolean(draftEnd && isSameDay(day, draftEnd));
-                    const inRange = Boolean(
-                      draftStart &&
-                        draftEnd &&
-                        isAfter(day, draftStart) &&
-                        isBefore(day, draftEnd),
-                    );
+                  <div className="grid grid-cols-7 gap-2 px-0.5">
+                    {["S", "M", "T", "W", "T", "F", "S"].map((label, index) => (
+                      <p
+                        key={`${label}-${index}`}
+                        className={`text-center text-[11px] leading-none ${
+                          index === 0 ? "text-[var(--ui-calendar-accent)]" : "text-[var(--ui-calendar-popup-weekday)]"
+                        }`}
+                      >
+                        {label}
+                      </p>
+                    ))}
+                  </div>
 
-                    return (
-                      <DayPill
-                        key={format(day, "yyyy-MM-dd")}
-                        day={day}
-                        inCurrentMonth={isSameMonth(day, cursorMonth)}
-                        isStart={isStart}
-                        isEnd={isEnd}
-                        isRangeStart={hasRange && isStart}
-                        isRangeEnd={hasRange && isEnd}
-                        inRange={inRange}
-                        onClick={() => handleDaySelect(day)}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+                  <div className="grid grid-cols-7 gap-x-0 gap-y-2">
+                    {days.map((day) => {
+                      const hasRange = Boolean(draftStart && draftEnd && !isSameDay(draftStart, draftEnd));
+                      const isStart = Boolean(draftStart && isSameDay(day, draftStart));
+                      const isEnd = Boolean(draftEnd && isSameDay(day, draftEnd));
+                      const inRange = Boolean(
+                        draftStart &&
+                          draftEnd &&
+                          isAfter(day, draftStart) &&
+                          isBefore(day, draftEnd),
+                      );
+
+                      return (
+                        <DayPill
+                          key={format(day, "yyyy-MM-dd")}
+                          day={day}
+                          inCurrentMonth={isSameMonth(day, cursorMonth)}
+                          isStart={isStart}
+                          isEnd={isEnd}
+                          isRangeStart={hasRange && isStart}
+                          isRangeEnd={hasRange && isEnd}
+                          inRange={inRange}
+                          onClick={() => handleDaySelect(day)}
+                        />
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {view === "month" ? (
             <div className="flex items-center justify-end">
-              <button
+              <motion.button
                 type="button"
                 onClick={() => setView("day")}
-                className="rounded-full px-3 py-1 text-[12px] text-[#8E93A0]"
+                className="rounded-full px-3 py-1 text-[12px] text-[var(--ui-calendar-popup-subtle)] transition hover:bg-[var(--ui-calendar-popup-panel-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                whileTap={{ scale: 0.97 }}
               >
                 Back
-              </button>
+              </motion.button>
             </div>
           ) : null}
         </div>
@@ -484,6 +584,7 @@ export function EventTimeRangePopup({
   onApply,
   selectionMode = "range",
 }: TimeRangePopupProps) {
+  const { preferences } = useAppState();
   const [draftStartDigits, setDraftStartDigits] = React.useState("");
   const [draftEndDigits, setDraftEndDigits] = React.useState("");
   const [activeField, setActiveField] = React.useState<"start" | "end">("start");
@@ -493,6 +594,7 @@ export function EventTimeRangePopup({
     if (!open) {
       return;
     }
+
     setDraftStartDigits(toTimeDigits(startTime));
     setDraftEndDigits(toTimeDigits(isSingleMode ? startTime || endTime : endTime));
     setActiveField("start");
@@ -503,6 +605,7 @@ export function EventTimeRangePopup({
       setDraftStartDigits((prev) => next(prev));
       return;
     }
+
     setDraftEndDigits((prev) => next(prev));
   };
 
@@ -511,10 +614,16 @@ export function EventTimeRangePopup({
       if (prev.length >= 4) {
         return prev;
       }
+
       const next = `${prev}${digit}`;
+      if (!isValidPartialTimeDigits(next)) {
+        return prev;
+      }
+
       if (next.length === 4 && activeField === "start" && !isSingleMode) {
         setActiveField("end");
       }
+
       return next;
     });
   };
@@ -523,20 +632,35 @@ export function EventTimeRangePopup({
     updateActive((prev) => prev.slice(0, -1));
   };
 
+  const handleClear = () => {
+    updateActive(() => "");
+  };
+
+  const handleAdjustActiveByMinutes = (deltaMinutes: number) => {
+    updateActive((prev) => addMinutesToDigits(prev, deltaMinutes));
+  };
+
   const canApply =
     isValidTimeDigits(draftStartDigits) &&
     (isSingleMode || isValidTimeDigits(draftEndDigits));
+  const formatLabel = preferences.use24Hour ? "24-hour format" : "12-hour format";
+  const keypadDigits = [7, 8, 9, 4, 5, 6, 1, 2, 3];
+  const shortcuts = [
+    { label: "+1h", value: 60 },
+    { label: "+15", value: 15 },
+    { label: "-1h", value: -60 },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent showClose={false} className="max-w-[380px] rounded-[26px] border-[#E2E5EC] bg-[#F4F5F7] p-4">
+      <DialogContent
+        showClose={false}
+        className="max-w-[380px] rounded-[26px] border-[var(--ui-calendar-popup-border)] bg-[var(--ui-calendar-popup-bg)] p-4 text-[var(--ui-calendar-popup-strong)]"
+      >
         <div className="space-y-3">
-          <p className="font-poppins inline-flex items-center gap-2 text-[18px] leading-[120%] font-medium text-[#444A55]">
-            <Clock3 className="size-4" />
-            Set time
-          </p>
+          <PopupTitle icon={Clock3}>Set time</PopupTitle>
 
-          <div className="space-y-3 rounded-[22px] bg-[#ECEDEF] p-3">
+          <div className="space-y-3 rounded-[22px] bg-[var(--ui-calendar-popup-panel-bg)] p-3">
             <div className={`grid gap-2 ${isSingleMode ? "grid-cols-1" : "grid-cols-2"}`}>
               <TimeDigitSlots
                 label="Start Time"
@@ -554,39 +678,78 @@ export function EventTimeRangePopup({
               ) : null}
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((digit) => (
-                <button
-                  key={digit}
+            <div className="flex items-center gap-3 px-1">
+              <span className="h-px flex-1 bg-[var(--ui-calendar-popup-input-border)]" />
+              <p className="text-[12px] font-medium text-[var(--ui-calendar-popup-subtle)]">
+                {formatLabel}
+              </p>
+              <span className="h-px flex-1 bg-[var(--ui-calendar-popup-input-border)]" />
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_56px] gap-3">
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                {keypadDigits.map((digit) => (
+                  <motion.button
+                    key={digit}
+                    type="button"
+                    onClick={() => handleDigit(String(digit))}
+                    className="flex h-11 items-center justify-center rounded-full text-[22px] font-medium leading-none text-[var(--ui-calendar-popup-strong)] transition hover:bg-[var(--ui-calendar-popup-slot-bg)]"
+                    whileTap={{ scale: 0.94 }}
+                  >
+                    {digit}
+                  </motion.button>
+                ))}
+                <motion.button
                   type="button"
-                  onClick={() => handleDigit(String(digit))}
-                  className="flex size-10 items-center justify-center rounded-full bg-[#B6B8BC] text-[20px] leading-none text-white"
+                  onClick={handleClear}
+                  className="flex h-11 items-center justify-center rounded-full text-[18px] font-medium leading-none text-[var(--ui-calendar-popup-strong)] transition hover:bg-[var(--ui-calendar-popup-slot-bg)]"
+                  whileTap={{ scale: 0.94 }}
                 >
-                  {digit}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={handleBackspace}
-                className="flex size-10 items-center justify-center rounded-full bg-[#F07373] text-white"
-                aria-label="Delete"
-              >
-                <Delete className="size-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDigit("0")}
-                className="flex size-10 items-center justify-center rounded-full bg-[#B6B8BC] text-[20px] leading-none text-white"
-              >
-                0
-              </button>
-              <button
+                  C
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={() => handleDigit("0")}
+                  className="flex h-11 items-center justify-center rounded-full bg-[var(--ui-calendar-popup-slot-active-bg)] text-[22px] font-medium leading-none text-[var(--ui-calendar-accent)] transition hover:bg-[var(--ui-calendar-popup-slot-active-bg)]"
+                  whileTap={{ scale: 0.94 }}
+                >
+                  0
+                </motion.button>
+                <motion.button
+                  type="button"
+                  onClick={handleBackspace}
+                  className="flex h-11 items-center justify-center rounded-full text-[var(--ui-calendar-popup-subtle)] transition hover:bg-[var(--ui-calendar-popup-slot-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                  aria-label="Delete"
+                  whileTap={{ scale: 0.94 }}
+                >
+                  <Delete className="size-4" />
+                </motion.button>
+              </div>
+
+              <div className="flex flex-col items-center gap-2 pt-1">
+                {shortcuts.map((shortcut) => (
+                  <motion.button
+                    key={shortcut.label}
+                    type="button"
+                    onClick={() => handleAdjustActiveByMinutes(shortcut.value)}
+                    className="flex h-10 w-full items-center justify-center rounded-full bg-[var(--ui-calendar-popup-slot-bg)] px-2 text-[11px] font-medium text-[var(--ui-calendar-popup-subtle)] transition hover:bg-[var(--ui-calendar-popup-input-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                    whileTap={{ scale: 0.96 }}
+                  >
+                    {shortcut.label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <motion.button
                 type="button"
                 disabled={!canApply}
                 onClick={() => {
                   if (!canApply) {
                     return;
                   }
+
                   const nextStartTime = toTimeValue(draftStartDigits);
                   const nextEndTime = isSingleMode ? nextStartTime : toTimeValue(draftEndDigits);
                   onApply({
@@ -595,10 +758,11 @@ export function EventTimeRangePopup({
                   });
                   onOpenChange(false);
                 }}
-                className="rounded-full px-2 text-[12px] text-[#8E93A0] disabled:opacity-40"
+                className="rounded-full px-2 text-[12px] text-[var(--ui-calendar-popup-subtle)] transition hover:text-[var(--ui-calendar-popup-strong)] disabled:opacity-40"
+                whileTap={{ scale: 0.97 }}
               >
                 Done
-              </button>
+              </motion.button>
             </div>
           </div>
         </div>

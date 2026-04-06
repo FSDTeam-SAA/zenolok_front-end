@@ -28,7 +28,7 @@ export function CalendarSection({
             className="font-poppins h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
             onClick={onManageWeekStartDay}
           >
-            Manage weeks start day
+            Manage Week Start Day
           </Button>
           <Button
             type="button"
@@ -37,7 +37,7 @@ export function CalendarSection({
             onClick={onCalendarSync}
             disabled={isCalendarSyncing}
           >
-            {isCalendarSyncing ? "Syncing..." : "Google Calendar sync"}
+            {isCalendarSyncing ? "Syncing..." : "Sync Google Calendar"}
           </Button>
         </div>
       </div>

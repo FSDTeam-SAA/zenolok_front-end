@@ -44,7 +44,7 @@ export function MessageComposer({
         />
         <button
           type="button"
-          className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full text-[#32ADE6] transition hover:bg-[var(--surface-3)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex size-7 cursor-pointer items-center justify-center rounded-full text-[var(--ui-btn-secondary-text)] transition hover:bg-[var(--ui-btn-secondary-bg)] disabled:cursor-not-allowed disabled:opacity-40"
           onClick={onSend}
           disabled={isSending}
           aria-label="Send message"

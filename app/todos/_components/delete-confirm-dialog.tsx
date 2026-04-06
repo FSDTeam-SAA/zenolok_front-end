@@ -30,9 +30,9 @@ export function DeleteConfirmDialog({
 }: DeleteConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl border border-[#DDE3EC] bg-[#F7F8FB]">
+      <DialogContent className="max-w-md rounded-3xl p-6 text-[var(--text-default)]">
         <DialogHeader>
-          <DialogTitle className="text-[28px]">{title}</DialogTitle>
+          <DialogTitle className="!text-[24px] text-[var(--text-strong)]">{title}</DialogTitle>
         </DialogHeader>
         <DialogFooter className="mt-2 flex-row justify-end gap-2">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

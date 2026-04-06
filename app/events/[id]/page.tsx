@@ -9,7 +9,6 @@ import { io, type Socket } from "socket.io-client";
 import {
   ArrowLeft,
   Bell,
-  CalendarDays,
   Clock3,
   ImagePlus,
   Link2,
@@ -20,7 +19,7 @@ import {
   UserPlus,
   Trash2,
 } from "lucide-react";
-import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
+import { endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -37,15 +36,16 @@ import {
 import { queryKeys } from "@/lib/query-keys";
 import {
   formatIsoTimeByPreference,
-  formatTimeRangeByPreference,
-  formatTimeStringByPreference,
 } from "@/lib/time-format";
+import { AllDayTabToggle } from "@/components/shared/all-day-tab-toggle";
 import { BrickIcon } from "@/components/shared/brick-icon";
+import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
   EventDateRangePopup,
   EventTimeRangePopup,
 } from "@/components/shared/event-date-time-popups";
+import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { MessageComposer } from "./_components/message-composer";
 import { TodoSection } from "./_components/todo-section";
@@ -55,7 +55,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -249,11 +248,6 @@ export default function EventDetailsPage() {
     queryFn: userApi.getProfile,
   });
   const editHasDateRange = Boolean(editStartDate && editEndDate);
-  const editDateSummary = editHasDateRange ? `${editStartDate} - ${editEndDate}` : "";
-  const editHasTimeRange = Boolean(editStartTime && editEndTime);
-  const editTimeSummary = editHasTimeRange
-    ? `${formatTimeStringByPreference(editStartTime, preferences.use24Hour)} - ${formatTimeStringByPreference(editEndTime, preferences.use24Hour)}`
-    : "";
 
   React.useEffect(() => {
     if (!id || !socketServerUrl) {
@@ -502,16 +496,14 @@ export default function EventDetailsPage() {
   const endDate = new Date(event.endTime);
   const hasValidSchedule =
     !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
-  const eventDateLabel = hasValidSchedule
-    ? isSameDay(startDate, endDate)
-      ? format(startDate, "dd MMM yyyy").toUpperCase()
-      : `${format(startDate, "dd MMM yyyy").toUpperCase()} - ${format(endDate, "dd MMM yyyy").toUpperCase()}`
-    : "INVALID DATE";
-  const eventTimeLabel = event.isAllDay
-    ? "All day"
-    : hasValidSchedule
-      ? formatTimeRangeByPreference(startDate, endDate, preferences.use24Hour)
-      : "Invalid time";
+  const eventStartDateValue = hasValidSchedule
+    ? format(startDate, "yyyy-MM-dd")
+    : "";
+  const eventEndDateValue = hasValidSchedule
+    ? format(endDate, "yyyy-MM-dd")
+    : "";
+  const eventStartTimeValue = hasValidSchedule ? format(startDate, "HH:mm") : "";
+  const eventEndTimeValue = hasValidSchedule ? format(endDate, "HH:mm") : "";
   const allUsers = usersQuery.data?.users || [];
   const isEventOwner = viewerId === event.createdBy;
 
@@ -624,7 +616,7 @@ export default function EventDetailsPage() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-full p-1 text-[#FF3B30] transition hover:bg-[#FFECEC] cursor-pointer"
+            className="cursor-pointer rounded-full p-1 text-[var(--ui-btn-danger-bg)] transition hover:bg-[var(--surface-3)]"
             onClick={() => {
               if (!isEventOwner) {
                 toast.error("Only the event creator can delete this event");
@@ -638,7 +630,7 @@ export default function EventDetailsPage() {
           </button>
           <button
             type="button"
-            className="rounded p-1 text-[#0088FF] transition hover:bg-[var(--surface-3)] cursor-pointer"
+            className="cursor-pointer rounded p-1 text-[var(--ui-btn-secondary-text)] transition hover:bg-[var(--ui-btn-secondary-bg)]"
             onClick={() => {
               if (!isEventOwner) {
                 toast.error("Only the event creator can edit this event");
@@ -717,50 +709,41 @@ export default function EventDetailsPage() {
               value={editLocation}
               onChange={(eventValue) => setEditLocation(eventValue.target.value)}
             />
-            <div className="space-y-2">
-              <button
-                type="button"
-                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[var(--text-strong)]"
+            <div className="space-y-3">
+              <EventRangeField
+                kind="date"
+                startValue={editStartDate}
+                endValue={editEndDate}
                 onClick={() => setEditDatePopupOpen(true)}
-              >
-                <CalendarDays className="size-5" />
-                Choose a date
-              </button>
-              {editDateSummary ? (
-                <p className="text-[12px] text-[var(--text-muted)]">{editDateSummary}</p>
-              ) : null}
-            </div>
-            {!editIsAllDay ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => setEditTimePopupOpen(true)}
-                  disabled={!editHasDateRange}
-                >
-                  <Clock3 className="size-5" />
-                  Set time
-                </button>
-                {editHasTimeRange ? (
-                  <p className="text-[12px] text-[var(--text-muted)]">
-                    {editTimeSummary}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between rounded-xl border border-[var(--border)] p-3">
-              <p className="fs-pop-16-regular text-[var(--text-default)]">All day</p>
-              <Switch
-                checked={editIsAllDay}
-                onCheckedChange={(checked) => {
-                  setEditIsAllDay(checked);
-                  if (checked) {
-                    setEditTimePopupOpen(false);
-                  }
-                }}
               />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                {editIsAllDay ? (
+                  <EventSingleField kind="time" label="All day" />
+                ) : (
+                  <EventRangeField
+                    kind="time"
+                    startValue={editStartTime}
+                    endValue={editEndTime}
+                    use24Hour={preferences.use24Hour}
+                    onClick={() => setEditTimePopupOpen(true)}
+                    disabled={!editHasDateRange}
+                    className="max-w-full"
+                  />
+                )}
+                <AllDayTabToggle
+                  active={editIsAllDay}
+                  onToggle={() => {
+                    const next = !editIsAllDay;
+                    setEditIsAllDay(next);
+                    if (next) {
+                      setEditTimePopupOpen(false);
+                    }
+                  }}
+                  className="self-end sm:self-auto"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+            <DragScrollArea className="pb-1">
               {bricks.map((brick) => (
                 <button
                   key={brick._id}
@@ -782,7 +765,7 @@ export default function EventDetailsPage() {
                   </Badge>
                 </button>
               ))}
-            </div>
+            </DragScrollArea>
           </div>
           <DialogFooter>
             <Button
@@ -959,18 +942,32 @@ export default function EventDetailsPage() {
           </div>
 
           <div className="mt-4 flex items-start justify-between gap-3 text-[var(--text-strong)]">
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-2 text-left">
-                <CalendarDays className="size-4 text-[var(--text-muted)]" />
-                <p className="text-[13px] font-medium tracking-[0.02em] text-[var(--text-default)]">
-                  {eventDateLabel}
-                </p>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-end gap-x-5 gap-y-1.5 sm:gap-x-7">
+                <EventRangeField
+                  kind="date"
+                  startValue={eventStartDateValue}
+                  endValue={eventEndDateValue}
+                  interactive={false}
+                  className="-ml-1"
+                />
+                {event.isAllDay ? (
+                  <p className="flex items-center gap-2 px-1 py-1 text-[13px] font-medium text-[var(--text-default)]">
+                    <Clock3 className="size-4 text-[var(--text-muted)]" />
+                    All day
+                  </p>
+                ) : (
+                  <EventRangeField
+                    kind="time"
+                    startValue={eventStartTimeValue}
+                    endValue={eventEndTimeValue}
+                    use24Hour={preferences.use24Hour}
+                    interactive={false}
+                    className="-ml-1"
+                  />
+                )}
               </div>
-              <p className="flex items-center gap-2 text-[13px] text-[var(--text-default)]">
-                <Clock3 className="size-4 text-[var(--text-muted)]" />
-                {eventTimeLabel}
-              </p>
-              <p className="flex items-center gap-2 text-[13px] text-[var(--text-default)]">
+              <p className="flex items-center gap-2 px-1 text-[13px] text-[var(--text-default)]">
                 <Locate className="size-4 text-[var(--text-muted)]" />
                 {event.location || "No location"}
               </p>
@@ -1212,7 +1209,9 @@ export default function EventDetailsPage() {
                         >
                           <p
                             className={`mb-1 text-[14px] leading-none font-medium ${
-                              isMe ? "text-[#31A8E8]" : "text-[var(--text-strong)]"
+                              isMe
+                                ? "text-[var(--ui-btn-secondary-text)]"
+                                : "text-[var(--text-strong)]"
                             }`}
                           >
                             {displayName}
@@ -1228,8 +1227,10 @@ export default function EventDetailsPage() {
                               </p>
                             ) : null}
                             <div
-                              className={`max-w-[260px] rounded-[18px] px-3 py-1.5 text-[12px] text-[var(--text-strong)] ${
-                                isMe ? "bg-[#E9F5FF]" : "bg-[var(--surface-1)]"
+                              className={`max-w-[260px] rounded-[18px] border px-3 py-1.5 text-[12px] ${
+                                isMe
+                                  ? "border-[color:color-mix(in_srgb,var(--ui-btn-secondary-text)_20%,var(--border)_80%)] bg-[var(--ui-btn-secondary-bg)] text-[var(--ui-btn-secondary-text)]"
+                                  : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-strong)]"
                               }`}
                             >
                               {getMessageLabel(message)}
@@ -1290,5 +1291,3 @@ export default function EventDetailsPage() {
     </div>
   );
 }
-
-

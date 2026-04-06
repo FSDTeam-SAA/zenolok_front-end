@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
 
@@ -64,57 +65,66 @@ export function SettingsSidebarMobile({
   primarySections,
   supportSections,
 }: SettingsMobileSidebarProps) {
-  if (!open) {
-    return null;
-  }
-
   return (
-    <div className="fixed inset-0 z-50 xl:hidden">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/35"
-        onClick={onClose}
-        aria-label="Close settings menu overlay"
-      />
-      <aside className="settings-sidebar-panel absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-1)] p-5 shadow-[0_16px_44px_rgba(17,24,37,0.20)]">
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h2 className="font-poppins text-[26px] leading-[120%] font-semibold text-[var(--text-strong)]">
-              Settings
-            </h2>
-            <p className="font-poppins text-[14px] leading-[120%] font-normal text-[var(--text-muted)]">
-              Account and preferences
-            </p>
-          </div>
-          <Button
+    <AnimatePresence>
+      {open ? (
+        <div className="fixed inset-0 z-50 xl:hidden">
+          <motion.button
             type="button"
-            variant="outline"
-            className="h-10 w-10 rounded-xl p-0"
+            className="absolute inset-0 bg-black/35"
             onClick={onClose}
-            aria-label="Close settings menu"
-          >
-            <X className="size-5" />
-          </Button>
-        </div>
-
-        <SettingsNavList
-          activeSection={activeSection}
-          sections={primarySections}
-          onSelect={onSectionSelect}
-        />
-
-        <div className="mt-5 border-t border-[var(--border)] pt-4">
-          <p className="font-poppins mb-2 text-[18px] leading-[120%] font-semibold text-[var(--text-strong)]">
-            Support
-          </p>
-          <SettingsNavList
-            activeSection={activeSection}
-            sections={supportSections}
-            onSelect={onSectionSelect}
+            aria-label="Close settings menu overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
           />
+          <motion.aside
+            className="settings-sidebar-panel absolute left-0 top-0 h-full w-[86%] max-w-[340px] overflow-y-auto border-r border-[var(--border)] bg-[var(--surface-1)] p-5 shadow-[0_16px_44px_rgba(17,24,37,0.20)]"
+            initial={{ x: -32, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: -24, opacity: 0 }}
+            transition={{ duration: 0.24 }}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="font-poppins text-[26px] leading-[120%] font-semibold text-[var(--text-strong)]">
+                  Settings
+                </h2>
+                <p className="font-poppins text-[14px] leading-[120%] font-normal text-[var(--text-muted)]">
+                  Account and preferences
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 w-10 rounded-xl p-0"
+                onClick={onClose}
+                aria-label="Close settings menu"
+              >
+                <X className="size-5" />
+              </Button>
+            </div>
+
+            <SettingsNavList
+              activeSection={activeSection}
+              sections={primarySections}
+              onSelect={onSectionSelect}
+            />
+
+            <div className="mt-5 border-t border-[var(--border)] pt-4">
+              <p className="font-poppins mb-2 text-[18px] leading-[120%] font-semibold text-[var(--text-strong)]">
+                Support
+              </p>
+              <SettingsNavList
+                activeSection={activeSection}
+                sections={supportSections}
+                onSelect={onSectionSelect}
+              />
+            </div>
+          </motion.aside>
         </div>
-      </aside>
-    </div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 

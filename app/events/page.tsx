@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Plus,
 } from "lucide-react";
+import { motion } from "motion/react";
 import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
@@ -26,11 +27,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { AllDayTabToggle } from "@/components/shared/all-day-tab-toggle";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
+import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
+import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { eventApi, brickApi, jamApi, paginateArray } from "@/lib/api";
@@ -39,7 +42,6 @@ import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
 import {
   formatTimeRangeByPreference,
-  formatTimeStringByPreference,
 } from "@/lib/time-format";
 
 const eventFilters = [
@@ -258,11 +260,6 @@ export default function EventsPage() {
     }, {});
   }, [paged.items, jamCountQueries]);
   const hasDateRange = Boolean(startDate && endDate);
-  const dateSummary = hasDateRange ? `${startDate} - ${endDate}` : "";
-  const hasTimeRange = Boolean(startTime && endTime);
-  const timeSummary = hasTimeRange
-    ? `${formatTimeStringByPreference(startTime, preferences.use24Hour)} - ${formatTimeStringByPreference(endTime, preferences.use24Hour)}`
-    : "";
 
   React.useEffect(() => {
     setPage(1);
@@ -396,33 +393,40 @@ export default function EventsPage() {
                     : "Invalid time";
 
                 return (
-                  <Link key={event._id} href={`/events/${event._id}`}>
-                    <Card className="events-list-card rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]">
-                      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex items-start gap-3">
-                          <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
-                          <div>
-                            <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
-                            <div className="font-poppins mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[#4D5463]">
-                              <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                <CalendarDays className="size-4" /> {dateLabel}
-                              </span>
-                              <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                <MapPin className="size-4" /> {event.location || "No location"}
-                              </span>
-                              <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                <Clock3 className="size-4" /> {timeLabel}
-                              </span>
+                  <motion.div
+                    key={event._id}
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.24 }}
+                  >
+                    <Link href={`/events/${event._id}`}>
+                      <Card className="events-list-card rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]">
+                        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex items-start gap-3">
+                            <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
+                            <div>
+                              <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
+                              <div className="font-poppins mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[#4D5463]">
+                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
+                                  <CalendarDays className="size-4" /> {dateLabel}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
+                                  <MapPin className="size-4" /> {event.location || "No location"}
+                                </span>
+                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
+                                  <Clock3 className="size-4" /> {timeLabel}
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <div className="font-poppins flex items-center gap-3 text-[#7A8293]">
+                            <MessageCircle className="size-5" />
+                            <span className="rounded-full bg-white px-2 py-0.5 text-[14px] leading-[120%] font-normal">{messageCount}</span>
+                          </div>
                         </div>
-                        <div className="font-poppins flex items-center gap-3 text-[#7A8293]">
-                          <MessageCircle className="size-5" />
-                          <span className="rounded-full bg-white px-2 py-0.5 text-[14px] leading-[120%] font-normal">{messageCount}</span>
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
+                      </Card>
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>
@@ -501,49 +505,46 @@ export default function EventsPage() {
       <Dialog open={createEventOpen} onOpenChange={setCreateEventOpen}>
         <DialogContent className="max-w-2xl rounded-[26px] space-y-3">
           <DialogHeader>
-            <DialogTitle>Create event</DialogTitle>
+            <DialogTitle>Create Event</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <Input placeholder="Title" value={title} onChange={(event) => setTitle(event.target.value)} />
             <Input placeholder="Location" value={location} onChange={(event) => setLocation(event.target.value)} />
-            <div className="space-y-2">
-              <button
-                type="button"
-                className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D]"
+            <div className="space-y-3">
+              <EventRangeField
+                kind="date"
+                startValue={startDate}
+                endValue={endDate}
                 onClick={() => setDatePopupOpen(true)}
-              >
-                <CalendarDays className="size-5" />
-                Choose a date
-              </button>
-              {dateSummary ? <p className="text-[12px] text-[#8890A0]">{dateSummary}</p> : null}
-            </div>
-            {!isAllDay ? (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  className="font-poppins inline-flex items-center gap-2 rounded-full px-1 text-[20px] leading-[120%] font-medium text-[#4D4D4D] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() => setTimePopupOpen(true)}
-                  disabled={!hasDateRange}
-                >
-                  <Clock3 className="size-5" />
-                  Set time
-                </button>
-                {hasTimeRange ? <p className="text-[12px] text-[#8890A0]">{timeSummary}</p> : null}
-              </div>
-            ) : null}
-            <div className="flex items-center justify-between rounded-xl border border-[#E4E8F0] p-3">
-              <p className="fs-pop-16-regular text-[#3A404D]">All day</p>
-              <Switch
-                checked={isAllDay}
-                onCheckedChange={(checked) => {
-                  setIsAllDay(checked);
-                  if (checked) {
-                    setTimePopupOpen(false);
-                  }
-                }}
               />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                {isAllDay ? (
+                  <EventSingleField kind="time" label="All day" />
+                ) : (
+                  <EventRangeField
+                    kind="time"
+                    startValue={startTime}
+                    endValue={endTime}
+                    use24Hour={preferences.use24Hour}
+                    onClick={() => setTimePopupOpen(true)}
+                    disabled={!hasDateRange}
+                    className="max-w-full"
+                  />
+                )}
+                <AllDayTabToggle
+                  active={isAllDay}
+                  onToggle={() => {
+                    const next = !isAllDay;
+                    setIsAllDay(next);
+                    if (next) {
+                      setTimePopupOpen(false);
+                    }
+                  }}
+                  className="self-end sm:self-auto"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1">
+            <DragScrollArea className="pb-1">
               {bricks.map((brick) => (
                 <button key={brick._id} type="button" className="shrink-0" onClick={() => setNewEventBrick(brick._id)}>
                   <Badge
@@ -567,11 +568,11 @@ export default function EventsPage() {
                   </Badge>
                 </button>
               ))}
-            </div>
+            </DragScrollArea>
           </div>
           <DialogFooter>
             <Button onClick={() => createEventMutation.mutate()} disabled={createEventMutation.isPending}>
-              {createEventMutation.isPending ? "Creating..." : "Create event"}
+              {createEventMutation.isPending ? "Creating..." : "Create Event"}
             </Button>
           </DialogFooter>
         </DialogContent>

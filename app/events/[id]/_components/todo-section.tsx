@@ -42,8 +42,8 @@ export function TodoSection({
                 type="button"
                 className={`size-4 rounded-full border ${
                   todo.isCompleted
-                    ? "border-[#32ADE6] bg-[#32ADE6]"
-                    : "border-[#A9AFBC] bg-transparent"
+                    ? "border-[var(--ui-btn-secondary-text)] bg-[var(--ui-btn-secondary-text)]"
+                    : "border-[var(--ui-btn-outline-border)] bg-transparent"
                 }`}
                 onClick={() => onToggle(todo)}
               />
@@ -58,7 +58,7 @@ export function TodoSection({
               </p>
               <button
                 type="button"
-                className="text-[var(--text-muted)] transition hover:text-[#E94B3C]"
+                className="text-[var(--text-muted)] transition hover:text-[var(--ui-btn-danger-bg)]"
                 onClick={() => onDelete(todo._id)}
                 aria-label="Delete todo"
               >
