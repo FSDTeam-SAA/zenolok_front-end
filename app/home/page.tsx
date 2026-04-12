@@ -60,6 +60,10 @@ import { brickApi, eventApi, userApi, type EventData } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
+import {
+  toggleAllBrickSelection,
+  toggleBrickSelection,
+} from "@/lib/brick-filter-selection";
 import { formatTimeRangeByPreference } from "@/lib/time-format";
 
 type CalendarEvent = {
@@ -772,30 +776,14 @@ export default function HomePage() {
         bricks={bricks}
         selectedBrickIds={effectiveSelectedBrickIds}
         onToggleBrick={(brickId) =>
-          {
-            setPreferredCreateEventBrickId(brickId);
-            setSelectedBrickIds((previous) => {
-              const currentSelection = previous ?? allBrickIds;
-              const nextSelection = currentSelection.includes(brickId)
-                ? currentSelection.filter((id) => id !== brickId)
-                : [...currentSelection, brickId];
-
-              return allBrickIds.length &&
-                allBrickIds.every((id) => nextSelection.includes(id))
-                ? null
-                : nextSelection;
-            });
-          }
+          setSelectedBrickIds((previous) =>
+            toggleBrickSelection(previous, brickId, allBrickIds),
+          )
         }
         onSelectAll={() =>
-          setSelectedBrickIds((previous) => {
-            const currentSelection = previous ?? allBrickIds;
-
-            return allBrickIds.length &&
-              allBrickIds.every((brickId) => currentSelection.includes(brickId))
-              ? []
-              : null;
-          })
+          setSelectedBrickIds((previous) =>
+            toggleAllBrickSelection(previous, allBrickIds),
+          )
         }
         onCreateBrick={() => setCreateBrickOpen(true)}
       />

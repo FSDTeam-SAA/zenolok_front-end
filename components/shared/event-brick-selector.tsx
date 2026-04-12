@@ -1,7 +1,6 @@
 "use client";
 
 import { BrickIcon } from "@/components/shared/brick-icon";
-import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Brick } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -29,7 +28,8 @@ export function EventBrickSelector({
   badgeClassName,
 }: EventBrickSelectorProps) {
   return (
-    <DragScrollArea className={cn("pb-1", className)}>
+    <div className={cn("overflow-x-auto pb-1", className)}>
+      <div className="flex w-max min-w-full items-center gap-2 whitespace-nowrap">
       {bricks.map((brick) => {
         const active = selectedBrickId === brick._id;
 
@@ -65,6 +65,7 @@ export function EventBrickSelector({
           </button>
         );
       })}
-    </DragScrollArea>
+      </div>
+    </div>
   );
 }

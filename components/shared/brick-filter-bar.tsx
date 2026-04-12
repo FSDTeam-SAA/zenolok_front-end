@@ -4,7 +4,6 @@ import { Check, LayoutGrid, Plus } from "lucide-react";
 import { motion } from "motion/react";
 
 import { BrickIcon } from "@/components/shared/brick-icon";
-import { DragScrollArea } from "@/components/shared/drag-scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { Brick } from "@/lib/api";
 
@@ -34,7 +33,8 @@ export function BrickFilterBar({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28 }}
     >
-      <DragScrollArea className="home-brick-filter pb-1">
+      <div className="home-brick-filter overflow-x-auto pb-1">
+        <div className="flex w-max min-w-full items-center gap-2 whitespace-nowrap">
         <motion.button
           type="button"
           className="shrink-0"
@@ -117,7 +117,8 @@ export function BrickFilterBar({
             <Plus className="size-4" />
           </span>
         </motion.button>
-      </DragScrollArea>
+        </div>
+      </div>
     </motion.section>
   );
 }
