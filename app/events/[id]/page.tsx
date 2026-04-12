@@ -2,21 +2,12 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import {
   ArrowLeft,
-  Bell,
-  Clock3,
-  ImagePlus,
-  Link2,
-  Locate,
-  Maximize2,
-  Paperclip,
   Pencil,
-  UserPlus,
   Trash2,
 } from "lucide-react";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
@@ -32,28 +23,29 @@ import {
   type EventData,
   type EventTodo,
   type JamMessage,
+  type UserProfile,
 } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import {
-  formatIsoTimeByPreference,
-} from "@/lib/time-format";
 import { AllDayTabToggle } from "@/components/shared/all-day-tab-toggle";
-import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { EventBrickSelector } from "@/components/shared/event-brick-selector";
 import {
   EventDateRangePopup,
   EventTimeRangePopup,
 } from "@/components/shared/event-date-time-popups";
-import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
+import {
+  EventRangeField,
+  EventSingleField,
+} from "@/components/shared/event-range-field";
 import { SectionLoading } from "@/components/shared/section-loading";
-import { MessageComposer } from "./_components/message-composer";
+import { EventLibraryPanel } from "./_components/event-library-panel";
+import {
+  EventSummaryCard,
+} from "./_components/event-summary-card";
+import { JamPreviewPanel } from "./_components/jam-preview-panel";
 import { TodoSection } from "./_components/todo-section";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -61,10 +53,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
-function mapParticipants(participants: EventData["participants"]) {
+function mapParticipants(participants: EventData["participants"]): UserProfile[] {
   const mapped = participants
     .map((participant) =>
       typeof participant === "string" ? null : participant,
@@ -93,42 +84,8 @@ function mapParticipantIds(participants: EventData["participants"]) {
   return Array.from(new Set(ids));
 }
 
-function getParticipantDisplayName(participant: {
-  name?: string;
-  username?: string;
-  email?: string;
-}) {
-  return (
-    participant.name || participant.username || participant.email || "User"
-  );
-}
-
 function isLinkText(value: string) {
   return /^https?:\/\/\S+$/i.test(value.trim());
-}
-
-function getDisplayNameFromMessage(message: JamMessage) {
-  return message.user.name || message.user.username || "User";
-}
-
-function getMessageAvatarUrl(message: JamMessage) {
-  return message.user.avatar?.url || message.user.profilePicture;
-}
-
-function formatMessageStamp(value: string, use24Hour: boolean) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return formatIsoTimeByPreference(value, use24Hour);
-}
-
-function getMessageLabel(message: JamMessage) {
-  return (
-    message.text ||
-    message.fileName ||
-    (message.messageType === "link" ? "Link" : "Media")
-  );
 }
 
 function sortMessagesByCreatedAt(messages: JamMessage[]) {
@@ -519,7 +476,9 @@ export default function EventDetailsPage() {
   const eventEndDateValue = hasValidSchedule
     ? format(endDate, "yyyy-MM-dd")
     : "";
-  const eventStartTimeValue = hasValidSchedule ? format(startDate, "HH:mm") : "";
+  const eventStartTimeValue = hasValidSchedule
+    ? format(startDate, "HH:mm")
+    : "";
   const eventEndTimeValue = hasValidSchedule ? format(endDate, "HH:mm") : "";
   const allUsers = usersQuery.data?.users || [];
   const isEventOwner = viewerId === event.createdBy;
@@ -594,8 +553,10 @@ export default function EventDetailsPage() {
       return;
     }
 
-    const nextStart = new Date(`${editStartDate}T${(editStartTime || "00:00")}:00`);
-    const nextEnd = new Date(`${editEndDate}T${(resolvedEndTime || "00:00")}:00`);
+    const nextStart = new Date(
+      `${editStartDate}T${editStartTime || "00:00"}:00`,
+    );
+    const nextEnd = new Date(`${editEndDate}T${resolvedEndTime || "00:00"}:00`);
 
     if (Number.isNaN(nextStart.getTime()) || Number.isNaN(nextEnd.getTime())) {
       toast.error("Invalid start or end date/time");
@@ -732,7 +693,9 @@ export default function EventDetailsPage() {
             <Input
               placeholder="Location"
               value={editLocation}
-              onChange={(eventValue) => setEditLocation(eventValue.target.value)}
+              onChange={(eventValue) =>
+                setEditLocation(eventValue.target.value)
+              }
             />
             <div className="space-y-3">
               <EventRangeField
@@ -797,220 +760,57 @@ export default function EventDetailsPage() {
           setEditEndDate(nextEndDate);
         }}
       />
-        <EventTimeRangePopup
-          open={editTimePopupOpen}
-          onOpenChange={setEditTimePopupOpen}
-          startTime={editStartTime}
-          endTime={editEndTime}
-          selectionMode={editIsSingleDayEvent ? "single" : "range"}
-          onApply={({ startTime: nextStartTime, endTime: nextEndTime, rollsEndToNextDay }) => {
-            setEditStartTime(nextStartTime);
-            setEditEndTime(nextEndTime);
-            if (
-              rollsEndToNextDay &&
-              editStartDate &&
-              editEndDate &&
-              editStartDate === editEndDate
-            ) {
-              setEditEndDate(
-                format(addDays(new Date(`${editEndDate}T00:00:00`), 1), "yyyy-MM-dd"),
-              );
-              toast.message("End time moved the end date to the next day.");
-            }
-          }}
-        />
+      <EventTimeRangePopup
+        open={editTimePopupOpen}
+        onOpenChange={setEditTimePopupOpen}
+        startTime={editStartTime}
+        endTime={editEndTime}
+        selectionMode={editIsSingleDayEvent ? "single" : "range"}
+        onApply={({
+          startTime: nextStartTime,
+          endTime: nextEndTime,
+          rollsEndToNextDay,
+        }) => {
+          setEditStartTime(nextStartTime);
+          setEditEndTime(nextEndTime);
+          if (
+            rollsEndToNextDay &&
+            editStartDate &&
+            editEndDate &&
+            editStartDate === editEndDate
+          ) {
+            setEditEndDate(
+              format(
+                addDays(new Date(`${editEndDate}T00:00:00`), 1),
+                "yyyy-MM-dd",
+              ),
+            );
+            toast.message("End time moved the end date to the next day.");
+          }
+        }}
+      />
 
       <section className="event-details-shell rounded-[16px] border border-[var(--border)] bg-[var(--surface-1)] p-2">
-        <div className="event-details-card rounded-[14px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-start gap-2">
-                <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
-                <p className="truncate text-[25px] font-medium leading-tight text-[var(--text-strong)]">
-                  {event.title}
-                </p>
-              </div>
-              <div className="mt-1.5 pl-3">
-                {event.brick ? (
-                  <Badge
-                    variant="blue"
-                    className="rounded-full px-2.5 py-0 text-[11px]"
-                    style={{ backgroundColor: event.brick.color }}
-                  >
-                    <BrickIcon name={event.brick.icon} className="size-3.5" />{" "}
-                    {event.brick.name}
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-            <div className="mt-1 flex shrink-0 items-center gap-2">
-              <div className="flex items-center">
-                {participants.slice(0, 4).map((participant, index) => (
-                  <Avatar
-                    key={participant._id}
-                    className={`size-6 border-2 border-[var(--border)] ${
-                      index === 0 ? "" : "-ml-2"
-                    }`}
-                  >
-                    <AvatarImage src={participant.avatar?.url} />
-                    <AvatarFallback className="text-[14px] bg-gray-300 text-gray-400">
-                      {getParticipantDisplayName(participant).slice(0, 1)}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-                {participants.length > 4 ? (
-                  <span className="-ml-2 inline-flex h-6 min-w-6 items-center justify-center rounded-full border-2 border-[var(--border)] bg-[var(--surface-3)] px-1 text-[10px] font-medium text-[var(--text-muted)]">
-                    +{participants.length - 4}
-                  </span>
-                ) : null}
-              </div>
-
-              <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-                <DialogTrigger asChild>
-                  <button
-                    type="button"
-                    className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)] hover:text-[var(--text-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label="Add participants"
-                    disabled={!isEventOwner}
-                  >
-                    <UserPlus className="size-[16px]" />
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg rounded-[26px] space-y-4">
-                  <DialogHeader>
-                    <DialogTitle className="text-[24px]">
-                      Add participants
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-2">
-                        {usersQuery.isLoading ? (
-                          <SectionLoading rows={3} />
-                        ) : usersQuery.isError ? (
-                          <p className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-                            Failed to load users
-                          </p>
-                        ) : allUsers.length ? (
-                          allUsers.map((user) => {
-                            const checked = selectedShareUserIds.includes(
-                              user._id,
-                            );
-                            const alreadyAdded = currentParticipantIds.has(
-                              user._id,
-                            );
-
-                            return (
-                              <label
-                                key={user._id}
-                                className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--surface-3)]"
-                              >
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <Checkbox
-                                    checked={checked}
-                                    onCheckedChange={(next) =>
-                                      toggleShareUser(user._id, Boolean(next))
-                                    }
-                                  />
-                                  <Avatar className="size-7 border border-[var(--border)]">
-                                    <AvatarImage src={user.avatar?.url} />
-                                    <AvatarFallback>
-                                      {getParticipantDisplayName(user).slice(
-                                        0,
-                                        1,
-                                      )}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm text-[var(--text-default)]">
-                                      {getParticipantDisplayName(user)}
-                                    </p>
-                                    <p className="truncate text-[11px] text-[var(--text-muted)]">
-                                      {user.email}
-                                    </p>
-                                  </div>
-                                </div>
-                                {alreadyAdded ? (
-                                  <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
-                                    Added
-                                  </span>
-                                ) : null}
-                              </label>
-                            );
-                          })
-                        ) : (
-                          <p className="px-2 py-3 text-center text-xs text-[var(--text-muted)]">
-                            No users found
-                          </p>
-                        )}
-                      </div>
-                      <Button
-                        className="h-10 w-full rounded-xl text-[20px] font-medium"
-                        onClick={handleShareWithSelectedUsers}
-                        disabled={
-                          usersQuery.isLoading || updateEventMutation.isPending
-                        }
-                      >
-                        {updateEventMutation.isPending
-                          ? "Saving..."
-                          : "Save participants"}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-start justify-between gap-3 text-[var(--text-strong)]">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-end gap-x-5 gap-y-1.5 sm:gap-x-7">
-                <EventRangeField
-                  kind="date"
-                  startValue={eventStartDateValue}
-                  endValue={eventEndDateValue}
-                  interactive={false}
-                  className="-ml-1"
-                />
-                {event.isAllDay ? (
-                  <p className="flex items-center gap-2 px-1 py-1 text-[13px] font-medium text-[var(--text-default)]">
-                    <Clock3 className="size-4 text-[var(--text-muted)]" />
-                    All day
-                  </p>
-                ) : (
-                  <EventRangeField
-                    kind="time"
-                    startValue={eventStartTimeValue}
-                    endValue={eventEndTimeValue}
-                    use24Hour={preferences.use24Hour}
-                    collapseSingleValue={eventStartDateValue === eventEndDateValue}
-                    interactive={false}
-                    className="-ml-1"
-                  />
-                )}
-              </div>
-              <p className="flex items-center gap-2 px-1 text-[13px] text-[var(--text-default)]">
-                <Locate className="size-4 text-[var(--text-muted)]" />
-                {event.location || "No location"}
-              </p>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <button
-                type="button"
-                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                aria-label="Notification"
-              >
-                <Bell className="size-4" />
-              </button>
-              <Badge
-                variant="neutral"
-                className="rounded-full border border-[var(--border)] bg-transparent px-2.5 py-1 !text-[14px] text-[var(--text-strong)]"
-              >
-                {event.isAllDay ? "All day" : "Scheduled"}
-              </Badge>
-            </div>
-          </div>
-        </div>
+        <EventSummaryCard
+          event={event}
+          participants={participants}
+          eventStartDateValue={eventStartDateValue}
+          eventEndDateValue={eventEndDateValue}
+          eventStartTimeValue={eventStartTimeValue}
+          eventEndTimeValue={eventEndTimeValue}
+          use24Hour={preferences.use24Hour}
+          shareDialogOpen={shareDialogOpen}
+          onShareDialogOpenChange={setShareDialogOpen}
+          isEventOwner={isEventOwner}
+          allUsers={allUsers}
+          selectedShareUserIds={selectedShareUserIds}
+          currentParticipantIds={currentParticipantIds}
+          onToggleShareUser={toggleShareUser}
+          onSaveParticipants={handleShareWithSelectedUsers}
+          isUsersLoading={usersQuery.isLoading}
+          isUsersError={usersQuery.isError}
+          isParticipantsSaving={updateEventMutation.isPending}
+        />
 
         {jamView === "jam" ? (
           <div className="mt-3 space-y-3">
@@ -1046,256 +846,35 @@ export default function EventDetailsPage() {
         ) : null}
 
         <Card className="mt-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 shadow-none">
-          {jamView === "jam" ? (
-            <div className="mb-2 flex items-center justify-end gap-1">
-              <button
-                type="button"
-                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                onClick={() => router.push(`/events/${id}/messages`)}
-                aria-label="Open messages page"
-              >
-                <Maximize2 className="size-4" />
-              </button>
-              <button
-                type="button"
-                className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                onClick={() => {
-                  setLibraryTab("media");
-                  setJamView("media");
-                }}
-                aria-label="Open media files and links"
-              >
-                <ImagePlus className="size-4" />
-              </button>
-            </div>
-          ) : null}
-
           {jamView === "media" ? (
-            <>
-              <div className="mb-3 flex items-center gap-2 text-[var(--text-muted)]">
-                <button
-                  type="button"
-                  className="rounded-full p-1 transition hover:bg-[var(--surface-3)]"
-                  onClick={() => setJamView("jam")}
-                  aria-label="Back to JAM"
-                >
-                  <ArrowLeft className="size-5" />
-                </button>
-                <div className="grid flex-1 grid-cols-3 rounded-full bg-[var(--surface-3)] p-1 text-sm">
-                  {(["media", "files", "link"] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      className={`rounded-full px-2 py-1 capitalize transition ${
-                        tab === libraryTab
-                          ? "bg-[var(--surface-1)] text-[var(--text-strong)]"
-                          : "text-[var(--text-muted)]"
-                      }`}
-                      onClick={() => setLibraryTab(tab)}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {libraryTab === "media" ? (
-                mediaMessages.length ? (
-                  <div className="grid max-h-[460px] grid-cols-4 gap-1 overflow-auto">
-                    {mediaMessages.map((message) => (
-                      <div
-                        key={message._id}
-                        className="overflow-hidden rounded-sm bg-[var(--surface-1)]"
-                      >
-                        {message.mediaUrl ? (
-                          <Image
-                            src={message.mediaUrl}
-                            alt={message.fileName || "media"}
-                            width={120}
-                            height={90}
-                            className="h-[88px] w-full object-cover"
-                            unoptimized
-                          />
-                        ) : (
-                          <div className="flex h-[88px] items-center justify-center px-2 text-center text-xs text-[var(--text-muted)]">
-                            {getMessageLabel(message)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No media"
-                    description="Attach photos in chat and they will show here."
-                  />
-                )
-              ) : null}
-
-              {libraryTab === "files" ? (
-                fileMessages.length ? (
-                  <div className="max-h-[460px] space-y-2 overflow-auto">
-                    {fileMessages.map((message) => (
-                      <div
-                        key={message._id}
-                        className="flex items-center justify-between rounded-xl bg-[var(--surface-1)] px-3 py-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-[var(--text-strong)]">
-                            {message.fileName || getMessageLabel(message)}
-                          </p>
-                          <p className="text-xs text-[var(--text-muted)]">
-                            {formatMessageStamp(message.createdAt, preferences.use24Hour)}
-                          </p>
-                        </div>
-                        <Paperclip className="size-4 text-[var(--text-muted)]" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No files"
-                    description="Uploaded files from chat will appear here."
-                  />
-                )
-              ) : null}
-
-              {libraryTab === "link" ? (
-                linkMessages.length ? (
-                  <div className="max-h-[460px] space-y-2 overflow-auto">
-                    {linkMessages.map((message) => {
-                      const linkValue = (message.text || "").trim();
-                      return (
-                        <a
-                          key={message._id}
-                          href={linkValue}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between rounded-xl bg-[var(--surface-1)] px-3 py-2"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm text-[var(--text-strong)]">
-                              {linkValue || "Link"}
-                            </p>
-                            <p className="text-xs text-[var(--text-muted)]">
-                              {formatMessageStamp(message.createdAt, preferences.use24Hour)}
-                            </p>
-                          </div>
-                          <Link2 className="size-4 text-[var(--text-muted)]" />
-                        </a>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmptyState
-                    title="No links"
-                    description="Links shared in messages will appear here."
-                  />
-                )
-              ) : null}
-            </>
-          ) : null}
-
-          {jamView === "jam" ? (
-            <>
-              <div className="max-h-[300px] space-y-3 overflow-auto rounded-[22px] bg-[var(--surface-3)] p-2">
-                {messagesQuery.isLoading ? (
-                  <SectionLoading rows={3} />
-                ) : jamPreviewMessages.length ? (
-                  jamPreviewMessages.map((message) => {
-                    const rawName = getDisplayNameFromMessage(message).trim();
-                    const isMe = viewerId
-                      ? message.user._id === viewerId
-                      : rawName === "Me";
-                    const displayName = isMe ? "Me" : rawName || "User";
-
-                    return (
-                      <div
-                        key={message._id}
-                        className={`flex items-end gap-2 ${
-                          isMe ? "justify-end" : ""
-                        }`}
-                      >
-                        {!isMe ? (
-                          <Avatar className="size-10 border border-[var(--border)]">
-                            <AvatarImage src={getMessageAvatarUrl(message)} />
-                            <AvatarFallback>
-                              {displayName.slice(0, 1)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : null}
-                        <div
-                          className={`min-w-0 max-w-[85%] ${
-                            isMe ? "text-right" : ""
-                          }`}
-                        >
-                          <p
-                            className={`mb-1 text-[14px] leading-none font-medium ${
-                              isMe
-                                ? "text-[var(--ui-btn-secondary-text)]"
-                                : "text-[var(--text-strong)]"
-                            }`}
-                          >
-                            {displayName}
-                          </p>
-                          <div
-                            className={`flex items-end gap-2 ${
-                              isMe ? "justify-end" : ""
-                            }`}
-                          >
-                            {isMe ? (
-                              <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                                {formatMessageStamp(message.createdAt, preferences.use24Hour)}
-                              </p>
-                            ) : null}
-                            <div
-                              className={`max-w-[260px] rounded-[18px] border px-3 py-1.5 text-[12px] ${
-                                isMe
-                                  ? "border-[color:color-mix(in_srgb,var(--ui-btn-secondary-text)_20%,var(--border)_80%)] bg-[var(--ui-btn-secondary-bg)] text-[var(--ui-btn-secondary-text)]"
-                                  : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-strong)]"
-                              }`}
-                            >
-                              {getMessageLabel(message)}
-                            </div>
-                            {!isMe ? (
-                              <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
-                                {formatMessageStamp(message.createdAt, preferences.use24Hour)}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                        {isMe ? (
-                          <Avatar className="size-10 border border-[var(--border)]">
-                            <AvatarImage src={getMessageAvatarUrl(message)} />
-                            <AvatarFallback>
-                              {displayName.slice(0, 1)}
-                            </AvatarFallback>
-                          </Avatar>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <EmptyState
-                    title="No messages"
-                    description="Start chatting with participants."
-                  />
-                )}
-              </div>
-
-              <div className="mt-3">
-                <MessageComposer
-                  messageText={messageText}
-                  onMessageChange={setMessageText}
-                  onFileChange={setSelectedFile}
-                  selectedFileName={selectedFile?.name}
-                  onSend={() => sendMessageMutation.mutate()}
-                  isSending={sendMessageMutation.isPending}
-                />
-              </div>
-            </>
-          ) : null}
-
+            <EventLibraryPanel
+              libraryTab={libraryTab}
+              onLibraryTabChange={setLibraryTab}
+              mediaMessages={mediaMessages}
+              fileMessages={fileMessages}
+              linkMessages={linkMessages}
+              use24Hour={preferences.use24Hour}
+              onBackToJam={() => setJamView("jam")}
+            />
+          ) : (
+            <JamPreviewPanel
+              viewerId={viewerId}
+              messages={jamPreviewMessages}
+              isLoading={messagesQuery.isLoading}
+              use24Hour={preferences.use24Hour}
+              messageText={messageText}
+              onMessageChange={setMessageText}
+              onFileChange={setSelectedFile}
+              selectedFileName={selectedFile?.name}
+              onSend={() => sendMessageMutation.mutate()}
+              isSending={sendMessageMutation.isPending}
+              onOpenMessagesPage={() => router.push(`/events/${id}/messages`)}
+              onOpenLibrary={() => {
+                setLibraryTab("media");
+                setJamView("media");
+              }}
+            />
+          )}
         </Card>
       </section>
 

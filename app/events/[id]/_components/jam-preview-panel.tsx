@@ -1,0 +1,164 @@
+"use client";
+
+import { ImagePlus, Maximize2 } from "lucide-react";
+
+import type { JamMessage } from "@/lib/api";
+import { EmptyState } from "@/components/shared/empty-state";
+import { SectionLoading } from "@/components/shared/section-loading";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  formatMessageStamp,
+  getDisplayNameFromMessage,
+  getMessageAvatarUrl,
+  getMessageLabel,
+} from "./event-detail-helpers";
+import { MessageComposer } from "./message-composer";
+
+type JamPreviewPanelProps = {
+  viewerId?: string;
+  messages: JamMessage[];
+  isLoading: boolean;
+  use24Hour: boolean;
+  messageText: string;
+  onMessageChange: (value: string) => void;
+  onFileChange: (file: File | null) => void;
+  selectedFileName?: string;
+  onSend: () => void;
+  isSending: boolean;
+  onOpenMessagesPage: () => void;
+  onOpenLibrary: () => void;
+};
+
+type MessagePreviewItemProps = {
+  message: JamMessage;
+  viewerId?: string;
+  use24Hour: boolean;
+};
+
+function MessagePreviewItem({
+  message,
+  viewerId,
+  use24Hour,
+}: MessagePreviewItemProps) {
+  const rawName = getDisplayNameFromMessage(message).trim();
+  const isMe = viewerId ? message.user._id === viewerId : rawName === "Me";
+  const displayName = isMe ? "Me" : rawName || "User";
+
+  return (
+    <div className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}>
+      {!isMe ? (
+        <Avatar className="size-10 border border-[var(--border)]">
+          <AvatarImage src={getMessageAvatarUrl(message)} />
+          <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
+        </Avatar>
+      ) : null}
+      <div className={`min-w-0 max-w-[85%] ${isMe ? "text-right" : ""}`}>
+        <p
+          className={`mb-1 text-[14px] leading-none font-medium ${
+            isMe
+              ? "text-[var(--ui-btn-secondary-text)]"
+              : "text-[var(--text-strong)]"
+          }`}
+        >
+          {displayName}
+        </p>
+        <div className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}>
+          {isMe ? (
+            <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
+              {formatMessageStamp(message.createdAt, use24Hour)}
+            </p>
+          ) : null}
+          <div
+            className={`max-w-[260px] rounded-[18px] border px-3 py-1.5 text-[12px] ${
+              isMe
+                ? "border-[color:color-mix(in_srgb,var(--ui-btn-secondary-text)_20%,var(--border)_80%)] bg-[var(--ui-btn-secondary-bg)] text-[var(--ui-btn-secondary-text)]"
+                : "border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-strong)]"
+            }`}
+          >
+            {getMessageLabel(message)}
+          </div>
+          {!isMe ? (
+            <p className="pb-0.5 text-[10px] text-[var(--text-muted)]">
+              {formatMessageStamp(message.createdAt, use24Hour)}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      {isMe ? (
+        <Avatar className="size-10 border border-[var(--border)]">
+          <AvatarImage src={getMessageAvatarUrl(message)} />
+          <AvatarFallback>{displayName.slice(0, 1)}</AvatarFallback>
+        </Avatar>
+      ) : null}
+    </div>
+  );
+}
+
+export function JamPreviewPanel({
+  viewerId,
+  messages,
+  isLoading,
+  use24Hour,
+  messageText,
+  onMessageChange,
+  onFileChange,
+  selectedFileName,
+  onSend,
+  isSending,
+  onOpenMessagesPage,
+  onOpenLibrary,
+}: JamPreviewPanelProps) {
+  return (
+    <>
+      <div className="mb-2 flex items-center justify-end gap-1">
+        <button
+          type="button"
+          className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
+          onClick={onOpenMessagesPage}
+          aria-label="Open messages page"
+        >
+          <Maximize2 className="size-4" />
+        </button>
+        <button
+          type="button"
+          className="rounded-full p-1 text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
+          onClick={onOpenLibrary}
+          aria-label="Open media files and links"
+        >
+          <ImagePlus className="size-4" />
+        </button>
+      </div>
+
+      <div className="max-h-[300px] space-y-3 overflow-auto rounded-[22px] bg-[var(--surface-3)] p-2">
+        {isLoading ? (
+          <SectionLoading rows={3} />
+        ) : messages.length ? (
+          messages.map((message) => (
+            <MessagePreviewItem
+              key={message._id}
+              message={message}
+              viewerId={viewerId}
+              use24Hour={use24Hour}
+            />
+          ))
+        ) : (
+          <EmptyState
+            title="No messages"
+            description="Start chatting with participants."
+          />
+        )}
+      </div>
+
+      <div className="mt-3">
+        <MessageComposer
+          messageText={messageText}
+          onMessageChange={onMessageChange}
+          onFileChange={onFileChange}
+          selectedFileName={selectedFileName}
+          onSend={onSend}
+          isSending={isSending}
+        />
+      </div>
+    </>
+  );
+}
