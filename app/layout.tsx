@@ -22,9 +22,9 @@ export const metadata: Metadata = {
   title: "Zenolok",
   description: "Zenolok task and event manager",
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "/dark-mode-logo.png",
+    shortcut: "/dark-mode-logo.png",
+    apple: "/dark-mode-logo.png",
   },
 };
 

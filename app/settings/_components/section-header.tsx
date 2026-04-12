@@ -11,7 +11,7 @@ export function SectionHeader({ title, description, titleClassName }: SectionHea
     <div>
       <h2
         className={cn(
-          "settings-section-title font-poppins mb-4 text-[24px] leading-[120%] font-semibold text-[var(--text-strong)]",
+          "settings-section-title font-poppins mb-2 !text-[24px] leading-[120%] font-semibold text-[var(--text-strong)]",
           titleClassName,
         )}
       >

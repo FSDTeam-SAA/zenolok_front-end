@@ -1043,10 +1043,10 @@ export default function SettingsPage() {
       >
         <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[36px] lg:text-[40px]">
+            <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[18px] lg:text-[24px]">
               Bricks Manage
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-[16px]">
               Manage brick name, icon, and color from this modal.
             </DialogDescription>
           </DialogHeader>
@@ -1057,7 +1057,7 @@ export default function SettingsPage() {
       <Dialog open={weekStartModalOpen} onOpenChange={setWeekStartModalOpen}>
         <DialogContent className="max-w-3xl rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
           <DialogHeader>
-            <DialogTitle className="font-poppins text-[24px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[24px] lg:text-[40px]">
+            <DialogTitle className="font-poppins leading-[120%] font-semibold text-[var(--text-strong)] sm:!text-[18px] lg:!text-[24px]">
               Manage Week Start Day
             </DialogTitle>
             <DialogDescription>

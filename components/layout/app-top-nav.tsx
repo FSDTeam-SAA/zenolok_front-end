@@ -62,7 +62,7 @@ export function AppTopNav() {
   const [activeNotificationTab, setActiveNotificationTab] = useState<
     "messages" | "system" | "all" | "unread"
   >("all");
-  const { monthCursor, goToToday, goToPreviousMonth, goToNextMonth } =
+  const { monthCursor, goToToday, goToPreviousMonth, goToNextMonth, preferences } =
     useAppState();
   const isHomePage =
     pathname === "/home" || pathname.startsWith("/home/");
@@ -130,13 +130,17 @@ export function AppTopNav() {
     >
       <div className="mx-auto flex h-[76px] w-full max-w-[1180px] items-center gap-3 px-3 sm:px-5">
         <div className="flex items-center gap-3">
-          <Link href="/home" className="flex items-center gap-2">
+          <Link
+            href="/home"
+            className="inline-flex size-[52px] items-center justify-center rounded-[16px] border border-[var(--border)] bg-[var(--surface-1)] mr-2 shadow-[0_6px_18px_rgba(21,32,54,0.08)]"
+            aria-label="Go to home"
+          >
             <Image
-              src="/logo.png"
+              src={preferences.darkMode ? "/dark-mode-logo.png" : "/logo.png"}
               alt="Zenolok Logo"
-              width={500}
-              height={500}
-              className="w-[50px] h-[50px] object-contain"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-contain"
               priority
             />
           </Link>

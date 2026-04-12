@@ -24,7 +24,7 @@ export function WeekStartDaySection({
         </p>
         <Button
           type="button"
-          className="font-poppins mt-4 h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
+          className="font-poppins mt-4 h-11 rounded-xl px-5 !text-[18px] leading-[120%] font-medium"
           onClick={onOpenModal}
         >
           Choose Week Start Day

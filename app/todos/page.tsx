@@ -283,14 +283,14 @@ function CategoryCard({
           const { isDateOnlyOverdue } = getScheduledOffsetMeta(item.scheduledDate, item.scheduledTime);
 
           return (
-            <div key={item._id} className="flex items-center gap-2 text-[18px] text-[#3F4552]">
+            <div key={item._id} className="flex items-center gap-2 text-[18px] text-[var(--text-default)]">
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   onTodoClick(item._id);
                 }}
-                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-white"
+                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--ui-checkbox-bg)]"
                 style={{ borderColor: category.color || "#38A8E8" }}
                 aria-label={isPendingDelete ? `Cancel delete for ${item.text}` : `Delete ${item.text} after 3 seconds`}
               >
@@ -304,10 +304,10 @@ function CategoryCard({
               <span
                 className={`flex-1 truncate ${
                   isChecked
-                    ? "text-[#A4ACBA] line-through"
+                    ? "text-[var(--text-muted)] line-through"
                     : isDateOnlyOverdue
                       ? "font-medium text-red-500"
-                      : "text-[#3F4552]"
+                      : "text-[var(--text-default)]"
                 }`}
               >
                 {item.text}
