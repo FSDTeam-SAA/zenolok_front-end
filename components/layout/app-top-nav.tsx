@@ -84,7 +84,8 @@ export function AppTopNav() {
       queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
     },
   });
-  const notifications = notificationsQuery.data ?? [];
+  const notifications = notificationsQuery.data?.items ?? [];
+  const serverCounts = notificationsQuery.data?.counts;
   const unreadCount = notifications.filter((item) => !item.read).length;
   const messageNotifications = notifications.filter((item) =>
     /(message|chat)/i.test(item.type ?? ""),
@@ -102,10 +103,22 @@ export function AppTopNav() {
       ? unreadNotifications
       : notifications;
   const unreadByTab = {
-    messages: messageNotifications.filter((item) => !item.read).length,
-    system: systemNotifications.filter((item) => !item.read).length,
-    all: unreadCount,
-    unread: unreadCount,
+    messages:
+      serverCounts?.messages.unread ??
+      messageNotifications.filter((item) => !item.read).length,
+    system:
+      serverCounts?.system.unread ??
+      systemNotifications.filter((item) => !item.read).length,
+    all: serverCounts?.all.unread ?? unreadCount,
+    unread: serverCounts?.all.unread ?? unreadCount,
+  };
+  const totalByTab = {
+    messages:
+      serverCounts?.messages.total ?? messageNotifications.length,
+    system:
+      serverCounts?.system.total ?? systemNotifications.length,
+    all: serverCounts?.all.total ?? notifications.length,
+    unread: serverCounts?.all.unread ?? unreadCount,
   };
 
   return (
@@ -246,6 +259,11 @@ export function AppTopNav() {
                     {unreadByTab[tab.key] ? (
                       <span className="absolute -top-2 -right-3 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-medium leading-none text-white">
                         {unreadByTab[tab.key] > 99 ? "99+" : unreadByTab[tab.key]}
+                      </span>
+                    ) : null}
+                    {!unreadByTab[tab.key] && totalByTab[tab.key] ? (
+                      <span className="absolute -top-2 -right-3 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[var(--surface-3)] px-1 text-[9px] font-medium leading-none text-[var(--text-muted)]">
+                        {totalByTab[tab.key] > 99 ? "99+" : totalByTab[tab.key]}
                       </span>
                     ) : null}
                   </button>

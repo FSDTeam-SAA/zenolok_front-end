@@ -161,6 +161,22 @@ export interface NotificationData {
   updatedAt: string;
 }
 
+export interface NotificationCountBucket {
+  total: number;
+  unread: number;
+}
+
+export interface NotificationCounts {
+  all: NotificationCountBucket;
+  messages: NotificationCountBucket;
+  system: NotificationCountBucket;
+}
+
+export interface NotificationListData {
+  items: NotificationData[];
+  counts: NotificationCounts;
+}
+
 export type SearchResultType =
   | "event"
   | "eventTodo"
@@ -382,9 +398,14 @@ export const searchApi = {
 };
 
 export const notificationApi = {
-  getAll: () => unwrap<NotificationData[]>(apiClient.get("/notifications")),
-  markAsRead: (id: string) => unwrap<NotificationData>(apiClient.patch(`/notifications/${id}/read`)),
+  getAll: () => unwrap<NotificationListData>(apiClient.get("/notifications")),
+  markAsRead: (id: string) =>
+    unwrap<{ notification: NotificationData; counts: NotificationCounts }>(
+      apiClient.patch(`/notifications/${id}/read`),
+    ),
   markAllRead: () =>
-    unwrap<{ modifiedCount: number }>(apiClient.patch("/notifications/mark-read")),
+    unwrap<{ modifiedCount: number; counts: NotificationCounts }>(
+      apiClient.patch("/notifications/mark-read"),
+    ),
   clearAll: () => unwrap<null>(apiClient.delete("/notifications/clear")),
 };
