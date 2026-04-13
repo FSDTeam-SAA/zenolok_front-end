@@ -18,6 +18,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { authApi, eventApi, feedbackApi, userApi } from "@/lib/api";
+import {
+  getAlarmPresetLabel,
+  resolveAlarmPresetOptions,
+  type EditableAlarmPresetKey,
+} from "@/lib/alarm-presets";
 import { queryKeys } from "@/lib/query-keys";
 import { weekStartDayOptions, type WeekStartDay } from "@/lib/settings";
 import { getTimeChangedMessage } from "@/lib/time-format";
@@ -68,12 +73,6 @@ const GOOGLE_GSI_SCRIPT_URL = "https://accounts.google.com/gsi/client";
 const GOOGLE_CALENDAR_SCOPE =
   "https://www.googleapis.com/auth/calendar.readonly";
 const GOOGLE_CALENDAR_EVENTS_LIMIT = 100;
-const ALARM_PRESET_LABELS: Record<AlarmPreset, string> = {
-  none: "No alert",
-  preset_1: "Preset 1",
-  preset_2: "Preset 2",
-  preset_3: "Preset 3",
-};
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -316,6 +315,8 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
 
   const [alarmPreset, setAlarmPreset] = React.useState<AlarmPreset>("none");
+  const [savingAlarmPresetOptionKey, setSavingAlarmPresetOptionKey] =
+    React.useState<EditableAlarmPresetKey | null>(null);
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
   const [feedbackPhotos, setFeedbackPhotos] = React.useState<File[]>([]);
   const [feedbackVideos, setFeedbackVideos] = React.useState<File[]>([]);
@@ -342,6 +343,10 @@ export default function SettingsPage() {
     queryKey: queryKeys.feedbacks,
     queryFn: feedbackApi.getAll,
   });
+  const alarmPresetOptions = React.useMemo(
+    () => resolveAlarmPresetOptions(profileQuery.data?.preferences?.alarmPresetOptions),
+    [profileQuery.data?.preferences?.alarmPresetOptions],
+  );
 
   React.useEffect(() => {
     if (!profileQuery.data) {
@@ -392,7 +397,8 @@ export default function SettingsPage() {
       backendAlarmPreset === "none" ||
       backendAlarmPreset === "preset_1" ||
       backendAlarmPreset === "preset_2" ||
-      backendAlarmPreset === "preset_3"
+      backendAlarmPreset === "preset_3" ||
+      backendAlarmPreset === "custom"
     ) {
       setAlarmPreset(backendAlarmPreset);
     }
@@ -561,7 +567,9 @@ export default function SettingsPage() {
       previousAlarmPreset: AlarmPreset;
     }) => userApi.updateAlarmPreset({ alarmPreset }),
     onSuccess: (_data, variables) => {
-      toast.success(`Changed to ${ALARM_PRESET_LABELS[variables.alarmPreset]}`);
+      toast.success(
+        `Changed to ${getAlarmPresetLabel(variables.alarmPreset, alarmPresetOptions)}`,
+      );
       queryClient.invalidateQueries({ queryKey: queryKeys.profile });
     },
     onError: (error: Error, variables) => {
@@ -584,6 +592,42 @@ export default function SettingsPage() {
       });
     },
     [alarmPreset, updateAlarmPresetMutation],
+  );
+
+  const updateAlarmPresetOptionMutation = useMutation({
+    mutationFn: ({
+      key,
+      offsetsInMinutes,
+    }: {
+      key: EditableAlarmPresetKey;
+      offsetsInMinutes: number[];
+    }) => userApi.updateAlarmPresetOption({ key, offsetsInMinutes }),
+    onSuccess: (_data, variables) => {
+      toast.success(
+        `${getAlarmPresetLabel(variables.key, alarmPresetOptions)} updated`,
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update preset timing");
+    },
+    onSettled: () => {
+      setSavingAlarmPresetOptionKey(null);
+    },
+  });
+
+  const handleAlarmPresetOptionSave = React.useCallback(
+    ({
+      key,
+      offsetsInMinutes,
+    }: {
+      key: EditableAlarmPresetKey;
+      offsetsInMinutes: number[];
+    }) => {
+      setSavingAlarmPresetOptionKey(key);
+      updateAlarmPresetOptionMutation.mutate({ key, offsetsInMinutes });
+    },
+    [updateAlarmPresetOptionMutation],
   );
 
   const updateNotificationMutation = useMutation({
@@ -936,7 +980,10 @@ export default function SettingsPage() {
         return (
           <AlarmPresetSection
             value={alarmPreset}
+            options={alarmPresetOptions}
             onChange={handleAlarmPresetChange}
+            onSaveOption={handleAlarmPresetOptionSave}
+            savingKey={savingAlarmPresetOptionKey}
           />
         );
       case "darkMode":

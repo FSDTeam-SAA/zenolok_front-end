@@ -9,7 +9,15 @@ type ApiEnvelope<T> = {
   data: T;
 };
 
-export type AlarmPresetKey = "none" | "preset_1" | "preset_2" | "preset_3";
+export type AlarmPresetKey = "none" | "preset_1" | "preset_2" | "preset_3" | "custom";
+
+export interface AlarmPresetOption {
+  key: AlarmPresetKey;
+  label: string;
+  description: string;
+  editable: boolean;
+  offsetsInMinutes: number[];
+}
 
 export interface AvatarData {
   public_id: string;
@@ -19,6 +27,7 @@ export interface AvatarData {
 export interface UserPreferences {
   alarmPreset: AlarmPresetKey;
   use24HourFormat: boolean;
+  alarmPresetOptions: AlarmPresetOption[];
   notificationSettings: {
     anyMessages: boolean;
     taggedMessages: boolean;
@@ -157,6 +166,8 @@ export interface NotificationData {
   user: string | UserProfile;
   read: boolean;
   type?: string;
+  eventId?: string;
+  messageId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -268,6 +279,10 @@ export const userApi = {
     })),
   updateAlarmPreset: (payload: { alarmPreset: AlarmPresetKey }) =>
     unwrap<UserPreferences>(apiClient.patch("/user/preferences/alarm-preset", payload)),
+  updateAlarmPresetOption: (payload: {
+    key: Exclude<AlarmPresetKey, "none">;
+    offsetsInMinutes: number[];
+  }) => unwrap<UserPreferences>(apiClient.patch("/user/preferences/alarm-preset-option", payload)),
   updateNotificationPreferences: (
     payload: Partial<UserPreferences["notificationSettings"]>,
   ) => unwrap<UserPreferences>(apiClient.patch("/user/preferences/notifications", payload)),
@@ -402,6 +417,10 @@ export const notificationApi = {
   markAsRead: (id: string) =>
     unwrap<{ notification: NotificationData; counts: NotificationCounts }>(
       apiClient.patch(`/notifications/${id}/read`),
+    ),
+  markEventMessagesRead: (eventId: string) =>
+    unwrap<{ modifiedCount: number; counts: NotificationCounts }>(
+      apiClient.patch(`/notifications/messages/event/${eventId}/read`),
     ),
   markAllRead: () =>
     unwrap<{ modifiedCount: number; counts: NotificationCounts }>(

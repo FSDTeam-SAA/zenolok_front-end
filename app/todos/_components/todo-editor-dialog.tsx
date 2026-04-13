@@ -11,27 +11,18 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
+  formatAlarmPresetSummary,
+  getAlarmPresetLabel,
+} from "@/lib/alarm-presets";
+import {
   formatTimeStringByPreference,
 } from "@/lib/time-format";
-import type { AlarmPresetKey } from "@/lib/api";
+import { cn } from "@/lib/utils";
+import type { AlarmPresetKey, AlarmPresetOption } from "@/lib/api";
 
 export type TodoEditorMode = "create" | "edit";
 export type RepeatValue = "daily" | "weekly" | "monthly" | "yearly";
 export type TodoAlarmPreset = AlarmPresetKey;
-
-const ALARM_PRESET_OPTIONS: Array<{ id: TodoAlarmPreset; label: string }> = [
-  { id: "none", label: "No alert" },
-  { id: "preset_1", label: "Preset 1" },
-  { id: "preset_2", label: "Preset 2" },
-  { id: "preset_3", label: "Preset 3" },
-];
-
-const ALARM_PRESET_LABELS: Record<TodoAlarmPreset, string> = {
-  none: "No alert",
-  preset_1: "Preset 1",
-  preset_2: "Preset 2",
-  preset_3: "Preset 3",
-};
 
 function formatDateDisplay(value: string) {
   if (!value) {
@@ -75,6 +66,7 @@ type TodoEditorDialogProps = {
   scheduledTimeInput: string;
   onScheduledTimeChange: (value: string) => void;
   alarmPreset: TodoAlarmPreset;
+  alarmPresetOptions: AlarmPresetOption[];
   onAlarmPresetChange: (value: TodoAlarmPreset) => void;
   repeatEnabled: boolean;
   onRepeatEnabledChange: (checked: boolean) => void;
@@ -103,6 +95,7 @@ export function TodoEditorDialog({
   scheduledTimeInput,
   onScheduledTimeChange,
   alarmPreset,
+  alarmPresetOptions,
   onAlarmPresetChange,
   repeatEnabled,
   onRepeatEnabledChange,
@@ -138,7 +131,7 @@ export function TodoEditorDialog({
                   }
                 }}
                 placeholder="New todo"
-                className="h-11 border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] text-[24px] leading-[120%] text-[var(--ui-input-text)] placeholder:text-[var(--ui-input-placeholder)]"
+                className="h-11 border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] !text-[18px] leading-[120%] text-[var(--ui-input-text)] placeholder:text-[var(--ui-input-placeholder)]"
               />
             </div>
 
@@ -150,7 +143,7 @@ export function TodoEditorDialog({
           </div>
         ) : (
           <div className="rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-2 text-[var(--text-default)]">
+            <div className="mb-4 flex items-center shadow px-2 rounded-2xl gap-2 text-[var(--text-default)]">
               <button
                 type="button"
                 aria-label="Back to category"
@@ -168,7 +161,7 @@ export function TodoEditorDialog({
                     onSubmit();
                   }
                 }}
-                className="h-10 border-none bg-transparent px-0 text-[36px] leading-[120%] text-[var(--text-default)] shadow-none"
+                className="h-10 border-none bg-transparent px-0 text-[24px] leading-[120%] text-[var(--text-default)] px-2"
               />
             </div>
 
@@ -176,7 +169,7 @@ export function TodoEditorDialog({
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <CalendarDays className="size-5" />
-                  <span>Date</span>
+                  <span className="text-[24px] leading-[120%]">Date</span>
                 </div>
                 <Switch checked={dateEnabled} onCheckedChange={onDateEnabledChange} />
               </div>
@@ -184,23 +177,23 @@ export function TodoEditorDialog({
                 <button
                   type="button"
                   onClick={() => setDatePopupOpen(true)}
-                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
+                  className="flex h-10 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
                 >
                   <span
-                    className={`text-[24px] leading-[120%] ${
+                    className={`text-[16px] leading-[120%] ${
                       scheduledDateInput ? "text-[var(--ui-input-text)]" : "text-[var(--ui-input-placeholder)]"
                     }`}
                   >
                     {scheduledDateInput ? formatDateDisplay(scheduledDateInput) : "MM/DD/YYYY"}
                   </span>
-                  <CalendarDays className="size-6 text-[var(--text-default)]" />
+                  <CalendarDays className="size-5 text-[var(--text-default)]" />
                 </button>
               ) : null}
 
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <Clock3 className="size-5" />
-                  <span>Time</span>
+                  <span className="text-[24px] leading-[120%]">Time</span>
                 </div>
                 <Switch checked={timeEnabled} onCheckedChange={onTimeEnabledChange} />
               </div>
@@ -208,16 +201,16 @@ export function TodoEditorDialog({
                 <button
                   type="button"
                   onClick={() => setTimePopupOpen(true)}
-                  className="flex h-12 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
+                  className="flex h-10 w-full items-center justify-between rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-4"
                 >
                   <span
-                    className={`text-[24px] leading-[120%] ${
+                    className={`text-[16px] leading-[120%] ${
                       scheduledTimeInput ? "text-[var(--ui-input-text)]" : "text-[var(--ui-input-placeholder)]"
                     }`}
                   >
                     {scheduledTimeInput ? formatTimeDisplay(scheduledTimeInput, preferences.use24Hour) : "Set time"}
                   </span>
-                  <Clock3 className="size-6 text-[var(--text-default)]" />
+                  <Clock3 className="size-5 text-[var(--text-default)]" />
                 </button>
               ) : null}
 
@@ -228,10 +221,15 @@ export function TodoEditorDialog({
               >
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <Bell className="size-5" />
-                  <span>Alarm</span>
+                  <span className="text-[24px] leading-[120%]">Alarm</span>
                 </div>
                 <div className="flex items-center gap-2 text-[18px] leading-[120%] text-[var(--text-muted)]">
-                  <span>{ALARM_PRESET_LABELS[alarmPreset]}</span>
+                  <div className="text-right">
+                    <p>{getAlarmPresetLabel(alarmPreset, alarmPresetOptions)}</p>
+                    <p className="text-[12px] text-[var(--text-muted)]">
+                      {formatAlarmPresetSummary(alarmPreset, alarmPresetOptions)}
+                    </p>
+                  </div>
                   <ChevronDown className="size-4" />
                 </div>
               </button>
@@ -239,7 +237,7 @@ export function TodoEditorDialog({
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-[30px] leading-[120%]">
                   <Repeat2 className="size-5" />
-                  <span>Repeat</span>
+                  <span className="text-[24px] leading-[120%]">Repeat</span>
                 </div>
                 <Switch checked={repeatEnabled} onCheckedChange={onRepeatEnabledChange} />
               </div>
@@ -261,17 +259,17 @@ export function TodoEditorDialog({
               <Button
                 type="button"
                 variant="ghost"
-                className="text-[var(--text-muted)] hover:text-[var(--text-default)]"
+                className="text-[var(--text-muted)] hover:text-[var(--text-default)] text-red-400"
                 onClick={onDelete}
                 disabled={isDeleting}
               >
-                <Trash2 className="size-4" />
+                <Trash2 className="size-4 text-red-400" />
                 {isDeleting ? "Deleting..." : "Delete"}
               </Button>
               <Button
                 type="button"
-                variant="ghost"
-                className="text-[var(--text-muted)] hover:text-[var(--text-default)]"
+                variant="default"
+                className="text-[var(--text-muted)] hover:text-[var(--text-default)] text-white"
                 onClick={onSubmit}
                 disabled={!canSubmit || isUpdating}
               >
@@ -304,29 +302,47 @@ export function TodoEditorDialog({
                     onClick={() => setAlarmPresetOpen(false)}
                   >
                     <ChevronLeft className="size-4" />
-                    <span className="text-[30px] leading-[120%]">Select Alarm</span>
+                    <span className="text-[24px] leading-[120%]">Select Alarm</span>
                   </button>
 
                   <div className="space-y-2 rounded-[22px] bg-[var(--surface-2)] p-3">
-                    {ALARM_PRESET_OPTIONS.map((option) => {
-                      const active = alarmPreset === option.id;
+                    {alarmPresetOptions.map((option) => {
+                      const active = alarmPreset === option.key;
+                      const isSelectable =
+                        option.key !== "custom" || option.offsetsInMinutes.length > 0 || active;
+
                       return (
                         <button
-                          key={option.id}
+                          key={option.key}
                           type="button"
                           onClick={() => {
-                            onAlarmPresetChange(option.id);
+                            if (!isSelectable) {
+                              return;
+                            }
+
+                            onAlarmPresetChange(option.key);
                             setAlarmPresetOpen(false);
                           }}
-                          className={`flex w-full items-center justify-between rounded-2xl border px-3 py-3 text-left transition ${
+                          className={cn(
+                            "flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition",
                             active
                               ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.10)]"
-                              : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]"
-                          }`}
+                              : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]",
+                            !isSelectable && "opacity-60",
+                          )}
+                          disabled={!isSelectable}
                         >
-                          <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
-                            {option.label}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
+                              {option.label}
+                            </span>
+                            <p className="mt-1 text-[12px] leading-[140%] text-[var(--text-muted)]">
+                              {option.description}
+                            </p>
+                            <p className="mt-2 text-[12px] font-medium text-[var(--text-default)]">
+                              {formatAlarmPresetSummary(option.key, alarmPresetOptions)}
+                            </p>
+                          </div>
                           {active ? (
                             <CheckCircle2 className="size-5 text-[#31C65B]" />
                           ) : null}

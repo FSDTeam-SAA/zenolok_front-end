@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { io, type Socket } from "socket.io-client";
 import {
@@ -19,6 +19,7 @@ import {
   eventApi,
   eventTodoApi,
   jamApi,
+  notificationApi,
   userApi,
   type EventData,
   type EventTodo,
@@ -124,6 +125,7 @@ export default function EventDetailsPage() {
   const { preferences } = useAppState();
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
 
   const id = params.id;
@@ -152,6 +154,9 @@ export default function EventDetailsPage() {
     "media",
   );
   const socketRef = React.useRef<Socket | null>(null);
+  const messagesPanelRef = React.useRef<HTMLDivElement | null>(null);
+  const hasHandledFocusMessagesRef = React.useRef(false);
+  const hasMarkedMessageNotificationsReadRef = React.useRef(false);
   const socketServerUrl = React.useMemo(
     () =>
       (
@@ -204,10 +209,22 @@ export default function EventDetailsPage() {
     queryKey: queryKeys.profile,
     queryFn: userApi.getProfile,
   });
+  const markEventMessagesReadMutation = useMutation({
+    mutationFn: () => notificationApi.markEventMessagesRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
+  });
   const editHasDateRange = Boolean(editStartDate && editEndDate);
   const editIsSingleDayEvent = Boolean(
     editStartDate && editEndDate && editStartDate === editEndDate,
   );
+  const shouldFocusMessages = searchParams.get("focus") === "messages";
+
+  React.useEffect(() => {
+    hasHandledFocusMessagesRef.current = false;
+    hasMarkedMessageNotificationsReadRef.current = false;
+  }, [id]);
 
   React.useEffect(() => {
     if (!id || !socketServerUrl) {
@@ -433,6 +450,63 @@ export default function EventDetailsPage() {
       return previous === editStartTime ? previous : editStartTime;
     });
   }, [editIsAllDay, editIsSingleDayEvent, editStartTime]);
+
+  React.useEffect(() => {
+    if (
+      !shouldFocusMessages ||
+      !event ||
+      !messagesPanelRef.current ||
+      hasHandledFocusMessagesRef.current
+    ) {
+      return;
+    }
+
+    hasHandledFocusMessagesRef.current = true;
+
+    const timeoutId = window.setTimeout(() => {
+      messagesPanelRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 160);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [event, shouldFocusMessages]);
+
+  React.useEffect(() => {
+    if (!id || !messagesPanelRef.current) {
+      return;
+    }
+
+    const panelNode = messagesPanelRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+
+        if (
+          !entry?.isIntersecting ||
+          entry.intersectionRatio < 0.55 ||
+          hasMarkedMessageNotificationsReadRef.current
+        ) {
+          return;
+        }
+
+        hasMarkedMessageNotificationsReadRef.current = true;
+        markEventMessagesReadMutation.mutate(undefined, {
+          onError: () => {
+            hasMarkedMessageNotificationsReadRef.current = false;
+          },
+        });
+      },
+      {
+        threshold: [0.55],
+      },
+    );
+
+    observer.observe(panelNode);
+
+    return () => observer.disconnect();
+  }, [id, markEventMessagesReadMutation]);
 
   if (eventQuery.isLoading) {
     return <SectionLoading rows={6} />;
@@ -845,7 +919,8 @@ export default function EventDetailsPage() {
           </div>
         ) : null}
 
-        <Card className="mt-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 shadow-none">
+        <div ref={messagesPanelRef}>
+          <Card className="mt-3 rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 shadow-none">
           {jamView === "media" ? (
             <EventLibraryPanel
               libraryTab={libraryTab}
@@ -875,7 +950,8 @@ export default function EventDetailsPage() {
               }}
             />
           )}
-        </Card>
+          </Card>
+        </div>
       </section>
 
       {jamView !== "jam" ? (

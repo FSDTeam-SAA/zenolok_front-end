@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpDown,
   CalendarDays,
   Clock3,
   MapPin,
@@ -12,7 +13,7 @@ import {
   Plus,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { addDays, endOfDay, format, isSameDay, startOfDay } from "date-fns";
+import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -34,11 +35,24 @@ import {
 } from "@/components/shared/event-brick-selector";
 import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
-import { EventDateRangePopup, EventTimeRangePopup } from "@/components/shared/event-date-time-popups";
-import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
+import {
+  EventDateRangePopup,
+  EventTimeRangePopup,
+} from "@/components/shared/event-date-time-popups";
+import {
+  EventRangeField,
+  EventSingleField,
+} from "@/components/shared/event-range-field";
 import { PaginationControls } from "@/components/shared/pagination-controls";
 import { SectionLoading } from "@/components/shared/section-loading";
-import { eventApi, brickApi, jamApi, paginateArray } from "@/lib/api";
+import {
+  eventApi,
+  brickApi,
+  notificationApi,
+  paginateArray,
+  type EventData,
+  type NotificationData,
+} from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -46,9 +60,7 @@ import {
   toggleAllBrickSelection,
   toggleBrickSelection,
 } from "@/lib/brick-filter-selection";
-import {
-  formatTimeRangeByPreference,
-} from "@/lib/time-format";
+import { formatTimeByPreference } from "@/lib/time-format";
 
 const eventFilters = [
   { label: "Upcoming", value: "upcoming" },
@@ -56,11 +68,100 @@ const eventFilters = [
   { label: "All", value: "all" },
 ] as const;
 
+type EventMetaRangeProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  startLabel: string;
+  startValue: string;
+  endLabel?: string | null;
+  endValue?: string | null;
+  showArrowMarkers?: boolean;
+};
+
+function EventMetaRange({
+  icon: Icon,
+  startLabel,
+  startValue,
+  endLabel,
+  endValue,
+  showArrowMarkers = true,
+}: EventMetaRangeProps) {
+  const showEnd = Boolean(
+    endLabel &&
+    endValue &&
+    (endLabel !== startLabel || endValue !== startValue),
+  );
+
+  return (
+    <div className="flex flex-wrap items-start gap-2.5 text-[#4D5463]">
+      <Icon className="mt-0.5 size-4 shrink-0 text-[#7A8293]" />
+      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex min-w-[112px] flex-col">
+          <p className="font-poppins text-[12px] leading-none font-medium text-[#9AA2B1]">
+            {startLabel}
+          </p>
+          <p className="font-poppins mt-1 text-[17px] leading-none font-semibold text-[#313744] sm:text-[18px]">
+            {startValue}
+          </p>
+          {showEnd && showArrowMarkers ? (
+            <span className="mt-1 inline-flex self-center text-[#8E97A7]">
+              <ArrowUpDown className="size-3" />
+            </span>
+          ) : null}
+        </div>
+        {showEnd ? (
+          <>
+            <span className="pb-0.5 text-[24px] leading-none text-[#98A1B2]">
+              -
+            </span>
+            <div className="flex min-w-[112px] flex-col">
+              <p className="font-poppins text-[12px] leading-none font-medium text-[#9AA2B1]">
+                {endLabel}
+              </p>
+              <p className="font-poppins mt-1 text-[17px] leading-none font-semibold text-[#313744] sm:text-[18px]">
+                {endValue}
+              </p>
+              {showArrowMarkers ? (
+                <span className="mt-1 inline-flex self-center text-[#8E97A7]">
+                  <ArrowUpDown className="size-3" />
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function isMessageNotification(notification: NotificationData) {
+  return /(message|chat)/i.test(notification.type ?? "");
+}
+
+function notificationMatchesEvent(
+  notification: NotificationData,
+  event: Pick<EventData, "_id" | "title">,
+) {
+  if (notification.eventId) {
+    return notification.eventId === event._id;
+  }
+
+  const eventTitle = (event.title ?? "").trim().toLowerCase();
+  if (!eventTitle) {
+    return false;
+  }
+
+  return notification.title.toLowerCase().includes(eventTitle);
+}
+
 export default function EventsPage() {
+  const router = useRouter();
   const { preferences } = useAppState();
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<(typeof eventFilters)[number]["value"]>("upcoming");
-  const [selectedBrickIds, setSelectedBrickIds] = useState<string[] | null>(null);
+  const [filter, setFilter] =
+    useState<(typeof eventFilters)[number]["value"]>("upcoming");
+  const [selectedBrickIds, setSelectedBrickIds] = useState<string[] | null>(
+    null,
+  );
   const [searchText, setSearchText] = useState("");
   const [page, setPage] = useState(1);
 
@@ -77,7 +178,8 @@ export default function EventsPage() {
   const [datePopupOpen, setDatePopupOpen] = useState(false);
   const [timePopupOpen, setTimePopupOpen] = useState(false);
   const [newEventBrick, setNewEventBrick] = useState<string>("");
-  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] = useState("");
+  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] =
+    useState("");
   const [brickName, setBrickName] = useState("");
   const [brickColor, setBrickColor] = useState("#36A9E1");
   const [brickIcon, setBrickIcon] = useState("home");
@@ -95,6 +197,11 @@ export default function EventsPage() {
       eventApi.getAll({
         filter: filter === "upcoming" ? "all" : filter,
       }),
+  });
+  const notificationsQuery = useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: notificationApi.getAll,
+    staleTime: 30_000,
   });
 
   const createEventMutation = useMutation({
@@ -118,14 +225,21 @@ export default function EventsPage() {
         throw new Error("Start and end times are required");
       }
 
-      const startDateTime = new Date(`${startDate}T${(startTime || "00:00")}:00`);
-      const endDateTime = new Date(`${endDate}T${(resolvedEndTime || "00:00")}:00`);
+      const startDateTime = new Date(`${startDate}T${startTime || "00:00"}:00`);
+      const endDateTime = new Date(
+        `${endDate}T${resolvedEndTime || "00:00"}:00`,
+      );
 
-      if (Number.isNaN(startDateTime.getTime()) || Number.isNaN(endDateTime.getTime())) {
+      if (
+        Number.isNaN(startDateTime.getTime()) ||
+        Number.isNaN(endDateTime.getTime())
+      ) {
         throw new Error("Invalid start or end date/time");
       }
 
-      const normalizedStart = isAllDay ? startOfDay(startDateTime) : startDateTime;
+      const normalizedStart = isAllDay
+        ? startOfDay(startDateTime)
+        : startDateTime;
       const normalizedEnd = isAllDay ? endOfDay(endDateTime) : endDateTime;
 
       if (normalizedEnd.getTime() < normalizedStart.getTime()) {
@@ -156,7 +270,8 @@ export default function EventsPage() {
       setNewEventBrick("");
       queryClient.invalidateQueries({ queryKey: ["events"] });
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to create event"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create event"),
   });
 
   const createBrickMutation = useMutation({
@@ -179,7 +294,8 @@ export default function EventsPage() {
       setBrickIcon("home");
       queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
     },
-    onError: (error: Error) => toast.error(error.message || "Failed to create brick"),
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to create brick"),
   });
 
   const bricks = useMemo(() => bricksQuery.data ?? [], [bricksQuery.data]);
@@ -232,7 +348,8 @@ export default function EventsPage() {
         }
 
         return Boolean(
-          event.brick?._id && effectiveSelectedBrickIds.includes(event.brick._id),
+          event.brick?._id &&
+          effectiveSelectedBrickIds.includes(event.brick._id),
         );
       });
 
@@ -246,7 +363,7 @@ export default function EventsPage() {
       (event) =>
         event.title.toLowerCase().includes(q) ||
         event.location?.toLowerCase().includes(q) ||
-        event.brick?.name?.toLowerCase().includes(q)
+        event.brick?.name?.toLowerCase().includes(q),
     );
   }, [
     allBricksSelected,
@@ -257,24 +374,42 @@ export default function EventsPage() {
     searchText,
   ]);
 
-  const paged = useMemo(() => paginateArray(filteredEvents, page, 10), [filteredEvents, page]);
-  const jamCountQueries = useQueries({
-    queries: paged.items.map((event) => ({
-      queryKey: queryKeys.jamMessages(event._id),
-      queryFn: () => jamApi.getByEvent(event._id),
-      enabled: Boolean(event._id),
-      staleTime: 60_000,
-    })),
-  });
-  const jamCountByEventId = useMemo(() => {
-    return paged.items.reduce<Record<string, number>>((accumulator, event, index) => {
-      const messageCount = jamCountQueries[index]?.data?.length ?? 0;
-      accumulator[event._id] = messageCount;
+  const paged = useMemo(
+    () => paginateArray(filteredEvents, page, 10),
+    [filteredEvents, page],
+  );
+  const unreadMessageCountByEventId = useMemo(() => {
+    const unreadMessageNotifications = (
+      notificationsQuery.data?.items ?? []
+    ).filter(
+      (notification) =>
+        !notification.read && isMessageNotification(notification),
+    );
+
+    return paged.items.reduce<Record<string, number>>((accumulator, event) => {
+      accumulator[event._id] = unreadMessageNotifications.filter(
+        (notification) => notificationMatchesEvent(notification, event),
+      ).length;
       return accumulator;
     }, {});
-  }, [paged.items, jamCountQueries]);
+  }, [notificationsQuery.data?.items, paged.items]);
   const hasDateRange = Boolean(startDate && endDate);
-  const isSingleDayEvent = Boolean(startDate && endDate && startDate === endDate);
+  const isSingleDayEvent = Boolean(
+    startDate && endDate && startDate === endDate,
+  );
+
+  const openEventDetails = React.useCallback(
+    (eventId: string) => {
+      router.push(`/events/${eventId}`);
+    },
+    [router],
+  );
+  const openEventMessages = React.useCallback(
+    (eventId: string) => {
+      router.push(`/events/${eventId}?focus=messages`);
+    },
+    [router],
+  );
 
   const openCreateEventDialog = React.useCallback(() => {
     setTitle("");
@@ -307,7 +442,9 @@ export default function EventsPage() {
         return null;
       }
 
-      const filtered = previous.filter((brickId) => allBrickIds.includes(brickId));
+      const filtered = previous.filter((brickId) =>
+        allBrickIds.includes(brickId),
+      );
       return filtered.length === previous.length ? previous : filtered;
     });
   }, [allBrickIds]);
@@ -381,7 +518,9 @@ export default function EventsPage() {
 
       <section className="events-content-shell rounded-[28px] border border-[#E0E4EC] bg-[#F4F6FA] p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="font-poppins text-[24px] leading-[120%] font-semibold text-[#3D414A]">Events</p>
+          <p className="font-poppins text-[24px] leading-[120%] font-semibold text-[#3D414A]">
+            Events
+          </p>
           <button
             type="button"
             onClick={openCreateEventDialog}
@@ -397,25 +536,35 @@ export default function EventsPage() {
           <>
             <div className="space-y-3">
               {paged.items.map((event) => {
-                const messageCount = jamCountByEventId[event._id] ?? 0;
+                const messageCount =
+                  unreadMessageCountByEventId[event._id] ?? 0;
                 const startDate = new Date(event.startTime);
                 const endDate = new Date(event.endTime);
                 const hasValidRange =
-                  !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
-                const dateLabel = hasValidRange
-                  ? isSameDay(startDate, endDate)
-                    ? format(startDate, "dd MMM yyyy")
-                    : `${format(startDate, "dd MMM yyyy")} - ${format(endDate, "dd MMM yyyy")}`
+                  !Number.isNaN(startDate.getTime()) &&
+                  !Number.isNaN(endDate.getTime());
+                const startDayLabel = hasValidRange
+                  ? format(startDate, "EEEE")
+                  : "Date";
+                const endDayLabel = hasValidRange
+                  ? format(endDate, "EEEE")
+                  : undefined;
+                const startDateLabel = hasValidRange
+                  ? format(startDate, "dd MMM yyyy").toUpperCase()
                   : "Invalid date";
-                const timeLabel = event.isAllDay
+                const endDateLabel = hasValidRange
+                  ? format(endDate, "dd MMM yyyy").toUpperCase()
+                  : undefined;
+                const startTimeLabel = event.isAllDay
                   ? "All day"
                   : hasValidRange
-                    ? formatTimeRangeByPreference(
-                        startDate,
-                        endDate,
-                        preferences.use24Hour,
-                      )
+                    ? formatTimeByPreference(startDate, preferences.use24Hour)
                     : "Invalid time";
+                const endTimeLabel = event.isAllDay
+                  ? undefined
+                  : hasValidRange
+                    ? formatTimeByPreference(endDate, preferences.use24Hour)
+                    : undefined;
 
                 return (
                   <motion.div
@@ -424,38 +573,94 @@ export default function EventsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.24 }}
                   >
-                    <Link href={`/events/${event._id}`}>
-                      <Card className="events-list-card rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]">
-                        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-                          <div className="flex items-start gap-3">
-                            <span className="mt-1 h-8 w-1.5 rounded-full" style={{ backgroundColor: event.brick?.color || "#F7C700" }} />
+                    <Card
+                      role="link"
+                      tabIndex={0}
+                      className="events-list-card cursor-pointer rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]"
+                      onClick={() => openEventDetails(event._id)}
+                      onKeyDown={(keyboardEvent) => {
+                        if (
+                          keyboardEvent.key !== "Enter" &&
+                          keyboardEvent.key !== " "
+                        ) {
+                          return;
+                        }
+
+                        keyboardEvent.preventDefault();
+                        openEventDetails(event._id);
+                      }}
+                    >
+                      <div className="">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center">
+                              <span
+                                className="mt-1 h-8 w-1.5 rounded-full"
+                                style={{
+                                  backgroundColor:
+                                    event.brick?.color || "#F7C700",
+                                }}
+                              />
+                            </div>
                             <div>
-                              <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">{event.title}</p>
-                              <div className="font-poppins mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[#4D5463]">
-                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                  <CalendarDays className="size-4" /> {dateLabel}
-                                </span>
-                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                  <MapPin className="size-4" /> {event.location || "No location"}
-                                </span>
-                                <span className="flex items-center gap-1.5 text-[20px] leading-[120%] font-medium">
-                                  <Clock3 className="size-4" /> {timeLabel}
-                                </span>
-                              </div>
+                              <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">
+                                {event.title}
+                              </p>
                             </div>
                           </div>
-                          <div className="font-poppins flex items-center gap-3 text-[#7A8293]">
-                            <MessageCircle className="size-5" />
-                            <span className="rounded-full bg-white px-2 py-0.5 text-[14px] leading-[120%] font-normal">{messageCount}</span>
+                          <button
+                            type="button"
+                            className="font-poppins group inline-flex items-center gap-1.5 self-end rounded-full px-1 py-1 text-[#7A8293] transition hover:bg-white/65 hover:text-[#4F5B72] lg:self-start"
+                            onClick={(clickEvent) => {
+                              clickEvent.preventDefault();
+                              clickEvent.stopPropagation();
+                              openEventMessages(event._id);
+                            }}
+                            aria-label={`Open messages for ${event.title}`}
+                          >
+                            <MessageCircle className="size-5 stroke-[1.8] transition group-hover:scale-[1.04]" />
+                            <span className="inline-flex min-w-[22px] items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[14px] leading-none font-medium text-[#7A8293] shadow-[0_1px_2px_rgba(15,23,42,0.08)]">
+                              {messageCount}
+                            </span>
+                          </button>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between">
+                          <div className="space-y-2">
+                            <EventMetaRange
+                              icon={CalendarDays}
+                              startLabel={startDayLabel}
+                              startValue={startDateLabel}
+                              endLabel={endDayLabel}
+                              endValue={endDateLabel}
+                              showArrowMarkers={!event.isAllDay}
+                            />
+                            <EventMetaRange
+                              icon={Clock3}
+                              startLabel={event.isAllDay ? "Schedule" : "Start"}
+                              startValue={startTimeLabel}
+                              endLabel={event.isAllDay ? undefined : "End"}
+                              endValue={endTimeLabel}
+                              showArrowMarkers={false}
+                            />
+                          </div>
+                          <div>
+                            <span className="font-poppins flex flex-wrap items-center gap-1.5 text-[18px] leading-[120%] font-medium text-[#4D5463]">
+                              <MapPin className="size-4 shrink-0 text-[#7A8293]" />
+                              {event.location || "No location"}
+                            </span>
                           </div>
                         </div>
-                      </Card>
-                    </Link>
+                      </div>
+                    </Card>
                   </motion.div>
                 );
               })}
             </div>
-            <PaginationControls page={paged.page} totalPages={paged.totalPages} onPageChange={setPage} />
+            <PaginationControls
+              page={paged.page}
+              totalPages={paged.totalPages}
+              onPageChange={setPage}
+            />
           </>
         ) : (
           <EmptyState
@@ -468,10 +673,16 @@ export default function EventsPage() {
       <Dialog open={createBrickOpen} onOpenChange={setCreateBrickOpen}>
         <DialogContent className="max-w-5xl rounded-[28px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
           <DialogHeader>
-            <DialogTitle className="text-[var(--text-strong)]">Create Brick</DialogTitle>
+            <DialogTitle className="text-[var(--text-strong)]">
+              Create Brick
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="Brick name" value={brickName} onChange={(event) => setBrickName(event.target.value)} />
+            <Input
+              placeholder="Brick name"
+              value={brickName}
+              onChange={(event) => setBrickName(event.target.value)}
+            />
             <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-3 sm:p-4">
               <div className="grid grid-cols-10 gap-2 sm:gap-3">
                 {colorPalette.map((color) => (
@@ -480,7 +691,9 @@ export default function EventsPage() {
                     key={color}
                     onClick={() => setBrickColor(color)}
                     className={`size-8 rounded-full border-2 transition sm:size-10 ${
-                      brickColor === color ? "border-[#283040] scale-[1.05]" : "border-transparent"
+                      brickColor === color
+                        ? "border-[#283040] scale-[1.05]"
+                        : "border-transparent"
                     }`}
                     style={{ backgroundColor: color }}
                     aria-label={`Select ${color} color`}
@@ -514,13 +727,21 @@ export default function EventsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2">
-              <span className="h-5 w-5 rounded-full" style={{ backgroundColor: brickColor }} />
+              <span
+                className="h-5 w-5 rounded-full"
+                style={{ backgroundColor: brickColor }}
+              />
               <BrickIcon name={brickIcon} className="size-4" />
-              <span className="fs-pop-14-regular-right text-left text-[var(--text-default)]">{brickName.trim() || "Preview"}</span>
+              <span className="fs-pop-14-regular-right text-left text-[var(--text-default)]">
+                {brickName.trim() || "Preview"}
+              </span>
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={() => createBrickMutation.mutate()} disabled={createBrickMutation.isPending}>
+            <Button
+              onClick={() => createBrickMutation.mutate()}
+              disabled={createBrickMutation.isPending}
+            >
               {createBrickMutation.isPending ? "Creating..." : "Create Brick"}
             </Button>
           </DialogFooter>
@@ -542,8 +763,16 @@ export default function EventsPage() {
             <DialogTitle>Create Event</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Input placeholder="Title" value={title} onChange={(event) => setTitle(event.target.value)} />
-            <Input placeholder="Location" value={location} onChange={(event) => setLocation(event.target.value)} />
+            <Input
+              placeholder="Title"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+            />
+            <Input
+              placeholder="Location"
+              value={location}
+              onChange={(event) => setLocation(event.target.value)}
+            />
             <div className="space-y-3">
               <EventRangeField
                 kind="date"
@@ -590,7 +819,10 @@ export default function EventsPage() {
             />
           </div>
           <DialogFooter>
-            <Button onClick={() => createEventMutation.mutate()} disabled={createEventMutation.isPending}>
+            <Button
+              onClick={() => createEventMutation.mutate()}
+              disabled={createEventMutation.isPending}
+            >
               {createEventMutation.isPending ? "Creating..." : "Create Event"}
             </Button>
           </DialogFooter>
@@ -607,21 +839,32 @@ export default function EventsPage() {
           setEndDate(nextEndDate);
         }}
       />
-        <EventTimeRangePopup
-          open={timePopupOpen}
-          onOpenChange={setTimePopupOpen}
-          startTime={startTime}
-          endTime={endTime}
-          selectionMode={isSingleDayEvent ? "single" : "range"}
-          onApply={({ startTime: nextStartTime, endTime: nextEndTime, rollsEndToNextDay }) => {
-            setStartTime(nextStartTime);
-            setEndTime(nextEndTime);
-            if (rollsEndToNextDay && startDate && endDate && startDate === endDate) {
-              setEndDate(format(addDays(new Date(`${endDate}T00:00:00`), 1), "yyyy-MM-dd"));
-              toast.message("End time moved the end date to the next day.");
-            }
-          }}
-        />
+      <EventTimeRangePopup
+        open={timePopupOpen}
+        onOpenChange={setTimePopupOpen}
+        startTime={startTime}
+        endTime={endTime}
+        selectionMode={isSingleDayEvent ? "single" : "range"}
+        onApply={({
+          startTime: nextStartTime,
+          endTime: nextEndTime,
+          rollsEndToNextDay,
+        }) => {
+          setStartTime(nextStartTime);
+          setEndTime(nextEndTime);
+          if (
+            rollsEndToNextDay &&
+            startDate &&
+            endDate &&
+            startDate === endDate
+          ) {
+            setEndDate(
+              format(addDays(new Date(`${endDate}T00:00:00`), 1), "yyyy-MM-dd"),
+            );
+            toast.message("End time moved the end date to the next day.");
+          }
+        }}
+      />
     </div>
   );
 }

@@ -44,7 +44,10 @@ import {
   EventDateRangePopup,
   EventTimeRangePopup,
 } from "@/components/shared/event-date-time-popups";
-import { EventRangeField, EventSingleField } from "@/components/shared/event-range-field";
+import {
+  EventRangeField,
+  EventSingleField,
+} from "@/components/shared/event-range-field";
 import { SectionLoading } from "@/components/shared/section-loading";
 import { Button } from "@/components/ui/button";
 import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
@@ -56,7 +59,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { brickApi, eventApi, userApi, type EventData } from "@/lib/api";
+import { brickApi, eventApi, type EventData } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -224,7 +227,8 @@ export default function HomePage() {
   const [eventDatePopupOpen, setEventDatePopupOpen] = React.useState(false);
   const [eventTimePopupOpen, setEventTimePopupOpen] = React.useState(false);
   const [newEventBrick, setNewEventBrick] = React.useState("");
-  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] = React.useState("");
+  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] =
+    React.useState("");
   const [selectedDateRange, setSelectedDateRange] = React.useState(() => {
     const normalized = startOfDay(selectedDate);
     return { start: normalized, end: normalized };
@@ -274,11 +278,6 @@ export default function HomePage() {
         endDate: calendarEndParam,
       }),
   });
-  const profileQuery = useQuery({
-    queryKey: queryKeys.profile,
-    queryFn: userApi.getProfile,
-  });
-
   const bricks = React.useMemo(
     () => bricksQuery.data ?? [],
     [bricksQuery.data],
@@ -370,21 +369,6 @@ export default function HomePage() {
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weeks = splitIntoWeeks(days);
 
-  const weekendDaySet = React.useMemo(() => {
-    const normalizeDay = (value: string) => value.trim().toLowerCase();
-    const validDays = new Set(Object.keys(weekStartsOnMap));
-    const backendWeekend = (profileQuery.data?.weekend || [])
-      .filter((day): day is string => typeof day === "string")
-      .map(normalizeDay)
-      .filter((day) => validDays.has(day));
-
-    if (backendWeekend.length) {
-      return new Set(backendWeekend);
-    }
-
-    return new Set([preferences.weekStartDay]);
-  }, [preferences.weekStartDay, profileQuery.data?.weekend]);
-
   const weekdayLabels = React.useMemo(
     () =>
       Array.from({ length: 7 }, (_, index) =>
@@ -460,7 +444,12 @@ export default function HomePage() {
       ),
     );
     setCreateEventOpen(true);
-  }, [allBrickIds, effectiveSelectedBrickIds, preferredCreateEventBrickId, selectedDateRange]);
+  }, [
+    allBrickIds,
+    effectiveSelectedBrickIds,
+    preferredCreateEventBrickId,
+    selectedDateRange,
+  ]);
 
   const createBrickMutation = useMutation({
     mutationFn: () => {
@@ -510,7 +499,9 @@ export default function HomePage() {
       const startDate = new Date(
         `${eventStartDate}T${eventStartTime || "00:00"}:00`,
       );
-      const endDate = new Date(`${eventEndDate}T${resolvedEndTime || "00:00"}:00`);
+      const endDate = new Date(
+        `${eventEndDate}T${resolvedEndTime || "00:00"}:00`,
+      );
 
       if (
         Number.isNaN(startDate.getTime()) ||
@@ -821,21 +812,17 @@ export default function HomePage() {
                 </div>
 
                 <div className="home-calendar-wrap w-full overflow-x-auto">
-                  <div className="home-calendar-board min-w-[840px]">
+                  <div className="home-calendar-board min-w-[820px]">
                     <div className="mb-2 grid grid-cols-7">
                       {weekdayLabels.map((weekday) => {
                         const label = format(weekday, "EEE");
-                        const normalizedDay = format(
-                          weekday,
-                          "EEEE",
-                        ).toLowerCase();
-                        const isWeekendLabel = weekendDaySet.has(normalizedDay);
+                        const isSundayLabel = weekday.getDay() === 0;
 
                         return (
                           <div key={label} className="px-2 py-1 text-center">
                             <p
                               className={`font-poppins text-[16px] leading-[120%] font-medium ${
-                                isWeekendLabel
+                                isSundayLabel
                                   ? "!text-[#FF3B30]"
                                   : "!text-[var(--text-default)]"
                               }`}
@@ -864,9 +851,7 @@ export default function HomePage() {
                               const isInSelectedRange =
                                 day >= selectedDateRange.start &&
                                 day <= selectedDateRange.end;
-                              const isWeekendDay = weekendDaySet.has(
-                                format(day, "EEEE").toLowerCase(),
-                              );
+                              const isSunday = day.getDay() === 0;
                               return (
                                 <button
                                   key={format(day, "yyyy-MM-dd")}
@@ -916,17 +901,17 @@ export default function HomePage() {
                                     skipRangeSyncRef.current = true;
                                     setSelectedDate(normalized);
                                   }}
-                                  className={`home-day-cell h-[136px] select-none border-r border-[var(--border)] px-2 py-2 text-left last:border-r-0 ${
+                                  className={`home-day-cell relative flex h-[136px] select-none items-start justify-center border-r border-[var(--border)] px-2 pt-3 pb-2 text-center last:border-r-0 ${
                                     isInSelectedRange
                                       ? "bg-[var(--surface-2)]"
                                       : ""
                                   }`}
                                 >
                                   <span
-                                    className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl pb-6 px-2 text-[20px] leading-[120%] font-medium ${
+                                    className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl px-2 text-[20px] leading-[120%] font-medium ${
                                       isInSelectedRange
                                         ? "text-[var(--text-strong)]"
-                                        : isWeekendDay
+                                        : isSunday
                                           ? "text-[#FF3B30]"
                                           : isSameMonth(day, monthCursor)
                                             ? "text-[var(--text-default)]"
@@ -939,11 +924,11 @@ export default function HomePage() {
                               );
                             })}
 
-                            <div className="pointer-events-none absolute inset-x-0 top-20 px-[2px]">
+                            <div className="pointer-events-none absolute inset-x-0 top-14 px-[2px]">
                               <div
-                                className={`grid grid-cols-7 auto-rows-[24px] ${
+                                className={`grid grid-cols-7 auto-rows-[20px] ${
                                   shouldScrollSegments
-                                    ? "pointer-events-auto max-h-[72px] overflow-y-auto pr-1"
+                                    ? "pointer-events-auto max-h-[80px] overflow-y-auto pr-1"
                                     : ""
                                 }`}
                               >
@@ -1190,28 +1175,31 @@ export default function HomePage() {
           setEventEndDate(endDate);
         }}
       />
-        <EventTimeRangePopup
-          open={eventTimePopupOpen}
-          onOpenChange={setEventTimePopupOpen}
-          startTime={eventStartTime}
-          endTime={eventEndTime}
-          selectionMode={isSingleDayEvent ? "single" : "range"}
-          onApply={({ startTime, endTime, rollsEndToNextDay }) => {
-            setEventStartTime(startTime);
-            setEventEndTime(endTime);
-            if (
-              rollsEndToNextDay &&
-              eventStartDate &&
-              eventEndDate &&
-              eventStartDate === eventEndDate
-            ) {
-              setEventEndDate(
-                format(addDays(new Date(`${eventEndDate}T00:00:00`), 1), "yyyy-MM-dd"),
-              );
-              toast.message("End time moved the end date to the next day.");
-            }
-          }}
-        />
+      <EventTimeRangePopup
+        open={eventTimePopupOpen}
+        onOpenChange={setEventTimePopupOpen}
+        startTime={eventStartTime}
+        endTime={eventEndTime}
+        selectionMode={isSingleDayEvent ? "single" : "range"}
+        onApply={({ startTime, endTime, rollsEndToNextDay }) => {
+          setEventStartTime(startTime);
+          setEventEndTime(endTime);
+          if (
+            rollsEndToNextDay &&
+            eventStartDate &&
+            eventEndDate &&
+            eventStartDate === eventEndDate
+          ) {
+            setEventEndDate(
+              format(
+                addDays(new Date(`${eventEndDate}T00:00:00`), 1),
+                "yyyy-MM-dd",
+              ),
+            );
+            toast.message("End time moved the end date to the next day.");
+          }
+        }}
+      />
     </div>
   );
 }

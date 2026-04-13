@@ -1,9 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { format, formatDistanceToNow } from "date-fns";
+import {
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  formatDistanceToNow,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns";
 import {
   Bell,
   CalendarDays,
@@ -53,6 +65,187 @@ const navItems = [
   },
 ];
 
+const weekStartsOnMap: Record<string, 0 | 1 | 2 | 3 | 4 | 5 | 6> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+function HomeMonthDatePicker({
+  className,
+  align = "start",
+}: {
+  className?: string;
+  align?: "start" | "center" | "end";
+}) {
+  const { monthCursor, selectedDate, setSelectedDate, preferences } = useAppState();
+  const [open, setOpen] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => startOfMonth(selectedDate));
+  const weekStartsOn = weekStartsOnMap[preferences.weekStartDay] ?? 0;
+
+  const monthStart = useMemo(() => startOfMonth(pickerMonth), [pickerMonth]);
+  const monthEnd = useMemo(() => endOfMonth(pickerMonth), [pickerMonth]);
+  const calendarStart = useMemo(
+    () => startOfWeek(monthStart, { weekStartsOn }),
+    [monthStart, weekStartsOn],
+  );
+  const calendarEnd = useMemo(
+    () => endOfWeek(monthEnd, { weekStartsOn }),
+    [monthEnd, weekStartsOn],
+  );
+  const days = useMemo(
+    () => eachDayOfInterval({ start: calendarStart, end: calendarEnd }),
+    [calendarEnd, calendarStart],
+  );
+  const weekdayLabels = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const day = addDays(calendarStart, index);
+
+        return {
+          key: format(day, "EEEE"),
+          label: format(day, "EEEEE"),
+          isSunday: day.getDay() === 0,
+        };
+      }),
+    [calendarStart],
+  );
+
+  const handleSelectDate = (day: Date) => {
+    setSelectedDate(day);
+    setOpen(false);
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          setPickerMonth(startOfMonth(selectedDate));
+        }
+
+        setOpen(nextOpen);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex shrink-0 items-center rounded-full px-3 py-1.5 text-left transition hover:bg-[var(--surface-1)] hover:text-[var(--text-strong)]",
+            className,
+          )}
+          aria-label={`Open date picker for ${format(monthCursor, "MMMM yyyy")}`}
+        >
+          {format(monthCursor, "MMMM yyyy")}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align={align}
+        sideOffset={12}
+        collisionPadding={12}
+        className="w-[min(calc(100vw-1rem),390px)] rounded-[26px] border-[var(--ui-calendar-popup-border)] bg-[var(--ui-calendar-popup-bg)] p-4 text-[var(--ui-calendar-popup-strong)] shadow-[0_22px_45px_rgba(15,23,42,0.12)]"
+      >
+        <div className="space-y-3">
+          <p className="font-poppins inline-flex items-center gap-2 text-[18px] leading-[120%] font-medium text-[var(--ui-calendar-popup-title)]">
+            <CalendarDays className="size-4" />
+            Choose a date
+          </p>
+
+          <div className="rounded-[22px] bg-[var(--ui-calendar-popup-panel-bg)] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-1">
+                <motion.button
+                  type="button"
+                  onClick={() => setPickerMonth((current) => addMonths(current, -1))}
+                  className="rounded-full p-1 text-[var(--ui-calendar-popup-nav)] transition hover:bg-[var(--ui-calendar-popup-input-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                  aria-label="Previous month"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ChevronLeft className="size-4" />
+                </motion.button>
+
+                <p className="min-w-[156px] text-center text-[22px] leading-none font-medium text-[var(--ui-calendar-popup-strong)] sm:text-[24px]">
+                  {format(pickerMonth, "MMMM yyyy")}
+                </p>
+
+                <motion.button
+                  type="button"
+                  onClick={() => setPickerMonth((current) => addMonths(current, 1))}
+                  className="rounded-full p-1 text-[var(--ui-calendar-popup-nav)] transition hover:bg-[var(--ui-calendar-popup-input-bg)] hover:text-[var(--ui-calendar-popup-strong)]"
+                  aria-label="Next month"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ChevronRight className="size-4" />
+                </motion.button>
+              </div>
+
+              <motion.button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[16px] text-[var(--ui-calendar-popup-subtle)] transition hover:text-[var(--ui-calendar-popup-strong)]"
+                whileTap={{ scale: 0.97 }}
+              >
+                Done
+                <ChevronRight className="size-4" />
+              </motion.button>
+            </div>
+
+            <div className="mt-4 grid grid-cols-7 gap-2 px-0.5">
+              {weekdayLabels.map((weekday) => (
+                <p
+                  key={weekday.key}
+                  className={cn(
+                    "text-center text-[11px] leading-none",
+                    weekday.isSunday
+                      ? "text-[var(--ui-calendar-accent)]"
+                      : "text-[var(--ui-calendar-popup-weekday)]",
+                  )}
+                >
+                  {weekday.label}
+                </p>
+              ))}
+            </div>
+
+            <div className="mt-3 grid grid-cols-7 gap-x-0 gap-y-2">
+              {days.map((day) => {
+                const inCurrentMonth = isSameMonth(day, pickerMonth);
+                const selected = isSameDay(day, selectedDate);
+                const isSunday = inCurrentMonth && day.getDay() === 0;
+
+                return (
+                  <motion.button
+                    key={format(day, "yyyy-MM-dd")}
+                    type="button"
+                    onClick={() => handleSelectDate(day)}
+                    className={cn(
+                      "mx-auto flex h-9 items-center justify-center rounded-full text-[17px] leading-none transition-colors",
+                      selected
+                        ? "size-9 bg-[#474954] text-white hover:bg-[#3e4049]"
+                        : isSunday
+                          ? "size-9 bg-[var(--ui-calendar-accent)] text-white hover:bg-[var(--ui-calendar-accent-hover)]"
+                          : inCurrentMonth
+                            ? "size-9 bg-[var(--ui-calendar-neutral-bg)] text-white hover:bg-[var(--ui-calendar-neutral-hover)]"
+                            : "size-9 bg-[var(--ui-calendar-outside-bg)] text-[var(--ui-calendar-outside-text)]",
+                    )}
+                    aria-label={`Select ${format(day, "MMMM d, yyyy")}`}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {format(day, "d")}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function AppTopNav() {
   const pathname = usePathname();
   const router = useRouter();
@@ -62,7 +255,7 @@ export function AppTopNav() {
   const [activeNotificationTab, setActiveNotificationTab] = useState<
     "messages" | "system" | "all" | "unread"
   >("all");
-  const { monthCursor, goToToday, goToPreviousMonth, goToNextMonth, preferences } =
+  const { goToToday, goToPreviousMonth, goToNextMonth, preferences } =
     useAppState();
   const isHomePage =
     pathname === "/home" || pathname.startsWith("/home/");
@@ -110,14 +303,6 @@ export function AppTopNav() {
       serverCounts?.system.unread ??
       systemNotifications.filter((item) => !item.read).length,
     all: serverCounts?.all.unread ?? unreadCount,
-    unread: serverCounts?.all.unread ?? unreadCount,
-  };
-  const totalByTab = {
-    messages:
-      serverCounts?.messages.total ?? messageNotifications.length,
-    system:
-      serverCounts?.system.total ?? systemNotifications.length,
-    all: serverCounts?.all.total ?? notifications.length,
     unread: serverCounts?.all.unread ?? unreadCount,
   };
 
@@ -173,9 +358,10 @@ export function AppTopNav() {
               >
                 <ChevronRight className="size-5" />
               </Button>
-              <div className="app-top-nav-month fs-pop-20-medium-center hidden md:block">
-                {format(monthCursor, "MMMM yyyy")}
-              </div>
+              <HomeMonthDatePicker
+                align="start"
+                className="app-top-nav-month fs-pop-20-medium-center hidden md:inline-flex"
+              />
             </>
           ) : null}
         </div>
@@ -265,11 +451,6 @@ export function AppTopNav() {
                         {unreadByTab[tab.key] > 99 ? "99+" : unreadByTab[tab.key]}
                       </span>
                     ) : null}
-                    {!unreadByTab[tab.key] && totalByTab[tab.key] ? (
-                      <span className="absolute -top-2 -right-3 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[var(--surface-3)] px-1 text-[9px] font-medium leading-none text-[var(--text-muted)]">
-                        {totalByTab[tab.key] > 99 ? "99+" : totalByTab[tab.key]}
-                      </span>
-                    ) : null}
                   </button>
                 ))}
               </div>
@@ -322,16 +503,16 @@ export function AppTopNav() {
                           className={cn(
                             "mt-2 size-4 rounded-full border",
                             notification.read
-                              ? "border-[var(--border)] bg-[var(--surface-2)]"
-                              : "border-[var(--border)] bg-[var(--surface-1)]",
+                              ? "border-[var(--border)] bg-transparent"
+                              : "border-[var(--border)] bg-[var(--surface-3)]",
                           )}
                         />
                         <div
                           className={cn(
                             "flex-1 rounded-xl border px-3 py-2 transition",
                             notification.read
-                              ? "border-[var(--border)] bg-[var(--surface-2)]"
-                              : "border-[var(--border)] bg-[var(--surface-1)]",
+                              ? "border-[var(--border)] bg-transparent "
+                              : "border-[var(--border)] bg-[var(--surface-2)] ",
                           )}
                         >
                           <p className="text-[12px] leading-[1.35] text-[var(--text-default)]">
@@ -403,9 +584,10 @@ export function AppTopNav() {
             >
               <ChevronRight className="size-5" />
             </Button>
-            <p className="app-top-nav-month text-right font-poppins text-[15px] leading-[120%] font-medium">
-              {format(monthCursor, "MMMM yyyy")}
-            </p>
+            <HomeMonthDatePicker
+              align="end"
+              className="app-top-nav-month text-right font-poppins text-[15px] leading-[120%] font-medium"
+            />
           </div>
         ) : null}
         <div className="mt-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
