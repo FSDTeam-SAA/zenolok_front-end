@@ -17,15 +17,16 @@ import {
   startOfWeek,
 } from "date-fns";
 import {
-  CalendarClock,
+  ArrowUpDown,
+  CalendarDays,
   ChevronDown,
   ChevronUp,
+  Clock3,
   MapPin,
   PanelLeft,
   Plus,
   RefreshCw,
   Bell,
-  AlarmClock,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -101,6 +102,108 @@ type WeekSegment = {
   isStart: boolean;
   isEnd: boolean;
 };
+
+type HomeSidebarMetaRangeProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  startValue: string;
+  endValue?: string | null;
+  startCaption?: string | null;
+  endCaption?: string | null;
+  showArrowMarkers?: boolean;
+  emphasize?: boolean;
+};
+
+function HomeSidebarMetaRange({
+  icon: Icon,
+  startValue,
+  endValue,
+  startCaption,
+  endCaption,
+  showArrowMarkers = false,
+  emphasize = false,
+}: HomeSidebarMetaRangeProps) {
+  const showEnd = Boolean(endValue && endValue !== startValue);
+
+  return (
+    <div className="flex items-start gap-1.5">
+      <Icon className="mt-0.5 size-3.5 shrink-0 text-[#8E97A7]" />
+      <div className="flex min-w-0 items-start gap-2">
+        <div className="min-w-0">
+          <p
+            className={`font-poppins text-[12px] leading-[120%] ${
+              emphasize
+                ? "font-semibold text-[#586171]"
+                : "font-medium text-[#6A7282]"
+            }`}
+          >
+            {startValue}
+          </p>
+          {startCaption ? (
+            <div className="mt-0.5 flex items-center gap-1 text-[#A0A8B8]">
+              <span className="font-poppins text-[10px] leading-none font-medium tracking-[0.14em]">
+                {startCaption}
+              </span>
+              {showEnd && showArrowMarkers ? (
+                <ArrowUpDown className="size-2.5" />
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        {showEnd ? (
+          <>
+            <span className="pt-0.5 text-[13px] leading-none text-[#98A1B2]">
+              -
+            </span>
+            <div className="min-w-0">
+              <p
+                className={`font-poppins text-[12px] leading-[120%] ${
+                  emphasize
+                    ? "font-semibold text-[#586171]"
+                    : "font-medium text-[#6A7282]"
+                }`}
+              >
+                {endValue}
+              </p>
+              {endCaption ? (
+                <div className="mt-0.5 flex items-center gap-1 text-[#A0A8B8]">
+                  <span className="font-poppins text-[10px] leading-none font-medium tracking-[0.14em]">
+                    {endCaption}
+                  </span>
+                  {showArrowMarkers ? (
+                    <ArrowUpDown className="size-2.5" />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function HomeEventTodoRow({
+  text,
+  completed,
+}: {
+  text: string;
+  completed: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-[#2CCB62] bg-white">
+        <span className="size-2.5 rounded-full bg-[#2CCB62]" />
+      </span>
+      <span
+        className={`font-poppins text-[15px] leading-[120%] font-medium text-[#575F6D] ${
+          completed ? "line-through opacity-60" : ""
+        }`}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
 
 const weekStartsOnMap: Record<string, 0 | 1 | 2 | 3 | 4 | 5 | 6> = {
   sunday: 0,
@@ -629,13 +732,29 @@ export default function HomePage() {
         <div className="space-y-2">
           {selectedDateEvents.map((event) => {
             const expanded = expandedEventId === event.id;
-            const eventDateLabel = isSameDay(event.start, event.end)
-              ? format(event.startAt, "yyyy-MM-dd")
-              : `${format(event.startAt, "yyyy-MM-dd")} - ${format(event.endAt, "yyyy-MM-dd")}`;
-            const eventTimeLabel = event.isAllDay
+            const sameDayRange = isSameDay(event.start, event.end);
+            const eventStartDateLabel = format(
+              event.startAt,
+              "dd MMM yyyy",
+            ).toUpperCase();
+            const eventEndDateLabel = sameDayRange
+              ? undefined
+              : format(event.endAt, "dd MMM yyyy").toUpperCase();
+            const eventStartDayLabel = format(event.startAt, "EEE").toUpperCase();
+            const eventEndDayLabel = sameDayRange
+              ? undefined
+              : format(event.endAt, "EEE").toUpperCase();
+            const eventStartTimeLabel = event.isAllDay
               ? "All day"
               : formatTimeRangeByPreference(
                   event.startAt,
+                  event.startAt,
+                  preferences.use24Hour,
+                );
+            const eventEndTimeLabel = event.isAllDay
+              ? undefined
+              : formatTimeRangeByPreference(
+                  event.endAt,
                   event.endAt,
                   preferences.use24Hour,
                 );
@@ -665,16 +784,7 @@ export default function HomePage() {
                       />
                       <div className="min-w-0">
                         <p className="font-poppins truncate text-[16px] leading-[120%] font-medium text-[#535A66]">
-                          <span
-                            className={
-                              event.isAllDay
-                                ? "text-[#26A4E6]"
-                                : "text-[#6C7485]"
-                            }
-                          >
-                            {eventTimeLabel}
-                          </span>
-                          <span className="mx-1 text-[#B6BDC9]">|</span>
+                          {/* <span className="mx-1 text-[#B6BDC9]">|</span> */}
                           <span>{event.title}</span>
                         </p>
                       </div>
@@ -686,7 +796,6 @@ export default function HomePage() {
                       <RefreshCw className="size-4" />
                     ) : null}
                     <Bell className="size-4" />
-                    <AlarmClock className="size-5" />
                     <button
                       type="button"
                       className="inline-flex items-center justify-center"
@@ -709,10 +818,22 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
-                  <CalendarClock className="size-3.5" />
-                  {eventDateLabel}
-                </p>
+                <div className="mt-1 space-y-1.5">
+                  <HomeSidebarMetaRange
+                    icon={CalendarDays}
+                    startValue={eventStartDateLabel}
+                    endValue={eventEndDateLabel}
+                    startCaption={eventStartDayLabel}
+                    endCaption={eventEndDayLabel}
+                    showArrowMarkers={!event.isAllDay && !sameDayRange}
+                  />
+                  <HomeSidebarMetaRange
+                    icon={Clock3}
+                    startValue={eventStartTimeLabel}
+                    endValue={eventEndTimeLabel}
+                    emphasize
+                  />
+                </div>
 
                 <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
                   <MapPin className="size-3.5" />
@@ -720,32 +841,22 @@ export default function HomePage() {
                 </p>
 
                 {expanded ? (
-                  <div className="ml-8 mt-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] px-3 py-2">
-                    <div className="space-y-2">
-                      {event.todos.length ? (
-                        event.todos.map((todo) => (
-                          <div
-                            key={todo.id}
-                            className="flex items-center gap-2 text-[13px] text-[var(--text-default)]"
-                          >
-                            <span className="size-2 rounded-full bg-[var(--text-muted)]" />
-                            <span
-                              className={
-                                todo.isCompleted
-                                  ? "line-through text-[var(--text-muted)]"
-                                  : ""
-                              }
-                            >
-                              {todo.text}
-                            </span>
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-[12px] text-[var(--text-muted)]">
+                  <div className="ml-8 mt-2 space-y-2">
+                    {event.todos.length ? (
+                      event.todos.map((todo) => (
+                        <HomeEventTodoRow
+                          key={todo.id}
+                          text={todo.text}
+                          completed={todo.isCompleted}
+                        />
+                      ))
+                    ) : (
+                      <div className="rounded-[18px] border border-[#E2E7F0] bg-white px-3 py-2.5">
+                        <p className="font-poppins text-[13px] text-[#8C95A6]">
                           No todos yet
                         </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ) : null}
               </div>

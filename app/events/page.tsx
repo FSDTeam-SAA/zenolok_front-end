@@ -6,11 +6,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpDown,
+  Bell,
   CalendarDays,
   Clock3,
   MapPin,
   MessageCircle,
   Plus,
+  Repeat2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
@@ -70,11 +73,12 @@ const eventFilters = [
 
 type EventMetaRangeProps = {
   icon: React.ComponentType<{ className?: string }>;
-  startLabel: string;
+  startLabel?: string | null;
   startValue: string;
   endLabel?: string | null;
   endValue?: string | null;
   showArrowMarkers?: boolean;
+  labelPosition?: "above" | "below" | "hidden";
 };
 
 function EventMetaRange({
@@ -84,52 +88,120 @@ function EventMetaRange({
   endLabel,
   endValue,
   showArrowMarkers = true,
+  labelPosition = "above",
 }: EventMetaRangeProps) {
   const showEnd = Boolean(
-    endLabel &&
     endValue &&
-    (endLabel !== startLabel || endValue !== startValue),
+    (labelPosition === "hidden"
+      ? endValue !== startValue
+      : endLabel && (endLabel !== startLabel || endValue !== startValue)),
+  );
+  const hasStartLabel = labelPosition !== "hidden" && Boolean(startLabel);
+  const hasEndLabel = labelPosition !== "hidden" && Boolean(endLabel);
+
+  const renderRangeValue = (
+    value: string,
+    label?: string | null,
+    showMarker?: boolean,
+  ) => (
+    <div className="flex min-w-0 flex-col">
+      {labelPosition === "above" && label ? (
+        <p className="font-poppins text-[12px] leading-none font-medium tracking-[0.01em] text-[#8E97A7]">
+          {label}
+        </p>
+      ) : null}
+      <p className="font-poppins mt-0.5 text-[15px] leading-[120%] font-semibold text-[#4D5463] sm:text-[16px]">
+        {value}
+      </p>
+      {labelPosition === "below" && label ? (
+        <div className="mt-0.5 flex items-center gap-1 text-[#A1A9B8]">
+          <span className="font-poppins text-[11px] leading-none font-medium tracking-[0.14em]">
+            {label}
+          </span>
+          {showMarker ? <ArrowUpDown className="size-3" /> : null}
+        </div>
+      ) : showMarker ? (
+        <span className="mt-0.5 inline-flex text-[#A1A9B8]">
+          <ArrowUpDown className="size-3" />
+        </span>
+      ) : null}
+    </div>
   );
 
   return (
-    <div className="flex flex-wrap items-start gap-2.5 text-[#4D5463]">
-      <Icon className="mt-0.5 size-4 shrink-0 text-[#7A8293]" />
-      <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-        <div className="flex min-w-[112px] flex-col">
-          <p className="font-poppins text-[12px] leading-none font-medium text-[#9AA2B1]">
-            {startLabel}
-          </p>
-          <p className="font-poppins mt-1 text-[17px] leading-none font-semibold text-[#313744] sm:text-[18px]">
-            {startValue}
-          </p>
-          {showEnd && showArrowMarkers ? (
-            <span className="mt-1 inline-flex self-center text-[#8E97A7]">
-              <ArrowUpDown className="size-3" />
-            </span>
-          ) : null}
-        </div>
+    <div className="flex min-w-0 items-start gap-2.5 text-[#4D5463]">
+      <Icon className="mt-0.5 size-[18px] shrink-0 text-[#9CA5B5]" />
+      <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-1.5">
+        {renderRangeValue(
+          startValue,
+          hasStartLabel ? startLabel : undefined,
+          Boolean(showEnd && showArrowMarkers),
+        )}
         {showEnd ? (
           <>
-            <span className="pb-0.5 text-[24px] leading-none text-[#98A1B2]">
+            <span className="pt-0.5 text-[20px] leading-none text-[#A4ACBB]">
               -
             </span>
-            <div className="flex min-w-[112px] flex-col">
-              <p className="font-poppins text-[12px] leading-none font-medium text-[#9AA2B1]">
-                {endLabel}
-              </p>
-              <p className="font-poppins mt-1 text-[17px] leading-none font-semibold text-[#313744] sm:text-[18px]">
-                {endValue}
-              </p>
-              {showArrowMarkers ? (
-                <span className="mt-1 inline-flex self-center text-[#8E97A7]">
-                  <ArrowUpDown className="size-3" />
-                </span>
-              ) : null}
-            </div>
+            {renderRangeValue(
+              endValue || "",
+              hasEndLabel ? endLabel : undefined,
+              Boolean(showArrowMarkers),
+            )}
           </>
         ) : null}
       </div>
     </div>
+  );
+}
+
+type EventStatusIconProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  badgeCount?: number;
+  active?: boolean;
+  asButton?: boolean;
+  label: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+function EventStatusIcon({
+  icon: Icon,
+  badgeCount = 0,
+  active = false,
+  asButton = false,
+  label,
+  onClick,
+}: EventStatusIconProps) {
+  const className =
+    "relative inline-flex size-8 items-center justify-center rounded-full text-[#C5CCD8] transition hover:bg-white/75 " +
+    (active ? "text-[#A5AFBF]" : "text-[#CBD2DD]");
+
+  if (asButton) {
+    return (
+      <button
+        type="button"
+        className={className}
+        aria-label={label}
+        onClick={onClick}
+      >
+        <Icon className="size-[18px]" />
+        {badgeCount > 0 ? (
+          <span className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 py-[1px] text-[11px] font-semibold leading-none text-white">
+            {badgeCount}
+          </span>
+        ) : null}
+      </button>
+    );
+  }
+
+  return (
+    <span className={className} aria-hidden="true">
+      <Icon className="size-[18px]" />
+      {badgeCount > 0 ? (
+        <span className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 py-[1px] text-[11px] font-semibold leading-none text-white">
+          {badgeCount}
+        </span>
+      ) : null}
+    </span>
   );
 }
 
@@ -393,6 +465,21 @@ export default function EventsPage() {
       return accumulator;
     }, {});
   }, [notificationsQuery.data?.items, paged.items]);
+  const unreadAlertCountByEventId = useMemo(() => {
+    const unreadAlertNotifications = (
+      notificationsQuery.data?.items ?? []
+    ).filter(
+      (notification) =>
+        !notification.read && !isMessageNotification(notification),
+    );
+
+    return paged.items.reduce<Record<string, number>>((accumulator, event) => {
+      accumulator[event._id] = unreadAlertNotifications.filter((notification) =>
+        notificationMatchesEvent(notification, event),
+      ).length;
+      return accumulator;
+    }, {});
+  }, [notificationsQuery.data?.items, paged.items]);
   const hasDateRange = Boolean(startDate && endDate);
   const isSingleDayEvent = Boolean(
     startDate && endDate && startDate === endDate,
@@ -534,20 +621,21 @@ export default function EventsPage() {
           <SectionLoading rows={6} />
         ) : paged.items.length ? (
           <>
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-2">
               {paged.items.map((event) => {
                 const messageCount =
                   unreadMessageCountByEventId[event._id] ?? 0;
+                const alertCount = unreadAlertCountByEventId[event._id] ?? 0;
                 const startDate = new Date(event.startTime);
                 const endDate = new Date(event.endTime);
                 const hasValidRange =
                   !Number.isNaN(startDate.getTime()) &&
                   !Number.isNaN(endDate.getTime());
                 const startDayLabel = hasValidRange
-                  ? format(startDate, "EEEE")
+                  ? format(startDate, "EEE").toUpperCase()
                   : "Date";
                 const endDayLabel = hasValidRange
-                  ? format(endDate, "EEEE")
+                  ? format(endDate, "EEE").toUpperCase()
                   : undefined;
                 const startDateLabel = hasValidRange
                   ? format(startDate, "dd MMM yyyy").toUpperCase()
@@ -576,7 +664,7 @@ export default function EventsPage() {
                     <Card
                       role="link"
                       tabIndex={0}
-                      className="events-list-card cursor-pointer rounded-2xl border border-[#D9DEE9] bg-[#E6EAF1] px-4 py-3 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]"
+                      className="events-list-card cursor-pointer rounded-[26px] border border-[#D9DEE9] bg-[#EEF2F7] px-4 py-4 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]"
                       onClick={() => openEventDetails(event._id)}
                       onKeyDown={(keyboardEvent) => {
                         if (
@@ -590,64 +678,82 @@ export default function EventsPage() {
                         openEventDetails(event._id);
                       }}
                     >
-                      <div className="">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="flex items-center">
-                              <span
-                                className="mt-1 h-8 w-1.5 rounded-full"
-                                style={{
-                                  backgroundColor:
-                                    event.brick?.color || "#F7C700",
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <p className="font-poppins text-[28px] leading-[120%] font-semibold text-[#3D414A]">
+                      <div className="flex items-start gap-3">
+                        <div className="flex items-center pt-1">
+                          <span
+                            className="h-8 w-1.5 rounded-full"
+                            style={{
+                              backgroundColor: event.brick?.color || "#F7C700",
+                            }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-poppins truncate text-[22px] leading-[120%] font-semibold text-[#454B57] sm:text-[23px]">
                                 {event.title}
                               </p>
+                              <div className="mt-3 flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
+                                <div className="min-w-0 space-y-2.5">
+                                  <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-start lg:gap-x-6">
+                                    <EventMetaRange
+                                      icon={CalendarDays}
+                                      startLabel={startDayLabel}
+                                      startValue={startDateLabel}
+                                      endLabel={endDayLabel}
+                                      endValue={endDateLabel}
+                                      showArrowMarkers={!event.isAllDay}
+                                      labelPosition="below"
+                                    />
+                                  </div>
+                                  <EventMetaRange
+                                    icon={Clock3}
+                                    startValue={startTimeLabel}
+                                    endValue={endTimeLabel}
+                                    showArrowMarkers={false}
+                                    labelPosition="hidden"
+                                  />
+                                  <span className="font-poppins inline-flex min-w-0 items-center gap-2 text-[15px] leading-[120%] font-medium text-[#666E7D] sm:text-[16px]">
+                                    <MapPin className="size-[18px] shrink-0 text-[#A0A8B8]" />
+                                    <span className="truncate">
+                                      {event.location || "No location"}
+                                    </span>
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <button
-                            type="button"
-                            className="font-poppins group inline-flex items-center gap-1.5 self-end rounded-full px-1 py-1 text-[#7A8293] transition hover:bg-white/65 hover:text-[#4F5B72] lg:self-start"
-                            onClick={(clickEvent) => {
-                              clickEvent.preventDefault();
-                              clickEvent.stopPropagation();
-                              openEventMessages(event._id);
-                            }}
-                            aria-label={`Open messages for ${event.title}`}
-                          >
-                            <MessageCircle className="size-5 stroke-[1.8] transition group-hover:scale-[1.04]" />
-                            <span className="inline-flex min-w-[22px] items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[14px] leading-none font-medium text-[#7A8293] shadow-[0_1px_2px_rgba(15,23,42,0.08)]">
-                              {messageCount}
-                            </span>
-                          </button>
-                        </div>
-                        <div className="mt-3 flex items-center justify-between">
-                          <div className="space-y-2">
-                            <EventMetaRange
-                              icon={CalendarDays}
-                              startLabel={startDayLabel}
-                              startValue={startDateLabel}
-                              endLabel={endDayLabel}
-                              endValue={endDateLabel}
-                              showArrowMarkers={!event.isAllDay}
-                            />
-                            <EventMetaRange
-                              icon={Clock3}
-                              startLabel={event.isAllDay ? "Schedule" : "Start"}
-                              startValue={startTimeLabel}
-                              endLabel={event.isAllDay ? undefined : "End"}
-                              endValue={endTimeLabel}
-                              showArrowMarkers={false}
-                            />
-                          </div>
-                          <div>
-                            <span className="font-poppins flex flex-wrap items-center gap-1.5 text-[18px] leading-[120%] font-medium text-[#4D5463]">
-                              <MapPin className="size-4 shrink-0 text-[#7A8293]" />
-                              {event.location || "No location"}
-                            </span>
+                            <div className="flex items-center justify-end gap-0.5 lg:pt-9">
+                              <EventStatusIcon
+                                icon={MessageCircle}
+                                label={`Open messages for ${event.title}`}
+                                badgeCount={messageCount}
+                                active={messageCount > 0}
+                                asButton
+                                onClick={(clickEvent) => {
+                                  clickEvent.preventDefault();
+                                  clickEvent.stopPropagation();
+                                  openEventMessages(event._id);
+                                }}
+                              />
+                              <EventStatusIcon
+                                icon={Repeat2}
+                                label={`${event.title} recurrence`}
+                                active={event.recurrence !== "once"}
+                              />
+                              <EventStatusIcon
+                                icon={Bell}
+                                label={`${event.title} alerts`}
+                                badgeCount={alertCount}
+                                active={Boolean(
+                                  event.reminder || alertCount > 0,
+                                )}
+                              />
+                              <EventStatusIcon
+                                icon={SlidersHorizontal}
+                                label={`${event.title} details`}
+                                active
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

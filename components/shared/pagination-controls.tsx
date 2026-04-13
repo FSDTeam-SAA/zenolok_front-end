@@ -23,8 +23,8 @@ export function PaginationControls({ page, totalPages, onPageChange }: Paginatio
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.24 }}
     >
-      <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
-        <ChevronLeft className="size-4" /> Prev
+      <Button variant="outline" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1} className="!text-[16px]">
+        <ChevronLeft className="size-4 " /> Prev
       </Button>
       <span className="text-sm text-[var(--text-muted)]">
         {page} / {totalPages}
@@ -32,6 +32,7 @@ export function PaginationControls({ page, totalPages, onPageChange }: Paginatio
       <Button
         variant="outline"
         size="sm"
+        className="!text-[16px]"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
       >

@@ -383,12 +383,12 @@ function CategoryCard({
                         )}
                       </span>
                     ) : null}
-                    {hasTodoAlarmConfigured(item) ? (
+                    {/* {hasTodoAlarmConfigured(item) ? (
                       <Bell className="size-3.5 cursor-pointer" />
                     ) : null}
                     {item.repeat ? (
                       <Repeat2 className="size-3.5 cursor-pointer" />
-                    ) : null}
+                    ) : null} */}
                   </div>
                 </div>
               )}
