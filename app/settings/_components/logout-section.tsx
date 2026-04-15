@@ -12,7 +12,7 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
       <SectionHeader
         title="Logout"
         description="End your current session securely."
-        titleClassName="text-[30px] text-[var(--text-strong)] sm:text-[36px] lg:text-[40px]"
+        titleClassName="text-[30px] text-[var(--text-strong)] sm:text-[36px] lg:text-[36px]"
       />
 
       <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
@@ -22,7 +22,7 @@ export function LogoutSection({ onLogout }: LogoutSectionProps) {
         <Button
           type="button"
           variant="destructive"
-          className="font-poppins mt-4 h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
+          className="font-poppins mt-5 h-10 rounded-xl px-5 text-[18px] leading-[120%] font-medium"
           onClick={onLogout}
         >
           Logout

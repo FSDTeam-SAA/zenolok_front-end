@@ -17,12 +17,10 @@ import {
   startOfWeek,
 } from "date-fns";
 import {
-  ArrowUpDown,
-  CalendarDays,
   ChevronDown,
   ChevronUp,
-  Clock3,
-  MapPin,
+  ListTodo,
+  MessageCircle,
   PanelLeft,
   Plus,
   RefreshCw,
@@ -104,83 +102,24 @@ type WeekSegment = {
   isEnd: boolean;
 };
 
-type HomeSidebarMetaRangeProps = {
-  icon: React.ComponentType<{ className?: string }>;
-  startValue: string;
-  endValue?: string | null;
-  startCaption?: string | null;
-  endCaption?: string | null;
-  showArrowMarkers?: boolean;
-  emphasize?: boolean;
-};
+const CALENDAR_SEGMENT_ROW_HEIGHT = 18;
+const CALENDAR_SEGMENT_ROW_GAP = 2;
+const CALENDAR_SEGMENT_TOP_OFFSET = 40;
+const CALENDAR_CELL_HORIZONTAL_PADDING = 6;
+const CALENDAR_SEGMENT_STACK_CLEARANCE = 4;
 
-function HomeSidebarMetaRange({
-  icon: Icon,
-  startValue,
-  endValue,
-  startCaption,
-  endCaption,
-  showArrowMarkers = false,
-  emphasize = false,
-}: HomeSidebarMetaRangeProps) {
-  const showEnd = Boolean(endValue && endValue !== startValue);
+function hexToRgba(color: string, alpha: number) {
+  const hex = color.replace("#", "");
 
-  return (
-    <div className="flex items-start gap-1.5">
-      <Icon className="mt-0.5 size-3.5 shrink-0 text-[#8E97A7]" />
-      <div className="flex min-w-0 items-start gap-2">
-        <div className="min-w-0">
-          <p
-            className={`font-poppins text-[12px] leading-[120%] ${
-              emphasize
-                ? "font-semibold text-[#586171]"
-                : "font-medium text-[#6A7282]"
-            }`}
-          >
-            {startValue}
-          </p>
-          {startCaption ? (
-            <div className="mt-0.5 flex items-center gap-1 text-[#A0A8B8]">
-              <span className="font-poppins text-[10px] leading-none font-medium tracking-[0.14em]">
-                {startCaption}
-              </span>
-              {showEnd && showArrowMarkers ? (
-                <ArrowUpDown className="size-2.5" />
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        {showEnd ? (
-          <>
-            <span className="pt-0.5 text-[13px] leading-none text-[#98A1B2]">
-              -
-            </span>
-            <div className="min-w-0">
-              <p
-                className={`font-poppins text-[12px] leading-[120%] ${
-                  emphasize
-                    ? "font-semibold text-[#586171]"
-                    : "font-medium text-[#6A7282]"
-                }`}
-              >
-                {endValue}
-              </p>
-              {endCaption ? (
-                <div className="mt-0.5 flex items-center gap-1 text-[#A0A8B8]">
-                  <span className="font-poppins text-[10px] leading-none font-medium tracking-[0.14em]">
-                    {endCaption}
-                  </span>
-                  {showArrowMarkers ? (
-                    <ArrowUpDown className="size-2.5" />
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
+  if (hex.length !== 6) {
+    return color;
+  }
+
+  const red = Number.parseInt(hex.slice(0, 2), 16);
+  const green = Number.parseInt(hex.slice(2, 4), 16);
+  const blue = Number.parseInt(hex.slice(4, 6), 16);
+
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function HomeEventTodoRow({
@@ -207,6 +146,58 @@ function HomeEventTodoRow({
         {text}
       </span>
     </div>
+  );
+}
+
+function formatSidebarClock(date: Date, use24Hour: boolean) {
+  if (use24Hour) {
+    return { main: format(date, "HH:mm"), suffix: "" };
+  }
+
+  return { main: format(date, "h:mm"), suffix: format(date, "a") };
+}
+
+type HomeSidebarActionIconProps = {
+  icon: React.ComponentType<{ className?: string }>;
+  badgeCount?: number;
+  label: string;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+};
+
+function HomeSidebarActionIcon({
+  icon: Icon,
+  badgeCount = 0,
+  label,
+  onClick,
+}: HomeSidebarActionIconProps) {
+  const badge = badgeCount > 0 ? (
+    <span className="absolute -top-2 -right-1 inline-flex min-h-[16px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1 text-[10px] font-semibold leading-none text-white">
+      {badgeCount}
+    </span>
+  ) : null;
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="relative inline-flex size-7 items-center justify-center rounded-full text-[#B2B7C2] transition hover:bg-white/80 hover:text-[#81889A]"
+        aria-label={label}
+        onClick={onClick}
+      >
+        <Icon className="size-[15px]" />
+        {badge}
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className="relative inline-flex size-7 items-center justify-center rounded-full text-[#B2B7C2]"
+      aria-hidden="true"
+    >
+      <Icon className="size-[15px]" />
+      {badge}
+    </span>
   );
 }
 
@@ -273,10 +264,13 @@ function buildWeekSegments(
   const weekEnd = startOfDay(week[6]);
 
   const relevant = events
-    .filter((event) => intersectsWeek(event, weekStart, weekEnd))
+    .filter(
+      (event) => event.spansMultipleDays && intersectsWeek(event, weekStart, weekEnd),
+    )
     .sort(
       (a, b) =>
         a.start.getTime() - b.start.getTime() ||
+        Number(b.isAllDay) - Number(a.isAllDay) ||
         a.end.getTime() - b.end.getTime(),
     );
 
@@ -352,6 +346,7 @@ export default function HomePage() {
     null,
   );
   const [eventsDrawerOpen, setEventsDrawerOpen] = React.useState(false);
+  const [expandedDayKey, setExpandedDayKey] = React.useState<string | null>(null);
 
   const weekStartsOn = weekStartsOnMap[preferences.weekStartDay] ?? 1;
   const monthStart = React.useMemo(
@@ -449,7 +444,16 @@ export default function HomePage() {
           icon: event.brick?.icon,
           isAllDay: event.isAllDay,
           todos: (event.todos || [])
-            .filter((todo) => todo.createdBy === currentUserId)
+            .filter((todo) => {
+              if (!currentUserId) {
+                return true;
+              }
+
+              return (
+                todo.createdBy === currentUserId ||
+                Boolean(todo.participants?.includes(currentUserId))
+              );
+            })
             .map((todo) => ({
               id: todo._id,
               text: todo.text,
@@ -516,23 +520,51 @@ export default function HomePage() {
     );
 
     return dayEvents.sort((a, b) => {
+      if (a.spansMultipleDays !== b.spansMultipleDays) {
+        return a.spansMultipleDays ? -1 : 1;
+      }
       if (a.isAllDay !== b.isAllDay) {
         return a.isAllDay ? -1 : 1;
       }
       return a.startAt.getTime() - b.startAt.getTime();
     });
   }, [filteredEvents, selectedDate]);
+
+  const singleDayEventsByDate = React.useMemo(() => {
+    const byDate = new Map<string, CalendarEvent[]>();
+
+    for (const event of filteredEvents) {
+      if (event.spansMultipleDays) {
+        continue;
+      }
+
+      const key = format(event.start, "yyyy-MM-dd");
+      const current = byDate.get(key) ?? [];
+      current.push(event);
+      byDate.set(key, current);
+    }
+
+    for (const events of byDate.values()) {
+      events.sort((a, b) => {
+        if (a.isAllDay !== b.isAllDay) {
+          return a.isAllDay ? -1 : 1;
+        }
+
+        return a.startAt.getTime() - b.startAt.getTime();
+      });
+    }
+
+    return byDate;
+  }, [filteredEvents]);
   const handleOpenEventDetails = React.useCallback(
     (eventId: string) => {
       setEventsDrawerOpen(false);
+      setExpandedDayKey(null);
       router.push(`/events/${eventId}`);
     },
     [router],
   );
   const hasEventDateRange = Boolean(eventStartDate && eventEndDate);
-  const isSingleDayEvent = Boolean(
-    eventStartDate && eventEndDate && eventStartDate === eventEndDate,
-  );
 
   const openCreateEventDialog = React.useCallback(() => {
     const defaultStartDate = format(selectedDateRange.start, "yyyy-MM-dd");
@@ -597,14 +629,11 @@ export default function HomePage() {
         throw new Error("Start and end dates are required");
       }
 
-      const usesSingleTime = !eventIsAllDay && eventStartDate === eventEndDate;
-      const resolvedEndTime = usesSingleTime ? eventStartTime : eventEndTime;
-
       if (!eventIsAllDay && !eventStartTime) {
         throw new Error("Start time is required");
       }
 
-      if (!eventIsAllDay && !usesSingleTime && !resolvedEndTime) {
+      if (!eventIsAllDay && !eventEndTime) {
         throw new Error("Start and end times are required");
       }
 
@@ -612,7 +641,7 @@ export default function HomePage() {
         `${eventStartDate}T${eventStartTime || "00:00"}:00`,
       );
       const endDate = new Date(
-        `${eventEndDate}T${resolvedEndTime || "00:00"}:00`,
+        `${eventEndDate}T${eventEndTime || "00:00"}:00`,
       );
 
       if (
@@ -698,20 +727,6 @@ export default function HomePage() {
   }, [hasEventDateRange]);
 
   React.useEffect(() => {
-    if (eventIsAllDay || !isSingleDayEvent) {
-      return;
-    }
-
-    setEventEndTime((previous) => {
-      if (!eventStartTime) {
-        return previous ? "" : previous;
-      }
-
-      return previous === eventStartTime ? previous : eventStartTime;
-    });
-  }, [eventIsAllDay, eventStartTime, isSingleDayEvent]);
-
-  React.useEffect(() => {
     if (!selectedDateEvents.length) {
       setExpandedEventId(null);
       return;
@@ -721,12 +736,22 @@ export default function HomePage() {
       if (prev && selectedDateEvents.some((event) => event.id === prev)) {
         return prev;
       }
-      return selectedDateEvents[0].id;
+
+      const timedEventWithTodos = selectedDateEvents.find(
+        (event) =>
+          !event.spansMultipleDays && !event.isAllDay && event.todos.length > 0,
+      );
+
+      const anyEventWithTodos = selectedDateEvents.find(
+        (event) => event.todos.length > 0,
+      );
+
+      return timedEventWithTodos?.id ?? anyEventWithTodos?.id ?? null;
     });
   }, [selectedDateEvents]);
 
   const eventsSidebarContent = (
-    <>
+    <div className="flex h-full min-h-0 flex-col">
       <div className="mb-3 flex items-center justify-end">
         <button
           type="button"
@@ -737,146 +762,259 @@ export default function HomePage() {
         </button>
       </div>
 
-      {selectedDateEvents.length ? (
-        <div className="space-y-2">
-          {selectedDateEvents.map((event) => {
-            const hasTodos = event.todos.length > 0;
-            const expanded = hasTodos && expandedEventId === event.id;
-            const sameDayRange = isSameDay(event.start, event.end);
-            const eventStartDateLabel = format(
-              event.startAt,
-              "dd MMM yyyy",
-            ).toUpperCase();
-            const eventEndDateLabel = sameDayRange
-              ? undefined
-              : format(event.endAt, "dd MMM yyyy").toUpperCase();
-            const eventStartDayLabel = format(event.startAt, "EEE").toUpperCase();
-            const eventEndDayLabel = sameDayRange
-              ? undefined
-              : format(event.endAt, "EEE").toUpperCase();
-            const eventStartTimeLabel = event.isAllDay
-              ? "All day"
-              : formatTimeRangeByPreference(
-                  event.startAt,
-                  event.startAt,
-                  preferences.use24Hour,
-                );
-            const eventEndTimeLabel = event.isAllDay
-              ? undefined
-              : formatTimeRangeByPreference(
-                  event.endAt,
-                  event.endAt,
-                  preferences.use24Hour,
-                );
+      <div className="drag-scrollbar-hidden min-h-0 flex-1 overflow-y-auto pr-1">
+        {selectedDateEvents.length ? (
+          <div className="space-y-2">
+            {selectedDateEvents.map((event) => {
+              const hasTodos = event.todos.length > 0;
+              const expanded = hasTodos && expandedEventId === event.id;
+              const incompleteTodoCount = event.todos.filter(
+                (todo) => !todo.isCompleted,
+              ).length;
+              const todoBadgeCount = incompleteTodoCount || event.todos.length;
+              const typeLabel = event.spansMultipleDays
+                ? "Streak"
+                : event.isAllDay
+                  ? "All day"
+                  : null;
+              const rangeLabel = event.spansMultipleDays
+                ? `${format(event.startAt, "dd MMM yyyy").toUpperCase()} - ${format(
+                    event.endAt,
+                    "dd MMM yyyy",
+                  ).toUpperCase()}`
+                : null;
+              const startClock = formatSidebarClock(
+                event.startAt,
+                preferences.use24Hour,
+              );
+              const endClock = formatSidebarClock(
+                event.endAt,
+                preferences.use24Hour,
+              );
 
-            return (
-              <div
-                key={event.id}
-                className="home-event-card rounded-xl border border-[#D3DAE8] bg-[#DFE4EC] px-2 py-2"
-                role="button"
-                tabIndex={0}
-                onClick={() => handleOpenEventDetails(event.id)}
-                onKeyDown={(keyEvent) => {
-                  if (keyEvent.key !== "Enter" && keyEvent.key !== " ") {
-                    return;
-                  }
+              return (
+                <div
+                  key={event.id}
+                  className="home-event-card rounded-[20px] border border-[#E1E5EC] bg-[#F7F8FB] px-3 py-3 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset]"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleOpenEventDetails(event.id)}
+                  onKeyDown={(keyEvent) => {
+                    if (keyEvent.key !== "Enter" && keyEvent.key !== " ") {
+                      return;
+                    }
 
-                  keyEvent.preventDefault();
-                  handleOpenEventDetails(event.id);
-                }}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="h-7 w-1.5 rounded-full"
-                        style={{ backgroundColor: event.color }}
-                      />
-                      <div className="min-w-0">
-                        <p className="font-poppins truncate text-[16px] leading-[120%] font-medium text-[#535A66]">
-                          {/* <span className="mx-1 text-[#B6BDC9]">|</span> */}
-                          <span>{event.title}</span>
-                        </p>
-                      </div>
+                    keyEvent.preventDefault();
+                    handleOpenEventDetails(event.id);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="min-w-0 flex-1">
+                      {typeLabel ? (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-8 w-1.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: event.color }}
+                            />
+                            <div className="flex min-w-0 items-center gap-1">
+                              <span
+                                className="shrink-0 font-poppins font-semibold"
+                                style={{
+                                  color: event.color,
+                                  fontSize: "24px",
+                                  lineHeight: "24px",
+                                }}
+                              >
+                                {typeLabel}
+                              </span>
+                              <span className="h-7 w-px shrink-0 bg-[#D4D8DF]" />
+                              <p
+                                className="truncate font-poppins font-medium text-[#626872]"
+                                style={{
+                                  fontSize: "24px",
+                                  lineHeight: "24px",
+                                }}
+                              >
+                                {event.title}
+                              </p>
+                            </div>
+                          </div>
+                          {rangeLabel ? (
+                            <p
+                              className="ml-[22px] mt-2 truncate font-poppins text-[#9AA1AE]"
+                              style={{ fontSize: "18px", lineHeight: "18px" }}
+                            >
+                              {rangeLabel}
+                            </p>
+                          ) : null}
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span
+                            className="h-10 w-1.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: event.color }}
+                          />
+                          <div className="flex min-w-0 items-center gap-3">
+                            <div className="w-[56px] shrink-0 text-[#6A707C]">
+                              <p
+                                className="font-poppins font-semibold text-[#666B75]"
+                                style={{ fontSize: "16px", lineHeight: "14px" }}
+                              >
+                                {startClock.main}
+                                {startClock.suffix ? (
+                                  <span
+                                    className="ml-0.5 align-top font-semibold text-[#8B909A]"
+                                    style={{ fontSize: "9px", lineHeight: "9px" }}
+                                  >
+                                    {startClock.suffix}
+                                  </span>
+                                ) : null}
+                              </p>
+                              <p
+                                className="mt-1 font-poppins text-[#9A9FA8]"
+                                style={{ fontSize: "14px", lineHeight: "12px" }}
+                              >
+                                {endClock.main}
+                                {endClock.suffix ? (
+                                  <span
+                                    className="ml-0.5 align-top font-medium text-[#A5AAB4]"
+                                    style={{ fontSize: "8px", lineHeight: "8px" }}
+                                  >
+                                    {endClock.suffix}
+                                  </span>
+                                ) : null}
+                              </p>
+                            </div>
+                            <span className="h-10 w-px shrink-0 bg-[#D4D8DF]" />
+                            <div className="min-w-0">
+                              <p
+                                className="truncate font-poppins font-medium text-[#555C67]"
+                                style={{
+                                  fontSize: "18px",
+                                  lineHeight: "18px",
+                                }}
+                              >
+                                {event.title}
+                              </p>
+                              <p
+                                className="mt-1 truncate font-poppins text-[#9BA1AC]"
+                                style={{ fontSize: "18px", lineHeight: "18px" }}
+                              >
+                                {event.location}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-0.5 text-[#A2A9B7]">
+                      {event.spansMultipleDays ? (
+                        <HomeSidebarActionIcon
+                          icon={MessageCircle}
+                          badgeCount={todoBadgeCount}
+                          label={`${event.title} streak updates`}
+                        />
+                      ) : event.isAllDay ? (
+                        <HomeSidebarActionIcon
+                          icon={RefreshCw}
+                          label={`${event.title} all-day event`}
+                        />
+                      ) : null}
+
+                      {!event.spansMultipleDays && !event.isAllDay ? (
+                        <>
+                          <HomeSidebarActionIcon
+                            icon={Bell}
+                            label={`${event.title} alerts`}
+                          />
+                          <HomeSidebarActionIcon
+                            icon={ListTodo}
+                            badgeCount={todoBadgeCount}
+                            label={`${event.title} tasks`}
+                          />
+                        </>
+                      ) : null}
+
+                      {hasTodos ? (
+                        <button
+                          type="button"
+                          className="inline-flex size-7 items-center justify-center rounded-full text-[#AAB0BB] transition hover:bg-white/80 hover:text-[#737B8B]"
+                          aria-label={
+                            expanded
+                              ? "Collapse event todos"
+                              : "Expand event todos"
+                          }
+                          onClick={(clickEvent) => {
+                            clickEvent.stopPropagation();
+                            setExpandedEventId((prev) =>
+                              prev === event.id ? null : event.id,
+                            );
+                          }}
+                        >
+                          {expanded ? (
+                            <ChevronUp className="size-[18px]" />
+                          ) : (
+                            <ChevronDown className="size-[18px]" />
+                          )}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1 text-[#A2A9B7]">
-                    {event.spansMultipleDays ? (
-                      <RefreshCw className="size-4" />
-                    ) : null}
-                    <Bell className="size-4" />
-                    {hasTodos ? (
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center"
-                        aria-label={
-                          expanded
-                            ? "Collapse event todos"
-                            : "Expand event todos"
-                        }
-                        onClick={(clickEvent) => {
-                          clickEvent.stopPropagation();
-                          setExpandedEventId((prev) =>
-                            prev === event.id ? null : event.id,
-                          );
-                        }}
-                      >
-                        {expanded ? (
-                          <ChevronUp className="size-4" />
-                        ) : (
-                          <ChevronDown className="size-4" />
-                        )}
-                      </button>
-                    ) : null}
-                  </div>
+                  {expanded ? (
+                    <div className="mt-3">
+                      <div className="mx-auto mb-3 h-px w-[68%] bg-[#D6D8DC]" />
+                      <div className="space-y-2 pl-6">
+                        {event.todos.map((todo) => (
+                          <HomeEventTodoRow
+                            key={todo.id}
+                            text={todo.text}
+                            completed={todo.isCompleted}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
-
-                <div className="mt-1 space-y-1.5">
-                  <HomeSidebarMetaRange
-                    icon={CalendarDays}
-                    startValue={eventStartDateLabel}
-                    endValue={eventEndDateLabel}
-                    startCaption={eventStartDayLabel}
-                    endCaption={eventEndDayLabel}
-                    showArrowMarkers={!event.isAllDay && !sameDayRange}
-                  />
-                  <HomeSidebarMetaRange
-                    icon={Clock3}
-                    startValue={eventStartTimeLabel}
-                    endValue={eventEndTimeLabel}
-                    emphasize
-                  />
-                </div>
-
-                <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
-                  <MapPin className="size-3.5" />
-                  {event.location}
-                </p>
-
-                {expanded ? (
-                  <div className="ml-8 mt-2 space-y-2">
-                    {event.todos.map((todo) => (
-                      <HomeEventTodoRow
-                        key={todo.id}
-                        text={todo.text}
-                        completed={todo.isCompleted}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState
-          title="No events"
-          description="No events on selected day."
-        />
-      )}
-    </>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            title="No events"
+            description="No events on selected day."
+          />
+        )}
+      </div>
+    </div>
   );
+
+  const openDayEventsPanel = React.useCallback(
+    (day: Date) => {
+      const normalized = startOfDay(day);
+      const dayKey = format(normalized, "yyyy-MM-dd");
+      setSelectedDateRange({ start: normalized, end: normalized });
+      skipRangeSyncRef.current = true;
+      setSelectedDate(normalized);
+      setExpandedDayKey((previous) => (previous === dayKey ? null : dayKey));
+    },
+    [setSelectedDate],
+  );
+
+  const handleDayEventsWheel = React.useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.currentTarget.scrollTop += event.deltaY;
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    setExpandedDayKey(null);
+  }, [monthCursor]);
 
   return (
     <div className="home-page space-y-4">
@@ -902,7 +1040,7 @@ export default function HomePage() {
         ) : (
           <>
             <div className="home-calendar-layout grid !gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
-              <aside className="home-events-sidebar hidden rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:block">
+              <aside className="home-events-sidebar hidden h-[720px] min-h-0 rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:flex xl:flex-col">
                 {eventsSidebarContent}
               </aside>
 
@@ -957,7 +1095,7 @@ export default function HomePage() {
                           week,
                           filteredEvents,
                         );
-                        const shouldScrollSegments = weekInfo.laneCount > 3;
+                        const visiblePeriodRows = Math.min(weekInfo.laneCount, 2);
 
                         return (
                           <div
@@ -971,10 +1109,33 @@ export default function HomePage() {
                               const isSunday = day.getDay() === 0;
                               const isLastDayOfWeek =
                                 dayIndex === week.length - 1;
+                              const dayKey = format(day, "yyyy-MM-dd");
+                              const dayEvents =
+                                singleDayEventsByDate.get(dayKey) ?? [];
+                              const occupiedPeriodRows = weekInfo.segments.filter(
+                                (segment) =>
+                                  segment.startCol <= dayIndex + 1 &&
+                                  segment.endCol >= dayIndex + 1 &&
+                                  segment.lane < visiblePeriodRows,
+                              ).length;
+                              const visibleSlots = Math.max(
+                                0,
+                                4 - occupiedPeriodRows,
+                              );
+                              const visibleDayEvents = dayEvents.slice(
+                                0,
+                                visibleSlots,
+                              );
+                              const hiddenDayEventsCount = Math.max(
+                                0,
+                                dayEvents.length - visibleDayEvents.length,
+                              );
+                              const isExpandedDay = expandedDayKey === dayKey;
                               return (
                                 <button
                                   key={format(day, "yyyy-MM-dd")}
                                   type="button"
+                                  onClick={() => openDayEventsPanel(day)}
                                   onMouseDown={(mouseEvent) => {
                                     if (mouseEvent.button !== 0) {
                                       return;
@@ -1020,7 +1181,7 @@ export default function HomePage() {
                                     skipRangeSyncRef.current = true;
                                     setSelectedDate(normalized);
                                   }}
-                                  className={`home-day-cell relative flex h-[136px] select-none items-start justify-center px-2 pt-3 pb-2 text-center ${
+                                  className={`home-day-cell relative flex h-[136px] select-none flex-col items-stretch pt-2 text-left ${
                                     isLastDayOfWeek
                                       ? "border-r-0"
                                       : "border-r border-[var(--border)]"
@@ -1030,44 +1191,212 @@ export default function HomePage() {
                                       : ""
                                   }`}
                                 >
-                                  <span
-                                    className={`font-poppins inline-flex min-w-[32px] items-center justify-center rounded-xl px-2 text-[20px] leading-[120%] font-medium ${
-                                      isInSelectedRange
-                                        ? "text-[var(--text-strong)]"
-                                        : isSunday
-                                          ? "text-[#FF3B30]"
-                                          : isSameMonth(day, monthCursor)
-                                            ? "text-[var(--text-default)]"
-                                            : "text-[var(--text-muted)]"
-                                    }`}
+                                  <div className="flex justify-center">
+                                    <span
+                                      className={`font-poppins inline-flex min-w-[32px] min-h-[32px] items-center justify-center rounded-full p-1 text-[20px] leading-[120%] font-medium ${
+                                        isInSelectedRange
+                                          ? "bg-[#D3D5DB] text-[var(--text-strong)]"
+                                          : isSunday
+                                            ? "text-[#FF3B30]"
+                                            : isSameMonth(day, monthCursor)
+                                              ? "text-[var(--text-default)]"
+                                              : "text-[var(--text-muted)]"
+                                      }`}
+                                    >
+                                      {format(day, "d")}
+                                    </span>
+                                  </div>
+
+                                  <div
+                                    className="flex-1 space-y-[1px] overflow-hidden"
+                                    style={{
+                                      paddingLeft: CALENDAR_CELL_HORIZONTAL_PADDING,
+                                      paddingRight: CALENDAR_CELL_HORIZONTAL_PADDING,
+                                      paddingTop:
+                                        occupiedPeriodRows > 0
+                                          ? occupiedPeriodRows *
+                                              (CALENDAR_SEGMENT_ROW_HEIGHT +
+                                                CALENDAR_SEGMENT_ROW_GAP) +
+                                            CALENDAR_SEGMENT_STACK_CLEARANCE
+                                          : 0,
+                                    }}
                                   >
-                                    {format(day, "d")}
-                                  </span>
+                                    {visibleDayEvents.map((event) => {
+                                      if (event.isAllDay) {
+                                        return (
+                                          <div
+                                            key={event.id}
+                                            className="flex h-[16px] items-center overflow-hidden rounded-[3px] pr-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.22)]"
+                                            style={{
+                                              backgroundColor: hexToRgba(
+                                                event.color,
+                                                0.26,
+                                              ),
+                                            }}
+                                          >
+                                            <span
+                                              className="h-full w-1 shrink-0 rounded-[2px]"
+                                              style={{
+                                                backgroundColor: event.color,
+                                              }}
+                                            />
+                                            <span
+                                              className="truncate pl-1 font-poppins text-[13px] leading-none font-semibold"
+                                              style={{ color: event.color }}
+                                            >
+                                              {event.title}
+                                            </span>
+                                          </div>
+                                        );
+                                      }
+
+                                      return (
+                                        <div
+                                          key={event.id}
+                                          className="flex h-[16px] items-center overflow-hidden rounded-[3px] bg-white/70 pr-1"
+                                        >
+                                          <span
+                                            className="h-full w-1 shrink-0 rounded-[2px]"
+                                            style={{
+                                              backgroundColor: event.color,
+                                            }}
+                                          />
+                                          <span className="truncate pl-1 font-poppins text-[13px] leading-none font-medium text-[#53565C]">
+                                            {event.title}
+                                          </span>
+                                        </div>
+                                      );
+                                    })}
+                                    {hiddenDayEventsCount > 0 ? (
+                                      <button
+                                        type="button"
+                                        className="pointer-events-auto block h-[12px] pl-1 text-left font-poppins text-[12px] leading-none font-medium text-[#55585F]"
+                                        onClick={(clickEvent) => {
+                                          clickEvent.preventDefault();
+                                          clickEvent.stopPropagation();
+                                          openDayEventsPanel(day);
+                                        }}
+                                      >
+                                        +{hiddenDayEventsCount}
+                                      </button>
+                                    ) : null}
+                                  </div>
+
+                                  {isExpandedDay ? (
+                                    <div
+                                      className="pointer-events-auto absolute inset-x-1 top-9 bottom-1 z-20 overflow-hidden rounded-[18px] border border-[#D3DAE8] bg-[#F6F8FC] shadow-[0_14px_28px_rgba(20,23,31,0.16)]"
+                                      onClick={(clickEvent) => {
+                                        clickEvent.preventDefault();
+                                        clickEvent.stopPropagation();
+                                      }}
+                                    >
+                                      <div className="flex items-center justify-between border-b border-[#DCE2EC] px-2 py-1.5">
+                                        <p className="font-poppins text-[16px] leading-none font-semibold text-[#3C4452]">
+                                          {format(day, "dd MMM")}
+                                        </p>
+                                        <button
+                                          type="button"
+                                          className="inline-flex size-6 items-center justify-center rounded-full text-[#7A8396] hover:bg-[#E8EDF5]"
+                                          onClick={(clickEvent) => {
+                                            clickEvent.preventDefault();
+                                            clickEvent.stopPropagation();
+                                            setExpandedDayKey(null);
+                                          }}
+                                          aria-label="Close day events"
+                                        >
+                                          <X className="size-4" />
+                                        </button>
+                                      </div>
+                                      <div
+                                        className="drag-scrollbar-hidden h-[calc(100%-38px)] overflow-y-auto px-1.5 py-1.5"
+                                        onClick={(clickEvent) => {
+                                          clickEvent.preventDefault();
+                                          clickEvent.stopPropagation();
+                                        }}
+                                        onWheel={handleDayEventsWheel}
+                                      >
+                                        <div className="space-y-1">
+                                          {dayEvents.map((event) => {
+                                            const sameDayRange = isSameDay(
+                                              event.start,
+                                              event.end,
+                                            );
+                                            const timeLabel = event.isAllDay
+                                              ? "All day"
+                                              : formatTimeRangeByPreference(
+                                                  event.startAt,
+                                                  event.endAt,
+                                                  preferences.use24Hour,
+                                                );
+
+                                            return (
+                                              <button
+                                                key={`${dayKey}-${event.id}`}
+                                                type="button"
+                                                className="flex w-full items-center gap-1.5 rounded-[8px] bg-white/88 px-1.5 py-1 text-left"
+                                                onClick={(clickEvent) => {
+                                                  clickEvent.preventDefault();
+                                                  clickEvent.stopPropagation();
+                                                  handleOpenEventDetails(event.id);
+                                                }}
+                                              >
+                                                <span
+                                                  className="h-8 w-1 shrink-0 rounded-full"
+                                                  style={{ backgroundColor: event.color }}
+                                                />
+                                                <span className="min-w-0 flex-1">
+                                                  <span className="block truncate font-poppins text-[14px] leading-none font-semibold text-[#505864]">
+                                                    {event.title}
+                                                  </span>
+                                                  <span className="mt-1 block truncate font-poppins text-[12px] leading-none text-[#7B8495]">
+                                                    {sameDayRange
+                                                      ? timeLabel
+                                                      : format(
+                                                          event.endAt,
+                                                          "dd MMM",
+                                                        )}
+                                                  </span>
+                                                </span>
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : null}
                                 </button>
                               );
                             })}
 
-                            <div className="pointer-events-none absolute inset-x-0 top-14">
+                            <div
+                              className="pointer-events-none absolute inset-x-0"
+                              style={{
+                                top: CALENDAR_SEGMENT_TOP_OFFSET,
+                                paddingLeft: CALENDAR_CELL_HORIZONTAL_PADDING,
+                                paddingRight: CALENDAR_CELL_HORIZONTAL_PADDING,
+                              }}
+                            >
                               <div
-                                className={`grid grid-cols-7 auto-rows-[20px] ${
-                                  shouldScrollSegments
-                                    ? "pointer-events-auto max-h-[80px] overflow-y-auto"
-                                    : ""
-                                }`}
+                                className="grid grid-cols-7 auto-rows-[18px] gap-y-[2px]"
                               >
-                                {weekInfo.segments.map((segment) => (
+                                {weekInfo.segments
+                                  .filter((segment) => segment.lane < visiblePeriodRows)
+                                  .map((segment) => (
                                   <div
                                     key={segment.id}
                                     style={{
                                       gridColumn: `${segment.startCol} / ${segment.endCol + 1}`,
                                       gridRow: segment.lane + 1,
-                                      backgroundColor: segment.color,
-                                      color: "#FFFFFF",
+                                      backgroundColor: hexToRgba(segment.color, 0.24),
                                     }}
-                                    className="flex h-[18px] items-center overflow-hidden rounded-[1px]"
+                                    className="flex h-[18px] items-center overflow-hidden rounded-[3px] pr-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]"
                                   >
+                                    <span
+                                      className="h-full w-1 shrink-0 rounded-[2px]"
+                                      style={{ backgroundColor: segment.color }}
+                                    />
                                     {segment.isStart ? (
-                                      <span className="truncate px-1 font-poppins text-[14px] leading-[120%] font-medium text-white">
+                                      <span className="truncate px-1 font-poppins text-[14px] leading-none font-semibold text-[#6A590F]">
                                         {segment.title}
                                       </span>
                                     ) : null}
@@ -1122,6 +1451,7 @@ export default function HomePage() {
                 </div>
               ) : null}
             </AnimatePresence>
+
           </>
         )}
       </section>
@@ -1247,7 +1577,7 @@ export default function HomePage() {
                     startValue={eventStartTime}
                     endValue={eventEndTime}
                     use24Hour={preferences.use24Hour}
-                    collapseSingleValue={isSingleDayEvent}
+                    collapseSingleValue={false}
                     onClick={() => setEventTimePopupOpen(true)}
                     disabled={!hasEventDateRange}
                     className="max-w-full"
@@ -1274,7 +1604,7 @@ export default function HomePage() {
                 setNewEventBrick(brickId);
                 setPreferredCreateEventBrickId(brickId);
               }}
-              badgeClassName="!text-[14px]"
+              badgeClassName="!text-[22px]"
             />
           </div>
           <DialogFooter>
@@ -1303,7 +1633,7 @@ export default function HomePage() {
         onOpenChange={setEventTimePopupOpen}
         startTime={eventStartTime}
         endTime={eventEndTime}
-        selectionMode={isSingleDayEvent ? "single" : "range"}
+        selectionMode="range"
         onApply={({ startTime, endTime, rollsEndToNextDay }) => {
           setEventStartTime(startTime);
           setEventEndTime(endTime);

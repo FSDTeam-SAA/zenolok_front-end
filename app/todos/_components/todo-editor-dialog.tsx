@@ -131,7 +131,7 @@ export function TodoEditorDialog({
                   }
                 }}
                 placeholder="New todo"
-                className="h-11 border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] !text-[18px] leading-[120%] text-[var(--ui-input-text)] placeholder:text-[var(--ui-input-placeholder)]"
+                className="h-11 border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] !text-[24px] leading-[120%] text-[var(--ui-input-text)] placeholder:text-[var(--ui-input-placeholder)]"
               />
             </div>
 

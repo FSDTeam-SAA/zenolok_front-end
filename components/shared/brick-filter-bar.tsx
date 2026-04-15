@@ -138,7 +138,7 @@ export function BrickFilterBar({
           >
             <Badge
               variant="neutral"
-              className="rounded-full px-4 py-1 !text-[16px] shadow-sm transition"
+              className="rounded-full px-4 py-1 !text-[22px] shadow-sm transition"
               style={
                 isAllSelected
                   ? {
@@ -175,7 +175,7 @@ export function BrickFilterBar({
               >
                 <Badge
                   variant="neutral"
-                  className="rounded-full px-4 py-1 !text-[16px] shadow-sm transition"
+                  className="rounded-full px-4 py-1 !text-[22px] !font-semibold shadow-sm transition"
                   style={
                     active
                       ? {

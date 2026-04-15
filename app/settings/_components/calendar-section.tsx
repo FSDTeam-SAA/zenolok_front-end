@@ -25,7 +25,7 @@ export function CalendarSection({
           <Button
             type="button"
             variant="outline"
-            className="font-poppins h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
+            className="font-poppins h-11 rounded-xl px-5 !text-[28px] leading-[120%] font-medium"
             onClick={onManageWeekStartDay}
           >
             Manage Week Start Day
@@ -33,7 +33,7 @@ export function CalendarSection({
           <Button
             type="button"
             variant="outline"
-            className="font-poppins h-11 rounded-xl px-5 text-[20px] leading-[120%] font-medium"
+            className="font-poppins h-11 rounded-xl px-5 !text-[28px] leading-[120%] font-medium"
             onClick={onCalendarSync}
             disabled={isCalendarSyncing}
           >

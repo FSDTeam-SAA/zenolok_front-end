@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Dongle, Poppins } from "next/font/google";
+import { Dongle } from "next/font/google";
 import Script from "next/script";
 
 import "./globals.css";
@@ -10,12 +10,6 @@ const dongle = Dongle({
   subsets: ["latin"],
   variable: "--font-dongle",
   weight: ["300", "400", "700"],
-});
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  variable: "--font-poppins",
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -35,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${dongle.variable} ${poppins.variable}`}>
+      <body className={dongle.variable}>
         <Script id="theme-init" strategy="beforeInteractive">
           {`(() => {
             try {

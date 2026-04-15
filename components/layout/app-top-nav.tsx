@@ -522,7 +522,7 @@ export function AppTopNav() {
               >
                 <Bell className="size-5" />
                 {unreadCount ? (
-                  <span className="absolute top-1 right-1 inline-flex min-w-4 items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[10px] leading-none text-white">
+                  <span className="absolute top-[-8px] right-0 inline-flex min-w-4 items-center justify-center rounded-full bg-[#FF3B30] px-1.5 text-[10px] leading-none text-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 ) : null}
@@ -552,7 +552,7 @@ export function AppTopNav() {
                   >
                     {tab.label}
                     {unreadByTab[tab.key] ? (
-                      <span className="absolute -top-2 -right-3 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-medium leading-none text-white">
+                      <span className="absolute -top-3 -right-5 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-medium leading-none text-white">
                         {unreadByTab[tab.key] > 99 ? "99+" : unreadByTab[tab.key]}
                       </span>
                     ) : null}

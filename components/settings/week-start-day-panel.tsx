@@ -30,14 +30,14 @@ export function WeekStartDayPanel({
           >
             <div className="flex items-center gap-3 sm:gap-4">
               <span
-                className={`settings-week-letter font-poppins flex size-10 items-center justify-center rounded-xl !text-[16px] leading-[120%] font-medium sm:size-14 sm:rounded-2xl sm:text-[34px] ${
+                className={`settings-week-letter font-poppins flex size-10 items-center justify-center rounded-xl !text-[24px] leading-[120%] font-medium sm:size-14 sm:rounded-2xl sm:text-[34px] ${
                   active ? "bg-[#D8E9FF] text-[#2A76DF]" : "bg-[#EFF1F5] text-[#2B303A]"
                 }`}
               >
                 {day.letter}
               </span>
               <span
-                className={`settings-week-label font-poppins !text-[16px] leading-[120%] sm:text-[30px] ${
+                className={`settings-week-label font-poppins !text-[24px] leading-[120%] sm:text-[30px] ${
                   active ? "font-semibold text-[#2A76DF]" : "font-medium text-[#2E3340]"
                 }`}
               >

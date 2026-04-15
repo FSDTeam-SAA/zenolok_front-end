@@ -576,20 +576,6 @@ export default function EventDetailsPage() {
       message.messageType === "link" || isLinkText(message.text || ""),
   );
   const jamPreviewMessages = messages.slice(-2);
-  const startDate = new Date(event.startTime);
-  const endDate = new Date(event.endTime);
-  const hasValidSchedule =
-    !Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime());
-  const eventStartDateValue = hasValidSchedule
-    ? format(startDate, "yyyy-MM-dd")
-    : "";
-  const eventEndDateValue = hasValidSchedule
-    ? format(endDate, "yyyy-MM-dd")
-    : "";
-  const eventStartTimeValue = hasValidSchedule
-    ? format(startDate, "HH:mm")
-    : "";
-  const eventEndTimeValue = hasValidSchedule ? format(endDate, "HH:mm") : "";
   const allUsers = usersQuery.data?.users || [];
   const isEventOwner = viewerId === event.createdBy;
 
@@ -846,7 +832,7 @@ export default function EventDetailsPage() {
               bricks={bricks}
               selectedBrickId={editBrickId}
               onSelectBrick={setEditBrickId}
-              badgeClassName="!text-[16px]"
+              badgeClassName="!text-[22px]"
             />
           </div>
           <DialogFooter>
@@ -904,10 +890,6 @@ export default function EventDetailsPage() {
         <EventSummaryCard
           event={event}
           participants={participants}
-          eventStartDateValue={eventStartDateValue}
-          eventEndDateValue={eventEndDateValue}
-          eventStartTimeValue={eventStartTimeValue}
-          eventEndTimeValue={eventEndTimeValue}
           use24Hour={preferences.use24Hour}
           shareDialogOpen={shareDialogOpen}
           onShareDialogOpenChange={setShareDialogOpen}

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowUpDown,
   Bell,
   CalendarDays,
   Clock3,
@@ -77,7 +76,6 @@ type EventMetaRangeProps = {
   startValue: string;
   endLabel?: string | null;
   endValue?: string | null;
-  showArrowMarkers?: boolean;
   labelPosition?: "above" | "below" | "hidden";
 };
 
@@ -87,65 +85,75 @@ function EventMetaRange({
   startValue,
   endLabel,
   endValue,
-  showArrowMarkers = true,
   labelPosition = "above",
 }: EventMetaRangeProps) {
+  const normalizedStartValue = startValue.trim();
+  const normalizedEndValue = endValue?.trim() || "";
   const showEnd = Boolean(
-    endValue &&
+    normalizedEndValue &&
     (labelPosition === "hidden"
-      ? endValue !== startValue
-      : endLabel && (endLabel !== startLabel || endValue !== startValue)),
+      ? normalizedEndValue !== normalizedStartValue
+      : normalizedEndValue !== normalizedStartValue ||
+        (endLabel || "") !== (startLabel || "")),
   );
-  const hasStartLabel = labelPosition !== "hidden" && Boolean(startLabel);
-  const hasEndLabel = labelPosition !== "hidden" && Boolean(endLabel);
+  const isInlineRow = labelPosition === "hidden";
 
-  const renderRangeValue = (
-    value: string,
-    label?: string | null,
-    showMarker?: boolean,
-  ) => (
-    <div className="flex min-w-0 flex-col">
+  const renderRangeValue = (value: string, label?: string | null) => (
+    <div
+      className={`min-w-0 ${
+        isInlineRow ? "flex items-center gap-2" : "flex flex-col"
+      }`}
+    >
       {labelPosition === "above" && label ? (
         <p className="font-poppins text-[12px] leading-none font-medium tracking-[0.01em] text-[#8E97A7]">
           {label}
         </p>
       ) : null}
-      <p className="font-poppins mt-0.5 text-[15px] leading-[120%] font-semibold text-[#4D5463] sm:text-[16px]">
+      <p
+        className={`font-poppins text-[15px] font-semibold text-[#4D5463] sm:text-[16px] ${
+          isInlineRow ? "leading-none" : "mt-0.5 leading-[120%]"
+        }`}
+      >
         {value}
       </p>
       {labelPosition === "below" && label ? (
-        <div className="mt-0.5 flex items-center gap-1 text-[#A1A9B8]">
+        <div className="mt-1 flex items-center text-[#A1A9B8]">
           <span className="font-poppins text-[11px] leading-none font-medium tracking-[0.14em]">
             {label}
           </span>
-          {showMarker ? <ArrowUpDown className="size-3" /> : null}
         </div>
-      ) : showMarker ? (
-        <span className="mt-0.5 inline-flex text-[#A1A9B8]">
-          <ArrowUpDown className="size-3" />
-        </span>
       ) : null}
     </div>
   );
 
   return (
-    <div className="flex min-w-0 items-start gap-2.5 text-[#4D5463]">
-      <Icon className="mt-0.5 size-[18px] shrink-0 text-[#9CA5B5]" />
-      <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-1.5">
+    <div
+      className={`flex min-w-0 gap-3 text-[#4D5463] ${
+        isInlineRow ? "items-center" : "items-start"
+      }`}
+    >
+      <Icon
+        className={`size-[18px] shrink-0 text-[#9CA5B5] ${
+          isInlineRow ? "" : "mt-0.5"
+        }`}
+      />
+      <div
+        className={`flex min-w-0 flex-wrap gap-x-3 gap-y-1 ${
+          isInlineRow ? "items-center" : "items-start"
+        }`}
+      >
         {renderRangeValue(
-          startValue,
-          hasStartLabel ? startLabel : undefined,
-          Boolean(showEnd && showArrowMarkers),
+          normalizedStartValue,
+          labelPosition === "hidden" ? undefined : startLabel,
         )}
         {showEnd ? (
           <>
-            <span className="pt-0.5 text-[20px] leading-none text-[#A4ACBB]">
+            <span className="self-center text-[18px] leading-none text-[#A4ACBB]">
               -
             </span>
             {renderRangeValue(
-              endValue || "",
-              hasEndLabel ? endLabel : undefined,
-              Boolean(showArrowMarkers),
+              normalizedEndValue,
+              labelPosition === "hidden" ? undefined : endLabel,
             )}
           </>
         ) : null}
@@ -172,7 +180,7 @@ function EventStatusIcon({
   onClick,
 }: EventStatusIconProps) {
   const className =
-    "relative inline-flex size-8 items-center justify-center rounded-full text-[#C5CCD8] transition hover:bg-white/75 " +
+    "relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-[#C5CCD8] transition hover:bg-white/75 " +
     (active ? "text-[#A5AFBF]" : "text-[#CBD2DD]");
 
   if (asButton) {
@@ -183,9 +191,9 @@ function EventStatusIcon({
         aria-label={label}
         onClick={onClick}
       >
-        <Icon className="size-[18px]" />
+        <Icon className="size-[22px]" />
         {badgeCount > 0 ? (
-          <span className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 py-[1px] text-[11px] font-semibold leading-none text-white">
+          <span className="absolute -right-1 -top-1 inline-flex min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 text-[16px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
             {badgeCount}
           </span>
         ) : null}
@@ -195,9 +203,9 @@ function EventStatusIcon({
 
   return (
     <span className={className} aria-hidden="true">
-      <Icon className="size-[18px]" />
+      <Icon className="size-[22px]" />
       {badgeCount > 0 ? (
-        <span className="absolute -top-1 -right-1 inline-flex min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 py-[1px] text-[11px] font-semibold leading-none text-white">
+        <span className="absolute -right-1 -top-1 inline-flex min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 text-[16px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
           {badgeCount}
         </span>
       ) : null}
@@ -653,6 +661,10 @@ export default function EventsPage() {
                   : hasValidRange
                     ? formatTimeByPreference(endDate, preferences.use24Hour)
                     : undefined;
+                const showDateRange =
+                  Boolean(endDateLabel) &&
+                  (endDateLabel !== startDateLabel ||
+                    endDayLabel !== startDayLabel);
 
                 return (
                   <motion.div
@@ -664,7 +676,7 @@ export default function EventsPage() {
                     <Card
                       role="link"
                       tabIndex={0}
-                      className="events-list-card cursor-pointer rounded-[26px] border border-[#D9DEE9] bg-[#EEF2F7] px-4 py-4 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF]"
+                      className="events-list-card cursor-pointer rounded-[26px] border border-[#D9DEE9] bg-[#EEF2F7] px-5 py-5 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF] sm:px-6"
                       onClick={() => openEventDetails(event._id)}
                       onKeyDown={(keyboardEvent) => {
                         if (
@@ -678,51 +690,45 @@ export default function EventsPage() {
                         openEventDetails(event._id);
                       }}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="flex items-center pt-1">
+                      <div className="flex items-start gap-4">
+                        <div className="flex shrink-0 pt-1.5">
                           <span
-                            className="h-8 w-1.5 rounded-full"
+                            className="h-7 w-1 rounded-full"
                             style={{
                               backgroundColor: event.brick?.color || "#F7C700",
                             }}
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                             <div className="min-w-0 flex-1">
                               <p className="font-poppins truncate text-[22px] leading-[120%] font-semibold text-[#454B57] sm:text-[23px]">
                                 {event.title}
                               </p>
-                              <div className="mt-3 flex flex-col gap-2.5 xl:flex-row xl:items-start xl:justify-between">
-                                <div className="min-w-0 space-y-2.5">
-                                  <div className="flex flex-col gap-2.5 lg:flex-row lg:flex-wrap lg:items-start lg:gap-x-6">
-                                    <EventMetaRange
-                                      icon={CalendarDays}
-                                      startLabel={startDayLabel}
-                                      startValue={startDateLabel}
-                                      endLabel={endDayLabel}
-                                      endValue={endDateLabel}
-                                      showArrowMarkers={!event.isAllDay}
-                                      labelPosition="below"
-                                    />
-                                  </div>
-                                  <EventMetaRange
-                                    icon={Clock3}
-                                    startValue={startTimeLabel}
-                                    endValue={endTimeLabel}
-                                    showArrowMarkers={false}
-                                    labelPosition="hidden"
-                                  />
-                                  <span className="font-poppins inline-flex min-w-0 items-center gap-2 text-[15px] leading-[120%] font-medium text-[#666E7D] sm:text-[16px]">
-                                    <MapPin className="size-[18px] shrink-0 text-[#A0A8B8]" />
-                                    <span className="truncate">
-                                      {event.location || "No location"}
-                                    </span>
-                                  </span>
+                              <div className="mt-3 min-w-0 space-y-2.5">
+                                <EventMetaRange
+                                  icon={CalendarDays}
+                                  startLabel={startDayLabel}
+                                  startValue={startDateLabel}
+                                  endLabel={showDateRange ? endDayLabel : undefined}
+                                  endValue={showDateRange ? endDateLabel : undefined}
+                                  labelPosition="below"
+                                />
+                                <EventMetaRange
+                                  icon={Clock3}
+                                  startValue={startTimeLabel}
+                                  endValue={endTimeLabel}
+                                  labelPosition="hidden"
+                                />
+                                <div className="flex min-w-0 items-center gap-3 text-[#666E7D]">
+                                  <MapPin className="size-[18px] shrink-0 text-[#A0A8B8]" />
+                                  <p className="font-poppins min-w-0 break-words text-[15px] leading-[120%] font-medium text-[#666E7D] sm:text-[16px]">
+                                    {event.location || "No location"}
+                                  </p>
                                 </div>
                               </div>
                             </div>
-                            <div className="flex items-center justify-end gap-0.5 lg:pt-9">
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-1.5 lg:justify-start lg:pt-0.5">
                               <EventStatusIcon
                                 icon={MessageCircle}
                                 label={`Open messages for ${event.title}`}
@@ -921,7 +927,7 @@ export default function EventsPage() {
                 setNewEventBrick(brickId);
                 setPreferredCreateEventBrickId(brickId);
               }}
-              badgeClassName="!text-[14px]"
+              badgeClassName="!text-[22px]"
             />
           </div>
           <DialogFooter>

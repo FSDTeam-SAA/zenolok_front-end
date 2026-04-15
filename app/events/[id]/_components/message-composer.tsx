@@ -40,7 +40,7 @@ export function MessageComposer({
           onChange={(event) => onMessageChange(event.target.value)}
           placeholder="Type here..."
           rows={1}
-          className="min-h-8 max-h-28 w-full resize-none overflow-y-auto rounded border-none bg-transparent px-0 text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--text-muted)] focus:outline-none"
+          className="min-h-8 max-h-28 w-full resize-none overflow-y-auto rounded border-none bg-transparent px-0 text-[16px] text-[var(--text-default)] placeholder:text-[24px] pt-2 placeholder:text-[var(--text-muted)] focus:outline-none"
         />
         <button
           type="button"
