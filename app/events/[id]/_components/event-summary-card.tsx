@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarDays, Clock3, MapPin, RefreshCw } from "lucide-react";
+import { Bell, CalendarDays, Clock3, Locate, MapPin, RefreshCw } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 
 import type { EventData, UserProfile } from "@/lib/api";
@@ -241,15 +241,9 @@ export function EventSummaryCard({
               />
             </div>
 
-<<<<<<< HEAD
             <div className="space-y-3 lg:min-w-[220px]">
               <div className="flex items-center gap-2 lg:justify-end">
                 <div className="flex items-center gap-2 lg:justify-end">
-=======
-            <div className="space-y-2">
-              <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:min-w-[220px] xl:flex-col xl:items-end xl:justify-start">
-                <div className="flex items-center gap-2 xl:justify-end">
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                   <button
                     type="button"
                     className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"

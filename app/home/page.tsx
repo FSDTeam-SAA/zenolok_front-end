@@ -444,7 +444,6 @@ export default function HomePage() {
           icon: event.brick?.icon,
           isAllDay: event.isAllDay,
           todos: (event.todos || [])
-<<<<<<< HEAD
             .filter((todo) => {
               if (!currentUserId) {
                 return true;
@@ -455,9 +454,6 @@ export default function HomePage() {
                 Boolean(todo.participants?.includes(currentUserId))
               );
             })
-=======
-            .filter((todo) => todo.createdBy === currentUserId)
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
             .map((todo) => ({
               id: todo._id,
               text: todo.text,
@@ -766,7 +762,6 @@ export default function HomePage() {
         </button>
       </div>
 
-<<<<<<< HEAD
       <div className="drag-scrollbar-hidden min-h-0 flex-1 overflow-y-auto pr-1">
         {selectedDateEvents.length ? (
           <div className="space-y-2">
@@ -796,39 +791,6 @@ export default function HomePage() {
                 event.endAt,
                 preferences.use24Hour,
               );
-=======
-      {selectedDateEvents.length ? (
-        <div className="space-y-2">
-          {selectedDateEvents.map((event) => {
-            const hasTodos = event.todos.length > 0;
-            const expanded = hasTodos && expandedEventId === event.id;
-            const sameDayRange = isSameDay(event.start, event.end);
-            const eventStartDateLabel = format(
-              event.startAt,
-              "dd MMM yyyy",
-            ).toUpperCase();
-            const eventEndDateLabel = sameDayRange
-              ? undefined
-              : format(event.endAt, "dd MMM yyyy").toUpperCase();
-            const eventStartDayLabel = format(event.startAt, "EEE").toUpperCase();
-            const eventEndDayLabel = sameDayRange
-              ? undefined
-              : format(event.endAt, "EEE").toUpperCase();
-            const eventStartTimeLabel = event.isAllDay
-              ? "All day"
-              : formatTimeRangeByPreference(
-                  event.startAt,
-                  event.startAt,
-                  preferences.use24Hour,
-                );
-            const eventEndTimeLabel = event.isAllDay
-              ? undefined
-              : formatTimeRangeByPreference(
-                  event.endAt,
-                  event.endAt,
-                  preferences.use24Hour,
-                );
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
 
               return (
                 <div
@@ -1001,7 +963,6 @@ export default function HomePage() {
                     </div>
                   </div>
 
-<<<<<<< HEAD
                   {expanded ? (
                     <div className="mt-3">
                       <div className="mx-auto mb-3 h-px w-[68%] bg-[#D6D8DC]" />
@@ -1028,83 +989,6 @@ export default function HomePage() {
         )}
       </div>
     </div>
-=======
-                  <div className="flex shrink-0 items-center gap-1 text-[#A2A9B7]">
-                    {event.spansMultipleDays ? (
-                      <RefreshCw className="size-4" />
-                    ) : null}
-                    <Bell className="size-4" />
-                    {hasTodos ? (
-                      <button
-                        type="button"
-                        className="inline-flex items-center justify-center"
-                        aria-label={
-                          expanded
-                            ? "Collapse event todos"
-                            : "Expand event todos"
-                        }
-                        onClick={(clickEvent) => {
-                          clickEvent.stopPropagation();
-                          setExpandedEventId((prev) =>
-                            prev === event.id ? null : event.id,
-                          );
-                        }}
-                      >
-                        {expanded ? (
-                          <ChevronUp className="size-4" />
-                        ) : (
-                          <ChevronDown className="size-4" />
-                        )}
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="mt-1 space-y-1.5">
-                  <HomeSidebarMetaRange
-                    icon={CalendarDays}
-                    startValue={eventStartDateLabel}
-                    endValue={eventEndDateLabel}
-                    startCaption={eventStartDayLabel}
-                    endCaption={eventEndDayLabel}
-                    showArrowMarkers={!event.isAllDay && !sameDayRange}
-                  />
-                  <HomeSidebarMetaRange
-                    icon={Clock3}
-                    startValue={eventStartTimeLabel}
-                    endValue={eventEndTimeLabel}
-                    emphasize
-                  />
-                </div>
-
-                <p className="font-poppins mt-1 flex items-center gap-1 text-[12px] leading-[120%] text-[#7A8396]">
-                  <MapPin className="size-3.5" />
-                  {event.location}
-                </p>
-
-                {expanded ? (
-                  <div className="ml-8 mt-2 space-y-2">
-                    {event.todos.map((todo) => (
-                      <HomeEventTodoRow
-                        key={todo.id}
-                        text={todo.text}
-                        completed={todo.isCompleted}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ) : (
-        <EmptyState
-          title="No events"
-          description="No events on selected day."
-        />
-      )}
-    </>
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
   );
 
   const openDayEventsPanel = React.useCallback(
@@ -1156,11 +1040,7 @@ export default function HomePage() {
         ) : (
           <>
             <div className="home-calendar-layout grid !gap-4 xl:grid-cols-[272px_minmax(0,1fr)]">
-<<<<<<< HEAD
               <aside className="home-events-sidebar hidden h-[720px] min-h-0 rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:flex xl:flex-col">
-=======
-              <aside className="home-events-sidebar hidden rounded-[24px] border border-[#D8DEEA] bg-[#ECEFF4] p-3 xl:block">
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                 {eventsSidebarContent}
               </aside>
 
@@ -1229,7 +1109,6 @@ export default function HomePage() {
                               const isSunday = day.getDay() === 0;
                               const isLastDayOfWeek =
                                 dayIndex === week.length - 1;
-<<<<<<< HEAD
                               const dayKey = format(day, "yyyy-MM-dd");
                               const dayEvents =
                                 singleDayEventsByDate.get(dayKey) ?? [];
@@ -1252,8 +1131,6 @@ export default function HomePage() {
                                 dayEvents.length - visibleDayEvents.length,
                               );
                               const isExpandedDay = expandedDayKey === dayKey;
-=======
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                               return (
                                 <button
                                   key={format(day, "yyyy-MM-dd")}
@@ -1304,11 +1181,7 @@ export default function HomePage() {
                                     skipRangeSyncRef.current = true;
                                     setSelectedDate(normalized);
                                   }}
-<<<<<<< HEAD
                                   className={`home-day-cell relative flex h-[136px] select-none flex-col items-stretch pt-2 text-left ${
-=======
-                                  className={`home-day-cell relative flex h-[136px] select-none items-start justify-center px-2 pt-3 pb-2 text-center ${
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                                     isLastDayOfWeek
                                       ? "border-r-0"
                                       : "border-r border-[var(--border)]"
@@ -1495,7 +1368,6 @@ export default function HomePage() {
                               );
                             })}
 
-<<<<<<< HEAD
                             <div
                               className="pointer-events-none absolute inset-x-0"
                               style={{
@@ -1506,15 +1378,6 @@ export default function HomePage() {
                             >
                               <div
                                 className="grid grid-cols-7 auto-rows-[18px] gap-y-[2px]"
-=======
-                            <div className="pointer-events-none absolute inset-x-0 top-14">
-                              <div
-                                className={`grid grid-cols-7 auto-rows-[20px] ${
-                                  shouldScrollSegments
-                                    ? "pointer-events-auto max-h-[80px] overflow-y-auto"
-                                    : ""
-                                }`}
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                               >
                                 {weekInfo.segments
                                   .filter((segment) => segment.lane < visiblePeriodRows)
@@ -1526,11 +1389,7 @@ export default function HomePage() {
                                       gridRow: segment.lane + 1,
                                       backgroundColor: hexToRgba(segment.color, 0.24),
                                     }}
-<<<<<<< HEAD
                                     className="flex h-[18px] items-center overflow-hidden rounded-[3px] pr-1 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]"
-=======
-                                    className="flex h-[18px] items-center overflow-hidden rounded-[1px]"
->>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                                   >
                                     <span
                                       className="h-full w-1 shrink-0 rounded-[2px]"
