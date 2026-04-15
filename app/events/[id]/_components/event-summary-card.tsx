@@ -241,9 +241,15 @@ export function EventSummaryCard({
               />
             </div>
 
+<<<<<<< HEAD
             <div className="space-y-3 lg:min-w-[220px]">
               <div className="flex items-center gap-2 lg:justify-end">
                 <div className="flex items-center gap-2 lg:justify-end">
+=======
+            <div className="space-y-2">
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between xl:min-w-[220px] xl:flex-col xl:items-end xl:justify-start">
+                <div className="flex items-center gap-2 xl:justify-end">
+>>>>>>> 5046e637bed5dfe7fef411fa35a0eb012c8b59bd
                   <button
                     type="button"
                     className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
@@ -266,6 +272,14 @@ export function EventSummaryCard({
               <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3">
                 <p className="flex items-center gap-2 text-[14px] text-[var(--text-default)]">
                   <MapPin className="size-4 shrink-0 text-[var(--text-muted)]" />
+                  <span className="truncate">
+                    {event.location || "No location"}
+                  </span>
+                </p>
+              </div>
+              <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3">
+                <p className="flex items-center gap-2 text-[14px] text-[var(--text-default)]">
+                  <Locate className="size-4 shrink-0 text-[var(--text-muted)]" />
                   <span className="truncate">
                     {event.location || "No location"}
                   </span>
