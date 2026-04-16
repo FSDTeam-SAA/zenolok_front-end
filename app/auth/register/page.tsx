@@ -95,7 +95,7 @@ export default function RegisterPage() {
                   <Input
                     placeholder="Email"
                     {...form.register("email")}
-                    className="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent pr-12 font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                    className="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent pr-12 font-poppins !text-[24px] text-[var(--text-default)] placeholder:text-[24px] placeholder:text-[var(--ui-input-placeholder)]"
                   />
                   <Mail className="absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[var(--ui-input-placeholder)]" />
                   {form.formState.errors.email ? (
@@ -110,7 +110,7 @@ export default function RegisterPage() {
                     placeholder="Password"
                     {...form.register("password")}
                     className="h-[56px] rounded-[4px]"
-                    inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                    inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins !text-[24px] text-[var(--text-default)] placeholder:text-[24px] placeholder:text-[var(--ui-input-placeholder)]"
                   />
                   {form.formState.errors.password ? (
                     <p className="mt-1 text-xs text-red-500">
@@ -124,7 +124,7 @@ export default function RegisterPage() {
                     placeholder="Confirm Password"
                     {...form.register("confirmPassword")}
                     className="h-[56px] rounded-[4px]"
-                    inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                    inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins !text-[24px] text-[var(--text-default)] placeholder:text-[24px] placeholder:text-[var(--ui-input-placeholder)]"
                   />
                   {form.formState.errors.confirmPassword ? (
                     <p className="mt-1 text-xs text-red-500">

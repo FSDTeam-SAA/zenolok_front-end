@@ -59,7 +59,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { brickApi, eventApi, type EventData } from "@/lib/api";
+import { brickApi, eventApi, notificationApi, type EventData } from "@/lib/api";
+import {
+  isMessageNotification,
+  notificationMatchesEvent,
+} from "@/lib/notifications";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
@@ -171,7 +175,7 @@ function HomeSidebarActionIcon({
   onClick,
 }: HomeSidebarActionIconProps) {
   const badge = badgeCount > 0 ? (
-    <span className="absolute -top-2 -right-1 inline-flex min-h-[16px] min-w-[18px] items-center justify-center rounded-full bg-[#FF4D42] px-1 text-[10px] font-semibold leading-none text-white">
+    <span className="absolute -top-3 -right-1 inline-flex min-h-[12px] min-w-[14px] items-center justify-center rounded-full bg-[#FF4D42] px-1 !text-[16px] font-semibold leading-none text-white">
       {badgeCount}
     </span>
   ) : null;
@@ -383,6 +387,12 @@ export default function HomePage() {
         endDate: calendarEndParam,
       }),
   });
+  const notificationsQuery = useQuery({
+    queryKey: queryKeys.notifications,
+    queryFn: notificationApi.getAll,
+    enabled: Boolean(session),
+    staleTime: 30_000,
+  });
   const bricks = React.useMemo(
     () => bricksQuery.data ?? [],
     [bricksQuery.data],
@@ -481,6 +491,36 @@ export default function HomePage() {
       ),
     );
   }, [effectiveSelectedBrickIds, normalizedEvents, allBricksSelected]);
+  const unreadMessageCountByEventId = React.useMemo(() => {
+    const unreadMessageNotifications = (
+      notificationsQuery.data?.items ?? []
+    ).filter(
+      (notification) =>
+        !notification.read && isMessageNotification(notification),
+    );
+
+    return filteredEvents.reduce<Record<string, number>>((accumulator, event) => {
+      accumulator[event.id] = unreadMessageNotifications.filter((notification) =>
+        notificationMatchesEvent(notification, event),
+      ).length;
+      return accumulator;
+    }, {});
+  }, [filteredEvents, notificationsQuery.data?.items]);
+  const unreadAlertCountByEventId = React.useMemo(() => {
+    const unreadAlertNotifications = (
+      notificationsQuery.data?.items ?? []
+    ).filter(
+      (notification) =>
+        !notification.read && !isMessageNotification(notification),
+    );
+
+    return filteredEvents.reduce<Record<string, number>>((accumulator, event) => {
+      accumulator[event.id] = unreadAlertNotifications.filter((notification) =>
+        notificationMatchesEvent(notification, event),
+      ).length;
+      return accumulator;
+    }, {});
+  }, [filteredEvents, notificationsQuery.data?.items]);
 
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   const weeks = splitIntoWeeks(days);
@@ -772,6 +812,8 @@ export default function HomePage() {
                 (todo) => !todo.isCompleted,
               ).length;
               const todoBadgeCount = incompleteTodoCount || event.todos.length;
+              const messageCount = unreadMessageCountByEventId[event.id] ?? 0;
+              const alertCount = unreadAlertCountByEventId[event.id] ?? 0;
               const typeLabel = event.spansMultipleDays
                 ? "Streak"
                 : event.isAllDay
@@ -859,13 +901,13 @@ export default function HomePage() {
                             <div className="w-[56px] shrink-0 text-[#6A707C]">
                               <p
                                 className="font-poppins font-semibold text-[#666B75]"
-                                style={{ fontSize: "16px", lineHeight: "14px" }}
+                                style={{ fontSize: "18px", lineHeight: "18px" }}
                               >
                                 {startClock.main}
                                 {startClock.suffix ? (
                                   <span
                                     className="ml-0.5 align-top font-semibold text-[#8B909A]"
-                                    style={{ fontSize: "9px", lineHeight: "9px" }}
+                                    style={{ fontSize: "16px", lineHeight: "16px" }}
                                   >
                                     {startClock.suffix}
                                   </span>
@@ -873,13 +915,13 @@ export default function HomePage() {
                               </p>
                               <p
                                 className="mt-1 font-poppins text-[#9A9FA8]"
-                                style={{ fontSize: "14px", lineHeight: "12px" }}
+                                style={{ fontSize: "18px", lineHeight: "18px" }}
                               >
                                 {endClock.main}
                                 {endClock.suffix ? (
                                   <span
                                     className="ml-0.5 align-top font-medium text-[#A5AAB4]"
-                                    style={{ fontSize: "8px", lineHeight: "8px" }}
+                                    style={{ fontSize: "16px", lineHeight: "16px" }}
                                   >
                                     {endClock.suffix}
                                   </span>
@@ -913,7 +955,7 @@ export default function HomePage() {
                       {event.spansMultipleDays ? (
                         <HomeSidebarActionIcon
                           icon={MessageCircle}
-                          badgeCount={todoBadgeCount}
+                          badgeCount={messageCount}
                           label={`${event.title} streak updates`}
                         />
                       ) : event.isAllDay ? (
@@ -927,6 +969,7 @@ export default function HomePage() {
                         <>
                           <HomeSidebarActionIcon
                             icon={Bell}
+                            badgeCount={alertCount}
                             label={`${event.title} alerts`}
                           />
                           <HomeSidebarActionIcon

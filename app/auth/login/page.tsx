@@ -98,7 +98,7 @@ export default function LoginPage() {
                     <Input
                       placeholder="User Email"
                       {...form.register("email")}
-                      className="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent pr-12 font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                      className="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent pr-12 font-poppins !text-[24px] text-[var(--text-default)] placeholder:text-[24px] placeholder:text-[var(--ui-input-placeholder)]"
                     />
                     <UserRound className="pointer-events-none absolute right-4 top-1/2 size-6 -translate-y-1/2 text-[var(--ui-input-placeholder)]" />
                   </div>
@@ -113,7 +113,7 @@ export default function LoginPage() {
                       <PasswordInput
                         placeholder="Password"
                         className="h-[56px] rounded-[4px]"
-                        inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins text-[16px] text-[var(--text-default)] placeholder:text-[16px] placeholder:text-[var(--ui-input-placeholder)]"
+                        inputClassName="h-[56px] rounded-[4px] border-[var(--ui-input-border)] bg-transparent font-poppins !text-[24px] text-[var(--text-default)] placeholder:text-[24px]placeholder:text-[var(--ui-input-placeholder)]"
                         {...field}
                       />
                     )}

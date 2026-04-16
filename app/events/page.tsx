@@ -52,11 +52,13 @@ import {
   brickApi,
   notificationApi,
   paginateArray,
-  type EventData,
-  type NotificationData,
 } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
 import { colorPalette } from "@/lib/presets";
+import {
+  isMessageNotification,
+  notificationMatchesEvent,
+} from "@/lib/notifications";
 import { queryKeys } from "@/lib/query-keys";
 import {
   toggleAllBrickSelection,
@@ -193,7 +195,7 @@ function EventStatusIcon({
       >
         <Icon className="size-[22px]" />
         {badgeCount > 0 ? (
-          <span className="absolute -right-1 -top-1 inline-flex min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 text-[16px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
+          <span className="absolute -right-1 -top-2 inline-flex min-h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#FF4D42] px-0.5 text-[9px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
             {badgeCount}
           </span>
         ) : null}
@@ -205,32 +207,12 @@ function EventStatusIcon({
     <span className={className} aria-hidden="true">
       <Icon className="size-[22px]" />
       {badgeCount > 0 ? (
-        <span className="absolute -right-1 -top-1 inline-flex min-h-[24px] min-w-[24px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 text-[16px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
+        <span className="absolute -right-1 -top-2 inline-flex min-h-[12px] min-w-[12px] items-center justify-center rounded-full bg-[#FF4D42] px-1.5 text-[9px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
           {badgeCount}
         </span>
       ) : null}
     </span>
   );
-}
-
-function isMessageNotification(notification: NotificationData) {
-  return /(message|chat)/i.test(notification.type ?? "");
-}
-
-function notificationMatchesEvent(
-  notification: NotificationData,
-  event: Pick<EventData, "_id" | "title">,
-) {
-  if (notification.eventId) {
-    return notification.eventId === event._id;
-  }
-
-  const eventTitle = (event.title ?? "").trim().toLowerCase();
-  if (!eventTitle) {
-    return false;
-  }
-
-  return notification.title.toLowerCase().includes(eventTitle);
 }
 
 export default function EventsPage() {

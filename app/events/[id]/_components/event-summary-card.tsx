@@ -166,7 +166,7 @@ export function EventSummaryCard({
                 style={{ backgroundColor: event.brick?.color || "#F7C700" }}
               />
               <div className="min-w-0 space-y-3">
-                <p className="truncate text-[28px] font-semibold leading-[1.05] text-[var(--text-strong)] sm:text-[32px] mt-2">
+                <p className="truncate text-[28px] py-2 font-semibold leading-[1.05] text-[var(--text-strong)] sm:text-[32px]">
                   {event.title}
                 </p>
                 {event.brick ? (

@@ -4,7 +4,6 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { io, type Socket } from "socket.io-client";
 import {
   ArrowLeft,
   Pencil,
@@ -55,6 +54,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useEventMessagesSocket } from "@/hooks/use-event-messages-socket";
+import { appendMessageIfMissing } from "@/lib/jam-messages";
 
 function mapParticipants(participants: EventData["participants"]): UserProfile[] {
   const mapped = participants
@@ -87,20 +88,6 @@ function mapParticipantIds(participants: EventData["participants"]) {
 
 function isLinkText(value: string) {
   return /^https?:\/\/\S+$/i.test(value.trim());
-}
-
-function sortMessagesByCreatedAt(messages: JamMessage[]) {
-  return [...messages].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-  );
-}
-
-function appendMessageIfMissing(messages: JamMessage[], next: JamMessage) {
-  if (messages.some((message) => message._id === next._id)) {
-    return messages;
-  }
-
-  return sortMessagesByCreatedAt([...messages, next]);
 }
 
 function toDateValue(value: string) {
@@ -153,19 +140,9 @@ export default function EventDetailsPage() {
   const [libraryTab, setLibraryTab] = useState<"media" | "files" | "link">(
     "media",
   );
-  const socketRef = React.useRef<Socket | null>(null);
   const messagesPanelRef = React.useRef<HTMLDivElement | null>(null);
   const hasHandledFocusMessagesRef = React.useRef(false);
   const hasMarkedMessageNotificationsReadRef = React.useRef(false);
-  const socketServerUrl = React.useMemo(
-    () =>
-      (
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTPUBLICBASEURL ||
-        ""
-      ).replace(/\/+$/, ""),
-    [],
-  );
 
   const eventQuery = useQuery({
     queryKey: queryKeys.event(id),
@@ -226,54 +203,7 @@ export default function EventDetailsPage() {
     hasMarkedMessageNotificationsReadRef.current = false;
   }, [id]);
 
-  React.useEffect(() => {
-    if (!id || !socketServerUrl) {
-      return;
-    }
-
-    const socket = io(socketServerUrl, {
-      transports: ["websocket", "polling"],
-    });
-    socketRef.current = socket;
-
-    const handleConnect = () => {
-      socket.emit("joinEventRoom", id);
-    };
-
-    const handleNewMessage = (message: JamMessage) => {
-      queryClient.setQueryData<JamMessage[]>(
-        queryKeys.jamMessages(id),
-        (previous = []) => appendMessageIfMissing(previous, message),
-      );
-    };
-
-    const handleDeleteMessage = (messageId: string) => {
-      queryClient.setQueryData<JamMessage[]>(
-        queryKeys.jamMessages(id),
-        (previous = []) =>
-          previous.filter((message) => message._id !== messageId),
-      );
-    };
-
-    socket.on("connect", handleConnect);
-    socket.on("newMessage", handleNewMessage);
-    socket.on("deleteMessage", handleDeleteMessage);
-
-    if (socket.connected) {
-      handleConnect();
-    }
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("newMessage", handleNewMessage);
-      socket.off("deleteMessage", handleDeleteMessage);
-      socket.disconnect();
-
-      if (socketRef.current === socket) {
-        socketRef.current = null;
-      }
-    };
-  }, [id, queryClient, socketServerUrl]);
+  useEventMessagesSocket(id);
 
   const refreshEverything = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.event(id) });

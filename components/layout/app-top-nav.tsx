@@ -36,6 +36,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAppState } from "@/components/providers/app-state-provider";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { notificationApi } from "@/lib/api";
+import { isMessageNotification } from "@/lib/notifications";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -384,12 +385,12 @@ export function AppTopNav() {
   });
   const notifications = notificationsQuery.data?.items ?? [];
   const serverCounts = notificationsQuery.data?.counts;
-  const unreadCount = notifications.filter((item) => !item.read).length;
+  const unreadCount = serverCounts?.all.unread ?? notifications.filter((item) => !item.read).length;
   const messageNotifications = notifications.filter((item) =>
-    /(message|chat)/i.test(item.type ?? ""),
+    isMessageNotification(item),
   );
   const systemNotifications = notifications.filter(
-    (item) => !/(message|chat)/i.test(item.type ?? ""),
+    (item) => !isMessageNotification(item),
   );
   const unreadNotifications = notifications.filter((item) => !item.read);
   const displayedNotifications =
@@ -522,7 +523,7 @@ export function AppTopNav() {
               >
                 <Bell className="size-5" />
                 {unreadCount ? (
-                  <span className="absolute top-[-8px] right-0 inline-flex min-w-4 items-center justify-center rounded-full bg-[#FF3B30] px-1.5 text-[10px] leading-none text-white">
+                  <span className="absolute top-[-8px] right-0 inline-flex items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] leading-none text-white">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 ) : null}
@@ -544,7 +545,7 @@ export function AppTopNav() {
                     type="button"
                     onClick={() => setActiveNotificationTab(tab.key)}
                     className={cn(
-                      "relative text-[13px] leading-none transition",
+                      "relative text-[15px] leading-none transition",
                       activeNotificationTab === tab.key
                         ? "text-[var(--text-strong)]"
                         : "text-[var(--text-muted)]",
@@ -552,7 +553,7 @@ export function AppTopNav() {
                   >
                     {tab.label}
                     {unreadByTab[tab.key] ? (
-                      <span className="absolute -top-3 -right-5 inline-flex min-w-[14px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-medium leading-none text-white">
+                      <span className="absolute -top-3 -right-4 inline-flex min-w-[12px] min-h-[12px] items-center justify-center rounded-full bg-[#FF3B30] px-1 text-[9px] font-medium leading-none text-white">
                         {unreadByTab[tab.key] > 99 ? "99+" : unreadByTab[tab.key]}
                       </span>
                     ) : null}

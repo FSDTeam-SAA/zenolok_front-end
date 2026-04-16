@@ -11,10 +11,13 @@ import { useAppState } from "@/components/providers/app-state-provider";
 import {
   eventApi,
   jamApi,
+  notificationApi,
   userApi,
   type EventData,
   type JamMessage,
 } from "@/lib/api";
+import { useEventMessagesSocket } from "@/hooks/use-event-messages-socket";
+import { appendMessageIfMissing } from "@/lib/jam-messages";
 import { queryKeys } from "@/lib/query-keys";
 import { formatIsoTimeByPreference } from "@/lib/time-format";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -71,6 +74,13 @@ export default function EventMessagesPage() {
 
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const hasMarkedMessageNotificationsReadRef = React.useRef(false);
+
+  useEventMessagesSocket(id);
+
+  React.useEffect(() => {
+    hasMarkedMessageNotificationsReadRef.current = false;
+  }, [id]);
 
   const profileQuery = useQuery({
     queryKey: queryKeys.profile,
@@ -87,6 +97,13 @@ export default function EventMessagesPage() {
     queryKey: queryKeys.jamMessages(id),
     queryFn: () => jamApi.getByEvent(id),
     enabled: Boolean(id),
+  });
+
+  const markEventMessagesReadMutation = useMutation({
+    mutationFn: () => notificationApi.markEventMessagesRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications });
+    },
   });
 
   const sendMessageMutation = useMutation({
@@ -120,10 +137,13 @@ export default function EventMessagesPage() {
 
       return jamApi.create(form);
     },
-    onSuccess: () => {
+    onSuccess: (message) => {
       setMessageText("");
       setSelectedFile(null);
-      queryClient.invalidateQueries({ queryKey: queryKeys.jamMessages(id) });
+      queryClient.setQueryData<JamMessage[]>(
+        queryKeys.jamMessages(id),
+        (previous = []) => appendMessageIfMissing(previous, message),
+      );
     },
     onError: (error: Error) => toast.error(error.message || "Failed to send message"),
   });
@@ -132,6 +152,15 @@ export default function EventMessagesPage() {
   const messages = messagesQuery.data || [];
   const participants = useMemo(() => mapParticipants(event?.participants || []), [event?.participants]);
   const viewerId = profileQuery.data?._id;
+
+  React.useEffect(() => {
+    if (!id || !event || hasMarkedMessageNotificationsReadRef.current) {
+      return;
+    }
+
+    hasMarkedMessageNotificationsReadRef.current = true;
+    markEventMessagesReadMutation.mutate();
+  }, [event, id, markEventMessagesReadMutation]);
 
   if (eventQuery.isLoading || messagesQuery.isLoading) {
     return <SectionLoading rows={8} />;
