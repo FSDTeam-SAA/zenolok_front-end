@@ -720,53 +720,66 @@ export default function EventsPage() {
                               />
                             </div>
                           </div>
-                          <div className="mt-2.5 flex min-w-0 flex-wrap items-start gap-x-6 gap-y-2">
-                            {/* Date/time grid: icon col + value columns */}
-                            <div className="inline-grid min-w-0 items-center gap-x-2.5 gap-y-0.5" style={{ gridTemplateColumns: showDateRange ? "16px auto auto auto" : "16px auto" }}>
-                              {/* Row 1: date */}
-                              <CalendarDays className="size-4 text-[#9CA5B5]" />
-                              <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
-                                {startDateLabel}
-                              </span>
-                              {showDateRange ? (
-                                <>
-                                  <span className="justify-self-center text-[14px] leading-none text-[#A4ACBB]">-</span>
-                                  <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
-                                    {endDateLabel}
-                                  </span>
-                                </>
-                              ) : null}
-
-                              {/* Row 2: arrows */}
-                              <span />
-                              <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
-                              {showDateRange ? (
-                                <>
-                                  <span />
-                                  <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
-                                </>
-                              ) : null}
-
-                              {/* Row 3: time */}
-                              <Clock3 className="size-4 text-[#9CA5B5]" />
-                              <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
-                                {startTimeLabel}
-                              </span>
-                              {showDateRange ? (
-                                <>
-                                  <span className="justify-self-center text-[14px] leading-none text-[#A4ACBB]">-</span>
-                                  <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
-                                    {endTimeLabel || ""}
-                                  </span>
-                                </>
-                              ) : null}
-                            </div>
-                            <div className="flex min-w-0 items-center gap-2 text-[#666E7D]">
-                              <MapPin className="size-4 shrink-0 text-[#A0A8B8]" />
-                              <p className="font-poppins min-w-0 truncate text-[14px] leading-none font-medium text-[#666E7D] sm:text-[15px]">
-                                {event.location || "No location"}
-                              </p>
-                            </div>
+                          <div className="mt-2.5 min-w-0">
+                            {showDateRange ? (
+                              /* Multi-day: grid with arrows between date and time */
+                              <>
+                                <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1.5">
+                                  <div
+                                    className="inline-grid items-center gap-x-2.5 gap-y-0.5"
+                                    style={{ gridTemplateColumns: "16px auto auto auto" }}
+                                  >
+                                    {/* Date row */}
+                                    <CalendarDays className="size-4 text-[#9CA5B5]" />
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{startDateLabel}</span>
+                                    <span className="justify-self-center text-[14px] leading-none text-[#A4ACBB]">-</span>
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{endDateLabel}</span>
+                                    {/* Arrow row */}
+                                    <span />
+                                    <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
+                                    <span />
+                                    <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
+                                    {/* Time row */}
+                                    <Clock3 className="size-4 text-[#9CA5B5]" />
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{startTimeLabel}</span>
+                                    <span />
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{endTimeLabel || ""}</span>
+                                  </div>
+                                  <div className="flex min-w-0 items-center gap-2 text-[#666E7D]">
+                                    <MapPin className="size-4 shrink-0 text-[#A0A8B8]" />
+                                    <p className="font-poppins min-w-0 truncate text-[14px] leading-none font-medium text-[#666E7D] sm:text-[15px]">
+                                      {event.location || "No location"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              /* Single-day / All-day: simple rows, no arrows */
+                              <div className="flex min-w-0 flex-wrap items-start gap-x-6 gap-y-1.5">
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex items-center gap-2.5">
+                                    <CalendarDays className="size-4 shrink-0 text-[#9CA5B5]" />
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{startDateLabel}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2.5">
+                                    <Clock3 className="size-4 shrink-0 text-[#9CA5B5]" />
+                                    <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{startTimeLabel}</span>
+                                    {endTimeLabel ? (
+                                      <>
+                                        <span className="text-[14px] leading-none text-[#A4ACBB]">-</span>
+                                        <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">{endTimeLabel}</span>
+                                      </>
+                                    ) : null}
+                                  </div>
+                                </div>
+                                <div className="flex min-w-0 items-center gap-2 text-[#666E7D]">
+                                  <MapPin className="size-4 shrink-0 text-[#A0A8B8]" />
+                                  <p className="font-poppins min-w-0 truncate text-[14px] leading-none font-medium text-[#666E7D] sm:text-[15px]">
+                                    {event.location || "No location"}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

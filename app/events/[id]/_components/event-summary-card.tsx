@@ -141,75 +141,76 @@ export function EventSummaryCard({
           </div>
 
           <div className="space-y-3">
-            {/* Date + time grid with icons */}
             <div className="flex min-w-0 items-start justify-between gap-4">
-              <div
-                className="inline-grid min-w-0 items-center gap-x-3 gap-y-0.5"
-                style={{
-                  gridTemplateColumns: spansMultipleDays
-                    ? "20px auto auto auto"
-                    : "20px auto",
-                }}
-              >
-                {/* Row 1: day labels */}
-                {spansMultipleDays ? (
-                  <>
-                    <span />
-                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
-                      {startDayLabel}
-                    </p>
-                    <span />
-                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
-                      {endDayLabel}
-                    </p>
-                  </>
-                ) : startDayLabel ? (
-                  <>
-                    <span />
-                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
-                      {startDayLabel}
-                    </p>
-                  </>
-                ) : null}
-
-                {/* Row 2: dates */}
-                <CalendarDays className="size-5 text-[var(--text-muted)]" />
-                <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
-                  {startDateLabel}
-                </span>
-                {spansMultipleDays ? (
-                  <>
-                    <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
-                    <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
-                      {endDateLabel}
-                    </span>
-                  </>
-                ) : null}
-
-                {/* Row 3: arrows */}
-                <span />
-                <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
-                {spansMultipleDays ? (
-                  <>
-                    <span />
-                    <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
-                  </>
-                ) : null}
-
-                {/* Row 4: times (multi-day: inside grid / single-day: separate block below) */}
-                {spansMultipleDays ? (
-                  <>
-                    <Clock3 className="size-5 text-[var(--text-muted)]" />
-                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
-                      {startTimeLabel}
-                    </span>
-                    <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
-                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
-                      {endTimeLabel || ""}
-                    </span>
-                  </>
-                ) : null}
-              </div>
+              {spansMultipleDays ? (
+                /* Multi-day: grid with arrows between date and time */
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-start gap-x-6 gap-y-1.5">
+                    <div
+                      className="inline-grid items-center gap-x-3 gap-y-0.5"
+                      style={{ gridTemplateColumns: "20px auto auto auto" }}
+                    >
+                      {/* Day labels */}
+                      <span />
+                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{startDayLabel}</p>
+                      <span />
+                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{endDayLabel}</p>
+                      {/* Dates */}
+                      <CalendarDays className="size-5 text-[var(--text-muted)]" />
+                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</span>
+                      <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
+                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{endDateLabel}</span>
+                      {/* Arrows */}
+                      <span />
+                      <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
+                      <span />
+                      <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
+                      {/* Times */}
+                      <Clock3 className="size-5 text-[var(--text-muted)]" />
+                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{startTimeLabel}</span>
+                      <span />
+                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{endTimeLabel || ""}</span>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-2 text-[14px] text-[var(--text-default)]">
+                      <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
+                      <span className="truncate font-poppins">{event.location || "No location"}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Single-day / All-day: simple rows, no arrows */
+                <div className="min-w-0 space-y-1">
+                  <div className="flex min-w-0 flex-wrap items-start gap-x-6 gap-y-1.5">
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex items-center gap-3">
+                        <CalendarDays className="size-5 shrink-0 text-[var(--text-muted)]" />
+                        {startDayLabel ? (
+                          <div>
+                            <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{startDayLabel}</p>
+                            <p className="mt-0.5 font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</p>
+                          </div>
+                        ) : (
+                          <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Clock3 className="size-5 shrink-0 text-[var(--text-muted)]" />
+                        <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{startTimeLabel}</span>
+                        {!event.isAllDay && endTimeLabel ? (
+                          <>
+                            <span className="text-[16px] leading-none text-[var(--text-muted)]">—</span>
+                            <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{endTimeLabel}</span>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-2 text-[14px] text-[var(--text-default)]">
+                      <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
+                      <span className="truncate font-poppins">{event.location || "No location"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex shrink-0 items-center gap-2">
                 <button
@@ -227,35 +228,7 @@ export function EventSummaryCard({
                     <RefreshCw className="size-4" />
                   </div>
                 ) : null}
-                <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1.5 font-poppins text-[13px] font-medium text-[var(--text-muted)]">
-                  All day
-                </span>
               </div>
-            </div>
-
-            {/* Time row for single-day events */}
-            {!spansMultipleDays ? (
-              <div className="flex items-center gap-3">
-                <Clock3 className="size-5 text-[var(--text-muted)]" />
-                <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
-                  {startTimeLabel}
-                </span>
-                {!event.isAllDay && endTimeLabel ? (
-                  <>
-                    <span className="text-[16px] leading-none text-[var(--text-muted)]">—</span>
-                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
-                      {endTimeLabel}
-                    </span>
-                  </>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="flex min-w-0 items-center gap-3 text-[14px] text-[var(--text-default)]">
-              <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
-              <span className="truncate font-poppins">
-                {event.location || "No location"}
-              </span>
             </div>
           </div>
         </div>
