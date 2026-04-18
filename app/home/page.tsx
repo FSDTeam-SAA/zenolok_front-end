@@ -837,7 +837,7 @@ export default function HomePage() {
               return (
                 <div
                   key={event.id}
-                  className="home-event-card rounded-[20px] border border-[#E1E5EC] bg-[#F7F8FB] px-3 py-3 shadow-[0_1px_0_rgba(255,255,255,0.85)_inset]"
+                  className="home-event-card rounded-2xl border border-[#E8EBF0] bg-white px-3 py-3 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
                   role="button"
                   tabIndex={0}
                   onClick={() => handleOpenEventDetails(event.id)}
@@ -856,27 +856,21 @@ export default function HomePage() {
                         <>
                           <div className="flex items-center gap-2">
                             <span
-                              className="h-8 w-1.5 shrink-0 rounded-full"
+                              className="h-9 w-1.5 shrink-0 rounded-full"
                               style={{ backgroundColor: event.color }}
                             />
-                            <div className="flex min-w-0 items-center gap-1">
+                            <div className="flex min-w-0 items-center gap-2">
                               <span
-                                className="shrink-0 font-poppins font-semibold"
+                                className="shrink-0 font-poppins text-sm font-semibold"
                                 style={{
                                   color: event.color,
-                                  fontSize: "24px",
-                                  lineHeight: "24px",
                                 }}
                               >
                                 {typeLabel}
                               </span>
-                              <span className="h-7 w-px shrink-0 bg-[#D4D8DF]" />
+                              <span className="h-5 w-px shrink-0 bg-[#D4D8DF]" />
                               <p
-                                className="truncate font-poppins font-medium text-[#626872]"
-                                style={{
-                                  fontSize: "24px",
-                                  lineHeight: "24px",
-                                }}
+                                className="truncate font-poppins text-base font-medium text-[#3A3F47]"
                               >
                                 {event.title}
                               </p>
@@ -884,67 +878,59 @@ export default function HomePage() {
                           </div>
                           {rangeLabel ? (
                             <p
-                              className="ml-[22px] mt-2 truncate font-poppins text-[#9AA1AE]"
-                              style={{ fontSize: "18px", lineHeight: "18px" }}
+                              className="ml-[22px] mt-1.5 truncate font-poppins text-xs text-[#9AA1AE]"
                             >
                               {rangeLabel}
                             </p>
                           ) : null}
                         </>
                       ) : (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
                           <span
                             className="h-10 w-1.5 shrink-0 rounded-full"
                             style={{ backgroundColor: event.color }}
                           />
-                          <div className="flex min-w-0 items-center gap-3">
-                            <div className="w-[56px] shrink-0 text-[#6A707C]">
+                          <div className="flex min-w-0 items-center gap-2.5">
+                            <div className="w-13 shrink-0">
                               <p
-                                className="font-poppins font-semibold text-[#666B75]"
-                                style={{ fontSize: "18px", lineHeight: "18px" }}
+                                className="font-poppins text-sm font-semibold text-[#666B75]"
                               >
                                 {startClock.main}
                                 {startClock.suffix ? (
                                   <span
-                                    className="ml-0.5 align-top font-semibold text-[#8B909A]"
-                                    style={{ fontSize: "16px", lineHeight: "16px" }}
+                                    className="ml-0.5 align-top text-xs font-semibold text-[#8B909A]"
                                   >
                                     {startClock.suffix}
                                   </span>
                                 ) : null}
                               </p>
                               <p
-                                className="mt-1 font-poppins text-[#9A9FA8]"
-                                style={{ fontSize: "18px", lineHeight: "18px" }}
+                                className="mt-0.5 font-poppins text-xs text-[#9A9FA8]"
                               >
                                 {endClock.main}
                                 {endClock.suffix ? (
                                   <span
-                                    className="ml-0.5 align-top font-medium text-[#A5AAB4]"
-                                    style={{ fontSize: "16px", lineHeight: "16px" }}
+                                    className="ml-0.5 align-top text-xs font-medium text-[#A5AAB4]"
                                   >
                                     {endClock.suffix}
                                   </span>
                                 ) : null}
                               </p>
                             </div>
-                            <span className="h-10 w-px shrink-0 bg-[#D4D8DF]" />
+                            <span className="h-8 w-px shrink-0 bg-[#D4D8DF]" />
                             <div className="min-w-0">
                               <p
-                                className="truncate font-poppins font-medium text-[#555C67]"
-                                style={{
-                                  fontSize: "18px",
-                                  lineHeight: "18px",
-                                }}
+                                className="truncate font-poppins text-sm font-medium text-[#3A3F47]"
                               >
                                 {event.title}
                               </p>
-                              <p
-                                className="mt-1 truncate font-poppins text-[#9BA1AC]"
-                                style={{ fontSize: "18px", lineHeight: "18px" }}
-                              >
-                                {event.location}
-                              </p>
+                              {event.location ? (
+                                <p
+                                  className="mt-0.5 truncate font-poppins text-xs text-[#9BA1AC]"
+                                >
+                                  {event.location}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                         </div>
@@ -1017,6 +1003,9 @@ export default function HomePage() {
                             completed={todo.isCompleted}
                           />
                         ))}
+                        <p className="pl-7 font-poppins text-sm text-[#C0C4CC]">
+                          New todo
+                        </p>
                       </div>
                     </div>
                   ) : null}

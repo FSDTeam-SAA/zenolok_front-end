@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowUpDown,
   Bell,
   CalendarDays,
   Clock3,
@@ -658,7 +659,7 @@ export default function EventsPage() {
                     <Card
                       role="link"
                       tabIndex={0}
-                      className="events-list-card cursor-pointer rounded-[26px] border border-[#D9DEE9] bg-[#EEF2F7] px-5 py-5 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF] sm:px-6"
+                      className="events-list-card cursor-pointer rounded-[26px] border border-[#D9DEE9] bg-[#EEF2F7] px-5 py-4 shadow-none transition hover:scale-[1.002] hover:border-[#C8D0DF] sm:px-6"
                       onClick={() => openEventDetails(event._id)}
                       onKeyDown={(keyboardEvent) => {
                         if (
@@ -672,8 +673,8 @@ export default function EventsPage() {
                         openEventDetails(event._id);
                       }}
                     >
-                      <div className="flex items-start gap-4">
-                        <div className="flex shrink-0 pt-1.5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex shrink-0 pt-1">
                           <span
                             className="h-7 w-1 rounded-full"
                             style={{
@@ -682,35 +683,11 @@ export default function EventsPage() {
                           />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-poppins truncate text-[22px] leading-[120%] font-semibold text-[#454B57] sm:text-[23px]">
-                                {event.title}
-                              </p>
-                              <div className="mt-3 min-w-0 space-y-2.5">
-                                <EventMetaRange
-                                  icon={CalendarDays}
-                                  startLabel={startDayLabel}
-                                  startValue={startDateLabel}
-                                  endLabel={showDateRange ? endDayLabel : undefined}
-                                  endValue={showDateRange ? endDateLabel : undefined}
-                                  labelPosition="below"
-                                />
-                                <EventMetaRange
-                                  icon={Clock3}
-                                  startValue={startTimeLabel}
-                                  endValue={endTimeLabel}
-                                  labelPosition="hidden"
-                                />
-                                <div className="flex min-w-0 items-center gap-3 text-[#666E7D]">
-                                  <MapPin className="size-[18px] shrink-0 text-[#A0A8B8]" />
-                                  <p className="font-poppins min-w-0 break-words text-[15px] leading-[120%] font-medium text-[#666E7D] sm:text-[16px]">
-                                    {event.location || "No location"}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1 sm:gap-1.5 lg:justify-start lg:pt-0.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="font-poppins truncate text-[18px] leading-[120%] font-semibold text-[#454B57] sm:text-[20px]">
+                              {event.title}
+                            </p>
+                            <div className="flex shrink-0 items-center gap-0.5">
                               <EventStatusIcon
                                 icon={MessageCircle}
                                 label={`Open messages for ${event.title}`}
@@ -741,6 +718,54 @@ export default function EventsPage() {
                                 label={`${event.title} details`}
                                 active
                               />
+                            </div>
+                          </div>
+                          <div className="mt-2.5 flex min-w-0 flex-wrap items-start gap-x-6 gap-y-2">
+                            {/* Date/time grid: icon col + value columns */}
+                            <div className="inline-grid min-w-0 items-center gap-x-2.5 gap-y-0.5" style={{ gridTemplateColumns: showDateRange ? "16px auto auto auto" : "16px auto" }}>
+                              {/* Row 1: date */}
+                              <CalendarDays className="size-4 text-[#9CA5B5]" />
+                              <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
+                                {startDateLabel}
+                              </span>
+                              {showDateRange ? (
+                                <>
+                                  <span className="justify-self-center text-[14px] leading-none text-[#A4ACBB]">-</span>
+                                  <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
+                                    {endDateLabel}
+                                  </span>
+                                </>
+                              ) : null}
+
+                              {/* Row 2: arrows */}
+                              <span />
+                              <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
+                              {showDateRange ? (
+                                <>
+                                  <span />
+                                  <ArrowUpDown className="mx-auto size-3 text-[#B0B7C5]" />
+                                </>
+                              ) : null}
+
+                              {/* Row 3: time */}
+                              <Clock3 className="size-4 text-[#9CA5B5]" />
+                              <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
+                                {startTimeLabel}
+                              </span>
+                              {showDateRange ? (
+                                <>
+                                  <span className="justify-self-center text-[14px] leading-none text-[#A4ACBB]">-</span>
+                                  <span className="font-poppins text-[14px] font-semibold leading-none text-[#4D5463] sm:text-[15px]">
+                                    {endTimeLabel || ""}
+                                  </span>
+                                </>
+                              ) : null}
+                            </div>
+                            <div className="flex min-w-0 items-center gap-2 text-[#666E7D]">
+                              <MapPin className="size-4 shrink-0 text-[#A0A8B8]" />
+                              <p className="font-poppins min-w-0 truncate text-[14px] leading-none font-medium text-[#666E7D] sm:text-[15px]">
+                                {event.location || "No location"}
+                              </p>
                             </div>
                           </div>
                         </div>

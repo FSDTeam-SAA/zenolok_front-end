@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CalendarDays, Clock3, Locate, MapPin, RefreshCw } from "lucide-react";
+import { ArrowUpDown, Bell, CalendarDays, Clock3, MapPin, RefreshCw } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 
 import type { EventData, UserProfile } from "@/lib/api";
@@ -11,90 +11,7 @@ import { formatTimeByPreference } from "@/lib/time-format";
 import { getParticipantDisplayName } from "./event-detail-helpers";
 import { ParticipantShareDialog } from "./participant-share-dialog";
 
-type EventSummaryMetaRangeProps = {
-  icon: React.ComponentType<{ className?: string }>;
-  startLabel?: string | null;
-  startValue: string;
-  endLabel?: string | null;
-  endValue?: string | null;
-  labelPosition?: "below" | "hidden";
-};
-
-function EventSummaryMetaRange({
-  icon: Icon,
-  startLabel,
-  startValue,
-  endLabel,
-  endValue,
-  labelPosition = "below",
-}: EventSummaryMetaRangeProps) {
-  const normalizedStartValue = startValue.trim();
-  const normalizedEndValue = endValue?.trim() || "";
-  const showEnd = Boolean(
-    normalizedEndValue &&
-    (labelPosition === "hidden"
-      ? normalizedEndValue !== normalizedStartValue
-      : normalizedEndValue !== normalizedStartValue ||
-        (endLabel || "") !== (startLabel || "")),
-  );
-  const isInlineRow = labelPosition === "hidden";
-
-  const renderValueBlock = (value: string, label?: string | null) => (
-    <div
-      className={`min-w-0 ${
-        isInlineRow ? "flex items-center gap-2" : "flex flex-col"
-      }`}
-    >
-      <p
-        className={`font-poppins text-[20px] font-semibold text-[var(--text-default)] ${
-          isInlineRow ? "leading-none" : "leading-[120%]"
-        }`}
-      >
-        {value}
-      </p>
-      {labelPosition === "below" && label ? (
-        <p className="font-poppins mt-1 text-[12px] leading-none font-medium text-[var(--text-muted)]">
-          {label}
-        </p>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <div
-      className={`flex min-w-0 gap-3 ${
-        isInlineRow ? "items-center" : "items-start"
-      }`}
-    >
-      <Icon
-        className={`size-5 shrink-0 text-[var(--text-muted)] ${
-          isInlineRow ? "" : "mt-0.5"
-        }`}
-      />
-      <div
-        className={`flex min-w-0 flex-wrap gap-x-4 gap-y-2 ${
-          isInlineRow ? "items-center" : "items-start"
-        }`}
-      >
-        {renderValueBlock(
-          normalizedStartValue,
-          labelPosition === "hidden" ? undefined : startLabel,
-        )}
-        {showEnd ? (
-          <>
-            <span className="self-center text-[20px] leading-none text-[var(--text-muted)]">
-              -
-            </span>
-            {renderValueBlock(
-              normalizedEndValue,
-              labelPosition === "hidden" ? undefined : endLabel,
-            )}
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
+/* Date/time metadata is rendered inline via CSS Grid in the card below. */
 
 type EventSummaryCardProps = {
   event: EventData;
@@ -223,62 +140,122 @@ export function EventSummaryCard({
             </div>
           </div>
 
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 space-y-3">
-              <EventSummaryMetaRange
-                icon={CalendarDays}
-                startLabel={startDayLabel}
-                startValue={startDateLabel}
-                endLabel={spansMultipleDays ? endDayLabel : undefined}
-                endValue={spansMultipleDays ? endDateLabel : undefined}
-                labelPosition="below"
-              />
-              <EventSummaryMetaRange
-                icon={Clock3}
-                startValue={startTimeLabel}
-                endValue={event.isAllDay ? undefined : endTimeLabel}
-                labelPosition="hidden"
-              />
+          <div className="space-y-3">
+            {/* Date + time grid with icons */}
+            <div className="flex min-w-0 items-start justify-between gap-4">
+              <div
+                className="inline-grid min-w-0 items-center gap-x-3 gap-y-0.5"
+                style={{
+                  gridTemplateColumns: spansMultipleDays
+                    ? "20px auto auto auto"
+                    : "20px auto",
+                }}
+              >
+                {/* Row 1: day labels */}
+                {spansMultipleDays ? (
+                  <>
+                    <span />
+                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                      {startDayLabel}
+                    </p>
+                    <span />
+                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                      {endDayLabel}
+                    </p>
+                  </>
+                ) : startDayLabel ? (
+                  <>
+                    <span />
+                    <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                      {startDayLabel}
+                    </p>
+                  </>
+                ) : null}
+
+                {/* Row 2: dates */}
+                <CalendarDays className="size-5 text-[var(--text-muted)]" />
+                <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                  {startDateLabel}
+                </span>
+                {spansMultipleDays ? (
+                  <>
+                    <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
+                    <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                      {endDateLabel}
+                    </span>
+                  </>
+                ) : null}
+
+                {/* Row 3: arrows */}
+                <span />
+                <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
+                {spansMultipleDays ? (
+                  <>
+                    <span />
+                    <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
+                  </>
+                ) : null}
+
+                {/* Row 4: times (multi-day: inside grid / single-day: separate block below) */}
+                {spansMultipleDays ? (
+                  <>
+                    <Clock3 className="size-5 text-[var(--text-muted)]" />
+                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                      {startTimeLabel}
+                    </span>
+                    <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
+                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                      {endTimeLabel || ""}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
+                  aria-label="Notification"
+                >
+                  <Bell className="size-4" />
+                </button>
+                {spansMultipleDays ? (
+                  <div
+                    className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
+                    aria-label="Repeats across dates"
+                  >
+                    <RefreshCw className="size-4" />
+                  </div>
+                ) : null}
+                <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-3 py-1.5 font-poppins text-[13px] font-medium text-[var(--text-muted)]">
+                  All day
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-3 lg:min-w-[220px]">
-              <div className="flex items-center gap-2 lg:justify-end">
-                <div className="flex items-center gap-2 lg:justify-end">
-                  <button
-                    type="button"
-                    className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                    aria-label="Notification"
-                  >
-                    <Bell className="size-4" />
-                  </button>
-                </div>
-                <div>
-                  {spansMultipleDays ? (
-                    <div
-                      className="flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                      aria-label="Repeats across dates"
-                    >
-                      <RefreshCw className="size-4" />
-                    </div>
-                  ) : null}
-                </div>
+            {/* Time row for single-day events */}
+            {!spansMultipleDays ? (
+              <div className="flex items-center gap-3">
+                <Clock3 className="size-5 text-[var(--text-muted)]" />
+                <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                  {startTimeLabel}
+                </span>
+                {!event.isAllDay && endTimeLabel ? (
+                  <>
+                    <span className="text-[16px] leading-none text-[var(--text-muted)]">—</span>
+                    <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                      {endTimeLabel}
+                    </span>
+                  </>
+                ) : null}
               </div>
-              <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3">
-                <p className="flex items-center gap-2 text-[14px] text-[var(--text-default)]">
-                  <MapPin className="size-4 shrink-0 text-[var(--text-muted)]" />
-                  <span className="truncate">
-                    {event.location || "No location"}
-                  </span>
-                </p>
-              </div>
-              <div className="rounded-[20px] border border-[var(--border)] bg-[var(--surface-1)] px-3 py-3">
-                <p className="flex items-center gap-2 text-[14px] text-[var(--text-default)]">
-                  <Locate className="size-4 shrink-0 text-[var(--text-muted)]" />
-                  <span className="truncate">
-                    {event.location || "No location"}
-                  </span>
-                </p>
-              </div>
+            ) : null}
+
+            <div className="flex min-w-0 items-center gap-3 text-[14px] text-[var(--text-default)]">
+              <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
+              <span className="truncate font-poppins">
+                {event.location || "No location"}
+              </span>
             </div>
           </div>
         </div>
