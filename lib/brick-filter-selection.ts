@@ -3,8 +3,7 @@ export function toggleBrickSelection(
   brickId: string,
   allBrickIds: string[],
 ) {
-  const currentSelection =
-    previous === null || previous.length === 0 ? allBrickIds : previous;
+  const currentSelection = previous === null ? allBrickIds : previous;
   const nextSelection = currentSelection.includes(brickId)
     ? currentSelection.filter((id) => id !== brickId)
     : [...currentSelection, brickId];
