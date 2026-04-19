@@ -203,8 +203,9 @@ export function BrickFilterBar({
             className="shrink-0"
             onClick={onCreateBrick}
             aria-label="Create brick"
-            whileHover={hasBricks ? { y: -1, rotate: 45 } : { y: -1 }}
+            whileHover={{ scale: 1.16 }}
             whileTap={{ scale: 0.94 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
           >
             {hasBricks ? (
               <span className="flex size-8 items-center justify-center rounded-full border border-[var(--ui-badge-neutral-border)] bg-[var(--ui-badge-neutral-bg)] text-[var(--ui-badge-neutral-text)]">

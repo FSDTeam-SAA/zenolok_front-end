@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Check, Plus, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,16 @@ type TodoSectionProps = {
   title: string;
   inputValue: string;
   onInputChange: (value: string) => void;
-  onAdd: () => void;
+  onAdd: () => Promise<void> | Promise<unknown> | void;
   onToggle: (todo: EventTodo) => void;
+  onSaveText: (
+    todoId: string,
+    text: string,
+  ) => Promise<void> | Promise<unknown> | void;
   onDelete: (todoId: string) => void;
   onReorder: (todoIds: string[]) => Promise<void> | void;
   accentColor?: string;
+  bare?: boolean;
 };
 
 const iconButtonClass =
@@ -43,11 +48,13 @@ export function TodoSection({
   onInputChange,
   onAdd,
   onToggle,
+  onSaveText,
   onDelete,
   onReorder,
   accentColor = "#7DC97E",
+  bare = false,
 }: TodoSectionProps) {
-  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const addInputRef = React.useRef<HTMLInputElement | null>(null);
   const sortedTodos = React.useMemo(() => sortTodos(todos), [todos]);
   const todoLookup = React.useMemo(
     () => new Map(sortedTodos.map((todo) => [todo._id, todo])),
@@ -59,9 +66,28 @@ export function TodoSection({
   const [draggingTodoId, setDraggingTodoId] = React.useState<string | null>(
     null,
   );
+  const [draftTexts, setDraftTexts] = React.useState<Record<string, string>>(
+    {},
+  );
 
   React.useEffect(() => {
     setOrderedIds(sortedTodos.map((todo) => todo._id));
+  }, [sortedTodos]);
+
+  React.useEffect(() => {
+    setDraftTexts((previous) => {
+      const nextDrafts: Record<string, string> = {};
+
+      sortedTodos.forEach((todo) => {
+        const previousDraft = previous[todo._id];
+        nextDrafts[todo._id] =
+          previousDraft !== undefined && previousDraft !== todo.text
+            ? previousDraft
+            : todo.text;
+      });
+
+      return nextDrafts;
+    });
   }, [sortedTodos]);
 
   const orderedTodos = React.useMemo(
@@ -75,13 +101,33 @@ export function TodoSection({
   const visibleTodos = orderedTodos.slice(0, 5);
   const hiddenCount = Math.max(0, orderedTodos.length - visibleTodos.length);
 
-  const handleAddTodo = () => {
-    if (!inputValue.trim()) {
-      inputRef.current?.focus();
+  const restoreInputFocus = React.useCallback(() => {
+    if (!addInputRef.current) {
       return;
     }
 
-    onAdd();
+    addInputRef.current.focus();
+    if (addInputRef.current.value) {
+      addInputRef.current.select();
+    }
+  }, []);
+
+  const handleAddTodo = async () => {
+    if (!inputValue.trim()) {
+      restoreInputFocus();
+      return;
+    }
+
+    try {
+      await onAdd();
+      onInputChange("");
+    } catch {
+      // Caller handles error display.
+    } finally {
+      requestAnimationFrame(() => {
+        restoreInputFocus();
+      });
+    }
   };
 
   const moveTodo = async (targetTodoId: string) => {
@@ -103,63 +149,132 @@ export function TodoSection({
     await onReorder(nextIds);
   };
 
-  return (
-    <Card className="w-full overflow-hidden rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-[var(--text-default)] shadow-none">
-      <div className="space-y-2">
-        {visibleTodos.map((todo) => (
-          <div
-            key={todo._id}
-            draggable
-            onDragStart={() => setDraggingTodoId(todo._id)}
-            onDragEnd={() => setDraggingTodoId(null)}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              void moveTodo(todo._id);
-            }}
-            className={`group flex items-center gap-3 rounded-[12px] px-1 py-1.5 ${
-              draggingTodoId === todo._id ? "opacity-60" : ""
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => onToggle(todo)}
-              className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--ui-checkbox-bg)]"
-              style={{ borderColor: accentColor }}
-              aria-label={
-                todo.isCompleted
-                  ? `Mark ${todo.text} as unfinished`
-                  : `Mark ${todo.text} as finished`
-              }
-            >
-              {todo.isCompleted ? (
-                <span
-                  className="size-2.5 rounded-full"
-                  style={{ backgroundColor: accentColor }}
-                />
-              ) : null}
-            </button>
+  const handleDraftChange = (todoId: string, value: string) => {
+    setDraftTexts((previous) => ({
+      ...previous,
+      [todoId]: value,
+    }));
+  };
 
-            <p
-              className={`min-w-0 flex-1 truncate text-[14px] leading-[140%] ${
-                todo.isCompleted
-                  ? "text-[var(--text-muted)] opacity-60"
-                  : "text-[var(--text-default)]"
+  const resetDraft = (todo: EventTodo) => {
+    setDraftTexts((previous) => ({
+      ...previous,
+      [todo._id]: todo.text,
+    }));
+  };
+
+  const handleSaveTodo = async (todo: EventTodo) => {
+    const nextText = (draftTexts[todo._id] ?? todo.text).trim();
+
+    if (!nextText) {
+      resetDraft(todo);
+      return;
+    }
+
+    if (nextText === todo.text) {
+      return;
+    }
+
+    setDraftTexts((previous) => ({
+      ...previous,
+      [todo._id]: nextText,
+    }));
+
+    await onSaveText(todo._id, nextText);
+  };
+
+  const Wrapper: React.ElementType = bare ? "div" : Card;
+  const wrapperClassName = bare
+    ? "w-full px-4 py-3 text-[var(--text-default)]"
+    : "w-full overflow-hidden rounded-[24px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 text-[var(--text-default)] shadow-none";
+
+  return (
+    <Wrapper className={wrapperClassName}>
+      <div className="space-y-2">
+        {visibleTodos.map((todo) => {
+          const draftValue = draftTexts[todo._id] ?? todo.text;
+
+          return (
+            <div
+              key={todo._id}
+              draggable
+              onDragStart={() => setDraggingTodoId(todo._id)}
+              onDragEnd={() => setDraggingTodoId(null)}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                void moveTodo(todo._id);
+              }}
+              className={`group flex items-center gap-3 rounded-[14px] px-1 py-1.5 ${
+                draggingTodoId === todo._id ? "opacity-60" : ""
               }`}
             >
-              {todo.text}
-            </p>
+              <button
+                type="button"
+                onClick={() => onToggle(todo)}
+                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--ui-checkbox-bg)]"
+                style={{ borderColor: accentColor }}
+                aria-label={
+                  todo.isCompleted
+                    ? `Mark ${todo.text} as unfinished`
+                    : `Mark ${todo.text} as finished`
+                }
+              >
+                {todo.isCompleted ? (
+                  <span
+                    className="size-2.5 rounded-full"
+                    style={{ backgroundColor: accentColor }}
+                  />
+                ) : null}
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onDelete(todo._id)}
-              className={`${iconButtonClass} opacity-0 group-hover:opacity-100`}
-              aria-label={`Delete ${todo.text}`}
-            >
-              <Trash2 className="size-4" />
-            </button>
-          </div>
-        ))}
+              <Input
+                value={draftValue}
+                onChange={(event) =>
+                  handleDraftChange(todo._id, event.target.value)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void handleSaveTodo(todo);
+                  }
+
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    resetDraft(todo);
+                  }
+                }}
+                placeholder={todo.text}
+                aria-label={`Edit ${todo.text}`}
+                className={`h-8 rounded-none border-none bg-transparent px-0 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0 ${
+                  todo.isCompleted
+                    ? "text-[var(--text-muted)] line-through opacity-60"
+                    : "text-[var(--text-default)]"
+                }`}
+              />
+
+              <div className="flex items-center gap-2">
+                <div
+                  className="flex size-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] cursor-pointer transition hover:bg-[var(--surface-3)]"
+                  onClick={() => {
+                    void handleSaveTodo(todo);
+                  }}
+                  aria-label={`Save ${todo.text}`}
+                >
+                  <Check className="size-5 text-[#92b497]" />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDelete(todo._id)}
+                  className="flex size-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
+                  aria-label={`Delete ${todo.text}`}
+                >
+                  <Trash2 className="size-4 text-red-400" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
 
         {hiddenCount > 0 ? (
           <p className="pl-8 text-[13px] leading-none text-[var(--text-muted)]">
@@ -168,25 +283,28 @@ export function TodoSection({
         ) : null}
 
         <div className={orderedTodos.length ? "pt-1" : ""}>
-          <div className="flex items-center gap-2 border-b border-[var(--border)]">
+          <div className="flex items-center gap-2 pt-2">
             <Input
-              ref={inputRef}
+              ref={addInputRef}
               value={inputValue}
               onChange={(event) => onInputChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  handleAddTodo();
+                  void handleAddTodo();
                 }
               }}
               placeholder={title}
-              className="h-8 rounded-none border-none bg-transparent px-0 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0"
+              className="h-8 rounded-none border-none bg-transparent px-2 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0"
             />
             <button
               type="button"
-              onClick={handleAddTodo}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                void handleAddTodo();
+              }}
               disabled={!inputValue.trim()}
-              className={`${iconButtonClass} text-[#FF3B30] disabled:opacity-35`}
+              className={`${iconButtonClass} text-[var(--text-muted)] disabled:opacity-35`}
               aria-label="Add todo"
             >
               <Plus className="size-4 stroke-[3px]" />
@@ -194,6 +312,6 @@ export function TodoSection({
           </div>
         </div>
       </div>
-    </Card>
+    </Wrapper>
   );
 }

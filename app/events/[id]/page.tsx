@@ -4,11 +4,7 @@ import * as React from "react";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowLeft,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { toast } from "sonner";
 
@@ -24,6 +20,7 @@ import {
   type JamMessage,
   type UserProfile,
 } from "@/lib/api";
+import { NO_BRICK_EVENT_COLOR } from "@/lib/event-colors";
 import { useEventMessagesSocket } from "@/hooks/use-event-messages-socket";
 import { appendMessageIfMissing } from "@/lib/jam-messages";
 import { queryKeys } from "@/lib/query-keys";
@@ -39,9 +36,7 @@ import {
   EventSingleField,
 } from "@/components/shared/event-range-field";
 import { SectionLoading } from "@/components/shared/section-loading";
-import {
-  EventSummaryCard,
-} from "./_components/event-summary-card";
+import { EventSummaryCard } from "./_components/event-summary-card";
 import { EventLibraryPanel } from "./_components/event-library-panel";
 import { EventNotesPanel } from "./_components/event-notes-panel";
 import { JamPreviewPanel } from "./_components/jam-preview-panel";
@@ -57,7 +52,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-function mapParticipants(participants: EventData["participants"]): UserProfile[] {
+function mapParticipants(
+  participants: EventData["participants"],
+): UserProfile[] {
   const mapped = participants
     .map((participant) =>
       typeof participant === "string" ? null : participant,
@@ -126,8 +123,10 @@ export default function EventDetailsPage() {
 
   const id = params.id;
 
-  const [newTodoText, setNewTodoText] = useState("");
-  const [notesText, setNotesText] = useState("");
+  const [newPrivateTodoText, setNewPrivateTodoText] = useState("");
+  const [newSharedTodoText, setNewSharedTodoText] = useState("");
+  const [sharedNotesText, setSharedNotesText] = useState("");
+  const [personalNotesText, setPersonalNotesText] = useState("");
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [jamView, setJamView] = useState<"jam" | "media">("jam");
@@ -150,9 +149,6 @@ export default function EventDetailsPage() {
   const [editDatePopupOpen, setEditDatePopupOpen] = useState(false);
   const [editTimePopupOpen, setEditTimePopupOpen] = useState(false);
   const [editIsAllDay, setEditIsAllDay] = useState(false);
-  const notesSaveTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-    null,
-  );
 
   useEventMessagesSocket(id);
 
@@ -238,8 +234,19 @@ export default function EventDetailsPage() {
     onError: (error: Error) =>
       toast.error(error.message || "Failed to update event"),
   });
-  const saveNotesMutation = useMutation({
-    mutationFn: (payload: { notes: string }) => eventApi.updateNotes(id, payload),
+  const saveSharedNotesMutation = useMutation({
+    mutationFn: (payload: { notes: string }) =>
+      eventApi.updateNotes(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.event(id) });
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Failed to save shared notes"),
+  });
+
+  const savePersonalNotesMutation = useMutation({
+    mutationFn: (payload: { notes: string }) =>
+      eventApi.updatePersonalNotes(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.event(id) });
     },
@@ -259,10 +266,7 @@ export default function EventDetailsPage() {
         isShared: Boolean(isShared),
       });
     },
-    onSuccess: () => {
-      setNewTodoText("");
-      refreshEverything();
-    },
+    onSuccess: refreshEverything,
     onError: (error: Error) =>
       toast.error(error.message || "Failed to add todo"),
   });
@@ -350,6 +354,7 @@ export default function EventDetailsPage() {
     [event?.participants],
   );
   const bricks = useMemo(() => bricksQuery.data ?? [], [bricksQuery.data]);
+  const isCollaborativeEvent = currentParticipantIds.size > 1;
 
   React.useEffect(() => {
     if (!shareDialogOpen || !event) {
@@ -375,8 +380,12 @@ export default function EventDetailsPage() {
   }, [editDialogOpen, event]);
 
   React.useEffect(() => {
-    setNotesText(event?.notes || "");
+    setSharedNotesText(event?.notes || "");
   }, [event?.notes, event?._id]);
+
+  React.useEffect(() => {
+    setPersonalNotesText(event?.personalNotes || "");
+  }, [event?.personalNotes, event?._id]);
 
   React.useEffect(() => {
     if (!editHasDateRange) {
@@ -398,27 +407,6 @@ export default function EventDetailsPage() {
     });
   }, [editIsAllDay, editIsSingleDayEvent, editStartTime]);
 
-  React.useEffect(() => {
-    if (!event || notesText === (event.notes || "")) {
-      return;
-    }
-
-    if (notesSaveTimerRef.current) {
-      clearTimeout(notesSaveTimerRef.current);
-    }
-
-    notesSaveTimerRef.current = setTimeout(() => {
-      saveNotesMutation.mutate({ notes: notesText });
-      notesSaveTimerRef.current = null;
-    }, 700);
-
-    return () => {
-      if (notesSaveTimerRef.current) {
-        clearTimeout(notesSaveTimerRef.current);
-      }
-    };
-  }, [event, notesText, saveNotesMutation]);
-
   if (eventQuery.isLoading) {
     return <SectionLoading rows={6} />;
   }
@@ -434,6 +422,9 @@ export default function EventDetailsPage() {
 
   const privateTodos = (eventTodosQuery.data || []).filter(
     (todo) => !todo.isShared,
+  );
+  const sharedTodos = (eventTodosQuery.data || []).filter(
+    (todo) => todo.isShared,
   );
   const messages = messagesQuery.data || [];
   const mediaMessages = messages.filter(
@@ -558,17 +549,24 @@ export default function EventDetailsPage() {
     );
   };
 
-  const flushNotesSave = () => {
-    if (!event || notesText === (event.notes || "")) {
+  const flushSharedNotesSave = () => {
+    if (!event || sharedNotesText === (event.notes || "")) {
       return;
     }
 
-    if (notesSaveTimerRef.current) {
-      clearTimeout(notesSaveTimerRef.current);
-      notesSaveTimerRef.current = null;
+    saveSharedNotesMutation.mutate({ notes: sharedNotesText });
+  };
+
+  const flushPersonalNotesSave = () => {
+    if (
+      !isCollaborativeEvent ||
+      !event ||
+      personalNotesText === (event.personalNotes || "")
+    ) {
+      return;
     }
 
-    saveNotesMutation.mutate({ notes: notesText });
+    savePersonalNotesMutation.mutate({ notes: personalNotesText });
   };
 
   return (
@@ -790,29 +788,116 @@ export default function EventDetailsPage() {
         />
 
         <div className="mt-3 space-y-3">
-          <TodoSection
-            todos={privateTodos}
-            title="New todo"
-            inputValue={newTodoText}
-            onInputChange={setNewTodoText}
-            onAdd={() => addTodoMutation.mutate({ text: newTodoText })}
-            onToggle={(todo) =>
-              updateTodoMutation.mutate({
-                todoId: todo._id,
-                payload: { isCompleted: !todo.isCompleted },
-              })
-            }
-            onDelete={(todoId) => deleteTodoMutation.mutate(todoId)}
-            onReorder={(todoIds) => reorderTodosMutation.mutateAsync(todoIds)}
-            accentColor={event.brick?.color || "#7DC97E"}
-          />
+          <div className="">
+            <div className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-[var(--surface-2)] ">
+              <TodoSection
+                todos={privateTodos}
+                title="New todo"
+                inputValue={newPrivateTodoText}
+                onInputChange={setNewPrivateTodoText}
+                onAdd={() =>
+                  addTodoMutation.mutateAsync({ text: newPrivateTodoText })
+                }
+                onToggle={(todo) =>
+                  updateTodoMutation.mutate({
+                    todoId: todo._id,
+                    payload: { isCompleted: !todo.isCompleted },
+                  })
+                }
+                onSaveText={(todoId, text) =>
+                  updateTodoMutation.mutateAsync({
+                    todoId,
+                    payload: { text },
+                  })
+                }
+                onDelete={(todoId) => deleteTodoMutation.mutate(todoId)}
+                onReorder={(todoIds) =>
+                  reorderTodosMutation.mutateAsync(todoIds)
+                }
+                accentColor={event.brick?.color || NO_BRICK_EVENT_COLOR}
+                bare
+              />
+              <div className="mx-4 border-t border-[var(--border)]" />
 
-          <EventNotesPanel
-            value={notesText}
-            onChange={setNotesText}
-            onBlur={flushNotesSave}
-            isSaving={saveNotesMutation.isPending}
-          />
+              <EventNotesPanel
+                value={
+                  isCollaborativeEvent ? personalNotesText : sharedNotesText
+                }
+                onChange={
+                  isCollaborativeEvent
+                    ? setPersonalNotesText
+                    : setSharedNotesText
+                }
+                onSubmit={
+                  isCollaborativeEvent
+                    ? flushPersonalNotesSave
+                    : flushSharedNotesSave
+                }
+                isSaving={
+                  isCollaborativeEvent
+                    ? savePersonalNotesMutation.isPending
+                    : saveSharedNotesMutation.isPending
+                }
+                placeholder="New notes"
+                label={isCollaborativeEvent ? "Private notes" : "Notes"}
+                minHeightClassName={
+                  isCollaborativeEvent ? "min-h-[50px]" : "min-h-[220px]"
+                }
+                bare
+              />
+            </div>
+          </div>
+
+          {isCollaborativeEvent ? (
+            <div className="">
+              <div className="overflow-hidden rounded-[24px] border border-[var(--border)] bg-[var(--surface-2)]">
+                <TodoSection
+                  todos={sharedTodos}
+                  title="New shared todo"
+                  inputValue={newSharedTodoText}
+                  onInputChange={setNewSharedTodoText}
+                  onAdd={() =>
+                    addTodoMutation.mutateAsync({
+                      text: newSharedTodoText,
+                      isShared: true,
+                    })
+                  }
+                  onToggle={(todo) =>
+                    updateTodoMutation.mutate({
+                      todoId: todo._id,
+                      payload: { isCompleted: !todo.isCompleted },
+                    })
+                  }
+                  onSaveText={(todoId, text) =>
+                    updateTodoMutation.mutateAsync({
+                      todoId,
+                      payload: { text },
+                    })
+                  }
+                  onDelete={(todoId) => deleteTodoMutation.mutate(todoId)}
+                  onReorder={(todoIds) =>
+                    reorderTodosMutation.mutateAsync(todoIds)
+                  }
+                  accentColor={event.brick?.color || NO_BRICK_EVENT_COLOR}
+                  bare
+                />
+                <div className="mx-4 border-t border-[var(--border)]" />
+
+                <EventNotesPanel
+                  value={sharedNotesText}
+                  onChange={setSharedNotesText}
+                  onSubmit={flushSharedNotesSave}
+                  isSaving={saveSharedNotesMutation.isPending}
+                  placeholder="New shared notes"
+                  label="Shared notes"
+                minHeightClassName={
+                  isCollaborativeEvent ? "min-h-[50px]" : "min-h-[220px]"
+                }
+                  bare
+                />
+              </div>
+            </div>
+          ) : null}
 
           <Card className="rounded-[22px] border border-[var(--border)] bg-[var(--surface-2)] p-3.5 shadow-none">
             {jamView === "media" ? (

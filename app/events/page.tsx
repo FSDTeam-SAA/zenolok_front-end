@@ -34,7 +34,6 @@ import { AllDayTabToggle } from "@/components/shared/all-day-tab-toggle";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import {
   EventBrickSelector,
-  resolveEventBrickSelection,
 } from "@/components/shared/event-brick-selector";
 import { BrickFilterBar } from "@/components/shared/brick-filter-bar";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -55,6 +54,7 @@ import {
   paginateArray,
 } from "@/lib/api";
 import { brickIconOptions } from "@/lib/brick-icons";
+import { NO_BRICK_EVENT_COLOR } from "@/lib/event-colors";
 import { colorPalette } from "@/lib/presets";
 import {
   isMessageNotification,
@@ -72,98 +72,6 @@ const eventFilters = [
   { label: "Past", value: "past" },
   { label: "All", value: "all" },
 ] as const;
-
-type EventMetaRangeProps = {
-  icon: React.ComponentType<{ className?: string }>;
-  startLabel?: string | null;
-  startValue: string;
-  endLabel?: string | null;
-  endValue?: string | null;
-  labelPosition?: "above" | "below" | "hidden";
-};
-
-function EventMetaRange({
-  icon: Icon,
-  startLabel,
-  startValue,
-  endLabel,
-  endValue,
-  labelPosition = "above",
-}: EventMetaRangeProps) {
-  const normalizedStartValue = startValue.trim();
-  const normalizedEndValue = endValue?.trim() || "";
-  const showEnd = Boolean(
-    normalizedEndValue &&
-    (labelPosition === "hidden"
-      ? normalizedEndValue !== normalizedStartValue
-      : normalizedEndValue !== normalizedStartValue ||
-        (endLabel || "") !== (startLabel || "")),
-  );
-  const isInlineRow = labelPosition === "hidden";
-
-  const renderRangeValue = (value: string, label?: string | null) => (
-    <div
-      className={`min-w-0 ${
-        isInlineRow ? "flex items-center gap-2" : "flex flex-col"
-      }`}
-    >
-      {labelPosition === "above" && label ? (
-        <p className="font-poppins text-[12px] leading-none font-medium tracking-[0.01em] text-[#8E97A7]">
-          {label}
-        </p>
-      ) : null}
-      <p
-        className={`font-poppins text-[15px] font-semibold text-[#4D5463] sm:text-[16px] ${
-          isInlineRow ? "leading-none" : "mt-0.5 leading-[120%]"
-        }`}
-      >
-        {value}
-      </p>
-      {labelPosition === "below" && label ? (
-        <div className="mt-1 flex items-center text-[#A1A9B8]">
-          <span className="font-poppins text-[11px] leading-none font-medium tracking-[0.14em]">
-            {label}
-          </span>
-        </div>
-      ) : null}
-    </div>
-  );
-
-  return (
-    <div
-      className={`flex min-w-0 gap-3 text-[#4D5463] ${
-        isInlineRow ? "items-center" : "items-start"
-      }`}
-    >
-      <Icon
-        className={`size-[18px] shrink-0 text-[#9CA5B5] ${
-          isInlineRow ? "" : "mt-0.5"
-        }`}
-      />
-      <div
-        className={`flex min-w-0 flex-wrap gap-x-3 gap-y-1 ${
-          isInlineRow ? "items-center" : "items-start"
-        }`}
-      >
-        {renderRangeValue(
-          normalizedStartValue,
-          labelPosition === "hidden" ? undefined : startLabel,
-        )}
-        {showEnd ? (
-          <>
-            <span className="self-center text-[18px] leading-none text-[#A4ACBB]">
-              -
-            </span>
-            {renderRangeValue(
-              normalizedEndValue,
-              labelPosition === "hidden" ? undefined : endLabel,
-            )}
-          </>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 
 type EventStatusIconProps = {
   icon: React.ComponentType<{ className?: string }>;
@@ -241,8 +149,6 @@ export default function EventsPage() {
   const [datePopupOpen, setDatePopupOpen] = useState(false);
   const [timePopupOpen, setTimePopupOpen] = useState(false);
   const [newEventBrick, setNewEventBrick] = useState<string>("");
-  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] =
-    useState("");
   const [brickName, setBrickName] = useState("");
   const [brickColor, setBrickColor] = useState("#36A9E1");
   const [brickIcon, setBrickIcon] = useState("home");
@@ -349,13 +255,16 @@ export default function EventsPage() {
         icon: brickIcon,
       });
     },
-    onSuccess: () => {
+    onSuccess: (createdBrick) => {
       toast.success("Brick created");
       setCreateBrickOpen(false);
       setBrickName("");
       setBrickColor("#36A9E1");
       setBrickIcon("home");
       queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
+      if (createEventOpen) {
+        setNewEventBrick(createdBrick._id);
+      }
     },
     onError: (error: Error) =>
       toast.error(error.message || "Failed to create brick"),
@@ -402,6 +311,10 @@ export default function EventsPage() {
         return true;
       })
       .filter((event) => {
+        if (!allBrickIds.length) {
+          return true;
+        }
+
         if (!effectiveSelectedBrickIds.length) {
           return false;
         }
@@ -429,6 +342,7 @@ export default function EventsPage() {
         event.brick?.name?.toLowerCase().includes(q),
     );
   }, [
+    allBrickIds,
     allBricksSelected,
     effectiveSelectedBrickIds,
     eventsQuery.data,
@@ -499,16 +413,9 @@ export default function EventsPage() {
     setEndDate("");
     setStartTime("");
     setEndTime("");
-    setNewEventBrick(
-      resolveEventBrickSelection(
-        allBrickIds,
-        preferredCreateEventBrickId
-          ? [preferredCreateEventBrickId, ...effectiveSelectedBrickIds]
-          : effectiveSelectedBrickIds,
-      ),
-    );
+    setNewEventBrick("");
     setCreateEventOpen(true);
-  }, [allBrickIds, effectiveSelectedBrickIds, preferredCreateEventBrickId]);
+  }, []);
 
   React.useEffect(() => {
     setPage(1);
@@ -678,7 +585,8 @@ export default function EventsPage() {
                           <span
                             className="h-7 w-1 rounded-full"
                             style={{
-                              backgroundColor: event.brick?.color || "#F7C700",
+                              backgroundColor:
+                                event.brick?.color || NO_BRICK_EVENT_COLOR,
                             }}
                           />
                         </div>
@@ -940,15 +848,21 @@ export default function EventsPage() {
                 />
               </div>
             </div>
-            <EventBrickSelector
-              bricks={bricks}
-              selectedBrickId={newEventBrick}
-              onSelectBrick={(brickId) => {
-                setNewEventBrick(brickId);
-                setPreferredCreateEventBrickId(brickId);
-              }}
-              badgeClassName="!text-[22px]"
-            />
+            <div className="space-y-2 rounded-[22px] border border-[var(--border)] bg-[var(--surface-1)]/60 p-3">
+              <EventBrickSelector
+                bricks={bricks}
+                selectedBrickId={newEventBrick}
+                onSelectBrick={setNewEventBrick}
+                allowNoBrick
+                onCreateBrick={() => setCreateBrickOpen(true)}
+                badgeClassName="!text-[22px]"
+              />
+              {!bricks.length ? (
+                <p className="font-poppins text-[13px] text-[var(--text-muted)]">
+                  No bricks yet. You can create this event without one, or add a brick now.
+                </p>
+              ) : null}
+            </div>
           </div>
           <DialogFooter>
             <Button

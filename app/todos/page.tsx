@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInCalendarDays, format, startOfDay } from "date-fns";
 import {
@@ -418,9 +419,12 @@ function CategoryCard({
   );
 }
 
-export default function TodosPage() {
+function TodosPageContent() {
   const { preferences } = useAppState();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const targetTodoId = searchParams.get("todoId");
 
   const [page, setPage] = React.useState(1);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -481,6 +485,7 @@ export default function TodosPage() {
     startScrollLeft: 0,
   });
   const scheduledCategorySuppressClickRef = React.useRef(false);
+  const handledNotificationTodoIdRef = React.useRef<string | null>(null);
   const [isScheduledCategoryDragging, setIsScheduledCategoryDragging] =
     React.useState(false);
 
@@ -694,6 +699,33 @@ export default function TodosPage() {
       ) || null
     );
   }, [selectedCategory, selectedTodoId]);
+
+  React.useEffect(() => {
+    if (!targetTodoId) {
+      handledNotificationTodoIdRef.current = null;
+      return;
+    }
+
+    if (handledNotificationTodoIdRef.current === targetTodoId) {
+      return;
+    }
+
+    const matchedCategory = categories.find((category) =>
+      (category.items || []).some((item) => item._id === targetTodoId),
+    );
+
+    if (!matchedCategory) {
+      return;
+    }
+
+    handledNotificationTodoIdRef.current = targetTodoId;
+    setSelectedCategoryId(matchedCategory._id);
+    setSelectedTodoId(targetTodoId);
+    setTodoEditorMode("edit");
+    setTodoEditorOpen(true);
+    setCategoryDetailOpen(false);
+    router.replace("/todos", { scroll: false });
+  }, [categories, router, targetTodoId]);
 
   const paged = React.useMemo(
     () => paginateArray(categories, page, 6),
@@ -1511,5 +1543,13 @@ export default function TodosPage() {
         title="Delete Category?"
       />
     </div>
+  );
+}
+
+export default function TodosPage() {
+  return (
+    <React.Suspense fallback={<SectionLoading rows={8} />}>
+      <TodosPageContent />
+    </React.Suspense>
   );
 }

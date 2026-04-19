@@ -36,8 +36,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAppState } from "@/components/providers/app-state-provider";
 import { BrickIcon } from "@/components/shared/brick-icon";
-import { notificationApi } from "@/lib/api";
-import { isMessageNotification } from "@/lib/notifications";
+import { notificationApi, type NotificationData } from "@/lib/api";
+import { getNotificationHref, isMessageNotification } from "@/lib/notifications";
 import { queryKeys } from "@/lib/query-keys";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -430,6 +430,22 @@ export function AppTopNav() {
       : activeNotificationCategory === "system"
         ? "No system notifications yet"
         : "No notifications yet";
+  const handleNotificationClick = useCallback(
+    (notification: NotificationData) => {
+      const href = getNotificationHref(notification);
+      if (!href) {
+        return;
+      }
+
+      if (!notification.read) {
+        markAsReadMutation.mutate(notification._id);
+      }
+
+      setNotificationsOpen(false);
+      router.push(href);
+    },
+    [markAsReadMutation, router],
+  );
 
   return (
     <motion.header
@@ -629,6 +645,8 @@ export function AppTopNav() {
                     const isTogglePending =
                       markAsReadMutation.isPending ||
                       markAsUnreadMutation.isPending;
+                    const href = getNotificationHref(notification);
+                    const isNavigable = Boolean(href);
 
                     return (
                       <motion.div
@@ -646,7 +664,8 @@ export function AppTopNav() {
                           }
                           className="mt-3 rounded-full disabled:cursor-not-allowed"
                           disabled={isTogglePending}
-                          onClick={() => {
+                          onClick={(event) => {
+                            event.stopPropagation();
                             if (notification.read) {
                               markAsUnreadMutation.mutate(notification._id);
                               return;
@@ -665,8 +684,31 @@ export function AppTopNav() {
                           />
                         </button>
                         <div
+                          role={isNavigable ? "button" : undefined}
+                          tabIndex={isNavigable ? 0 : undefined}
+                          onClick={() => {
+                            if (!isNavigable) {
+                              return;
+                            }
+
+                            handleNotificationClick(notification);
+                          }}
+                          onKeyDown={(event) => {
+                            if (
+                              !isNavigable ||
+                              (event.key !== "Enter" && event.key !== " ")
+                            ) {
+                              return;
+                            }
+
+                            event.preventDefault();
+                            handleNotificationClick(notification);
+                          }}
                           className={cn(
                             "min-h-[62px] flex-1 rounded-[16px] border px-4 py-3 transition",
+                            isNavigable
+                              ? "cursor-pointer hover:border-[#D6DDEA] hover:bg-[#F4F7FB]"
+                              : "",
                             notification.read
                               ? "border-[#EEF2F7] bg-[#FAFBFD]"
                               : "border-[#E3E8F1] bg-[#F8FAFD]",

@@ -1,12 +1,21 @@
 "use client";
 
-import { ArrowUpDown, Bell, CalendarDays, Clock3, MapPin, RefreshCw, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowUpDown,
+  Bell,
+  CalendarDays,
+  Clock3,
+  MapPin,
+  RefreshCw,
+  SlidersHorizontal,
+} from "lucide-react";
 import { format, isSameDay } from "date-fns";
 
 import type { EventData, UserProfile } from "@/lib/api";
 import { BrickIcon } from "@/components/shared/brick-icon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { NO_BRICK_EVENT_COLOR } from "@/lib/event-colors";
 import { formatTimeByPreference } from "@/lib/time-format";
 import { getParticipantDisplayName } from "./event-detail-helpers";
 import { ParticipantShareDialog } from "./participant-share-dialog";
@@ -85,7 +94,9 @@ export function EventSummaryCard({
             <div className="flex items-start gap-3">
               <span
                 className="mt-1 h-8 w-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: event.brick?.color || "#F7C700" }}
+                style={{
+                  backgroundColor: event.brick?.color || NO_BRICK_EVENT_COLOR,
+                }}
               />
               <div className="min-w-0 space-y-3">
                 <p className="truncate text-[28px] py-2 font-semibold leading-[1.05] text-[var(--text-strong)] sm:text-[32px]">
@@ -157,14 +168,24 @@ export function EventSummaryCard({
                     >
                       {/* Day labels */}
                       <span />
-                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{startDayLabel}</p>
+                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                        {startDayLabel}
+                      </p>
                       <span />
-                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{endDayLabel}</p>
+                      <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                        {endDayLabel}
+                      </p>
                       {/* Dates */}
                       <CalendarDays className="size-5 text-[var(--text-muted)]" />
-                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</span>
-                      <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">—</span>
-                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{endDateLabel}</span>
+                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                        {startDateLabel}
+                      </span>
+                      <span className="justify-self-center text-[16px] leading-none text-[var(--text-muted)]">
+                        —
+                      </span>
+                      <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                        {endDateLabel}
+                      </span>
                       {/* Arrows */}
                       <span />
                       <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
@@ -172,13 +193,13 @@ export function EventSummaryCard({
                       <ArrowUpDown className="mx-auto size-3 text-[var(--text-muted)]" />
                       {/* Times */}
                       <Clock3 className="size-5 text-[var(--text-muted)]" />
-                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{startTimeLabel}</span>
+                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                        {startTimeLabel}
+                      </span>
                       <span />
-                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{endTimeLabel || ""}</span>
-                    </div>
-                    <div className="flex min-w-0 items-center gap-2 text-[14px] text-[var(--text-default)]">
-                      <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
-                      <span className="truncate font-poppins">{event.location || "No location"}</span>
+                      <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                        {endTimeLabel || ""}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -191,27 +212,41 @@ export function EventSummaryCard({
                         <CalendarDays className="size-5 shrink-0 text-[var(--text-muted)]" />
                         {startDayLabel ? (
                           <div>
-                            <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">{startDayLabel}</p>
-                            <p className="mt-0.5 font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</p>
+                            <p className="font-poppins text-[12px] leading-none font-medium text-[var(--text-muted)]">
+                              {startDayLabel}
+                            </p>
+                            <p className="mt-0.5 font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                              {startDateLabel}
+                            </p>
                           </div>
                         ) : (
-                          <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">{startDateLabel}</span>
+                          <span className="font-poppins text-[16px] font-semibold leading-[120%] text-[var(--text-default)]">
+                            {startDateLabel}
+                          </span>
                         )}
                       </div>
                       <div className="flex items-center gap-3">
                         <Clock3 className="size-5 shrink-0 text-[var(--text-muted)]" />
-                        <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{startTimeLabel}</span>
+                        <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                          {startTimeLabel}
+                        </span>
                         {!event.isAllDay && endTimeLabel ? (
                           <>
-                            <span className="text-[16px] leading-none text-[var(--text-muted)]">—</span>
-                            <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">{endTimeLabel}</span>
+                            <span className="text-[16px] leading-none text-[var(--text-muted)]">
+                              —
+                            </span>
+                            <span className="font-poppins text-[16px] font-semibold leading-none text-[var(--text-default)]">
+                              {endTimeLabel}
+                            </span>
                           </>
                         ) : null}
                       </div>
                     </div>
                     <div className="flex min-w-0 items-center gap-2 text-[14px] text-[var(--text-default)]">
                       <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
-                      <span className="truncate font-poppins">{event.location || "No location"}</span>
+                      <span className="truncate font-poppins">
+                        {event.location || "No location"}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -250,6 +285,12 @@ export function EventSummaryCard({
                 ) : null}
               </div>
             </div>
+          </div>
+          <div className="flex min-w-0 items-center gap-2 text-[14px] text-[var(--text-default)]">
+            <MapPin className="size-5 shrink-0 text-[var(--text-muted)]" />
+            <span className="truncate font-poppins">
+              {event.location || "No location"}
+            </span>
           </div>
         </div>
       </div>

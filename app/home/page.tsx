@@ -39,7 +39,6 @@ import { BrickIcon } from "@/components/shared/brick-icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import {
   EventBrickSelector,
-  resolveEventBrickSelection,
 } from "@/components/shared/event-brick-selector";
 import {
   EventDateRangePopup,
@@ -66,6 +65,7 @@ import {
   notificationMatchesEvent,
 } from "@/lib/notifications";
 import { brickIconOptions } from "@/lib/brick-icons";
+import { NO_BRICK_EVENT_COLOR } from "@/lib/event-colors";
 import { colorPalette } from "@/lib/presets";
 import { queryKeys } from "@/lib/query-keys";
 import {
@@ -114,21 +114,6 @@ const CALENDAR_SEGMENT_ROW_GAP = 0;
 const CALENDAR_SEGMENT_TOP_OFFSET = 40;
 const CALENDAR_CELL_HORIZONTAL_PADDING = 0;
 const CALENDAR_SEGMENT_STACK_CLEARANCE = 4;
-
-function getContrastTextColor(color: string) {
-  const hex = color.replace("#", "");
-
-  if (hex.length !== 6) {
-    return "#FFFFFF";
-  }
-
-  const red = Number.parseInt(hex.slice(0, 2), 16);
-  const green = Number.parseInt(hex.slice(2, 4), 16);
-  const blue = Number.parseInt(hex.slice(4, 6), 16);
-  const luminance = (red * 299 + green * 587 + blue * 114) / 1000;
-
-  return luminance > 160 ? "#253047" : "#FFFFFF";
-}
 
 function HomeEventTodoRow({
   text,
@@ -356,8 +341,6 @@ export default function HomePage() {
   const [eventDatePopupOpen, setEventDatePopupOpen] = React.useState(false);
   const [eventTimePopupOpen, setEventTimePopupOpen] = React.useState(false);
   const [newEventBrick, setNewEventBrick] = React.useState("");
-  const [preferredCreateEventBrickId, setPreferredCreateEventBrickId] =
-    React.useState("");
   const [selectedDateRange, setSelectedDateRange] = React.useState(() => {
     const normalized = startOfDay(selectedDate);
     return { start: normalized, end: normalized };
@@ -458,7 +441,7 @@ export default function HomePage() {
         const titleLower = event.title.toLowerCase();
         const color = titleLower.includes("exhibition week")
           ? exhibitionColor
-          : event.brick?.color || "#84C6EC";
+          : event.brick?.color || NO_BRICK_EVENT_COLOR;
 
         items.push({
           id: event._id,
@@ -500,6 +483,10 @@ export default function HomePage() {
   }, [currentUserId, eventsQuery.data]);
 
   const filteredEvents = React.useMemo(() => {
+    if (!allBrickIds.length) {
+      return normalizedEvents;
+    }
+
     if (!effectiveSelectedBrickIds.length) {
       return [];
     }
@@ -513,7 +500,7 @@ export default function HomePage() {
         event.brickId && effectiveSelectedBrickIds.includes(event.brickId),
       ),
     );
-  }, [effectiveSelectedBrickIds, normalizedEvents, allBricksSelected]);
+  }, [allBrickIds, allBricksSelected, effectiveSelectedBrickIds, normalizedEvents]);
   const unreadMessageCountByEventId = React.useMemo(() => {
     const unreadMessageNotifications = (
       notificationsQuery.data?.items ?? []
@@ -642,21 +629,9 @@ export default function HomePage() {
     setEventEndDate(defaultEndDate);
     setEventStartTime("");
     setEventEndTime("");
-    setNewEventBrick(
-      resolveEventBrickSelection(
-        allBrickIds,
-        preferredCreateEventBrickId
-          ? [preferredCreateEventBrickId, ...effectiveSelectedBrickIds]
-          : effectiveSelectedBrickIds,
-      ),
-    );
+    setNewEventBrick("");
     setCreateEventOpen(true);
-  }, [
-    allBrickIds,
-    effectiveSelectedBrickIds,
-    preferredCreateEventBrickId,
-    selectedDateRange,
-  ]);
+  }, [selectedDateRange]);
 
   const createBrickMutation = useMutation({
     mutationFn: () => {
@@ -670,13 +645,16 @@ export default function HomePage() {
         icon: brickIcon,
       });
     },
-    onSuccess: () => {
+    onSuccess: (createdBrick) => {
       toast.success("Brick created");
       queryClient.invalidateQueries({ queryKey: queryKeys.bricks });
       setCreateBrickOpen(false);
       setBrickName("");
       setBrickColor("#36A9E1");
       setBrickIcon("home");
+      if (createEventOpen) {
+        setNewEventBrick(createdBrick._id);
+      }
     },
     onError: (error: Error) =>
       toast.error(error.message || "Failed to create brick"),
@@ -1284,9 +1262,6 @@ export default function HomePage() {
                                   >
                                     {visibleDayEvents.map((event) => {
                                       if (event.isAllDay) {
-                                        const textColor = getContrastTextColor(
-                                          event.color,
-                                        );
                                         return (
                                           <div
                                             key={event.id}
@@ -1296,8 +1271,7 @@ export default function HomePage() {
                                             }}
                                           >
                                             <span
-                                              className="truncate font-poppins text-[13px] leading-none font-semibold"
-                                              style={{ color: textColor }}
+                                              className="truncate font-poppins text-[13px] leading-none font-semibold text-white"
                                             >
                                               {event.title}
                                             </span>
@@ -1308,15 +1282,12 @@ export default function HomePage() {
                                       return (
                                         <div
                                           key={event.id}
-                                          className="flex h-[16px] items-center overflow-hidden rounded-[3px] bg-white/70 pr-1"
+                                          className="flex h-[16px] min-w-0 items-center overflow-hidden rounded-[3px] px-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.18)]"
+                                          style={{
+                                            backgroundColor: event.color,
+                                          }}
                                         >
-                                          <span
-                                            className="h-full w-1 shrink-0 rounded-[2px]"
-                                            style={{
-                                              backgroundColor: event.color,
-                                            }}
-                                          />
-                                          <span className="truncate pl-1 font-poppins text-[13px] leading-none font-medium text-[#53565C]">
+                                          <span className="truncate font-poppins text-[13px] leading-none font-medium text-white">
                                             {event.title}
                                           </span>
                                         </div>
@@ -1388,22 +1359,21 @@ export default function HomePage() {
                                               <button
                                                 key={`${dayKey}-${event.id}`}
                                                 type="button"
-                                                className="flex w-full items-center gap-1.5 rounded-[8px] bg-white/88 px-1.5 py-1 text-left"
+                                                className="flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left shadow-[inset_0_0_0_1px_rgba(255,255,255,0.16)]"
+                                                style={{
+                                                  backgroundColor: event.color,
+                                                }}
                                                 onClick={(clickEvent) => {
                                                   clickEvent.preventDefault();
                                                   clickEvent.stopPropagation();
                                                   handleOpenEventDetails(event.id);
                                                 }}
                                               >
-                                                <span
-                                                  className="h-8 w-1 shrink-0 rounded-full"
-                                                  style={{ backgroundColor: event.color }}
-                                                />
                                                 <span className="min-w-0 flex-1">
-                                                  <span className="block truncate font-poppins text-[14px] leading-none font-semibold text-[#505864]">
+                                                  <span className="block truncate font-poppins text-[14px] leading-none font-semibold text-white">
                                                     {event.title}
                                                   </span>
-                                                  <span className="mt-1 block truncate font-poppins text-[12px] leading-none text-[#7B8495]">
+                                                  <span className="mt-1 block truncate font-poppins text-[12px] leading-none text-white/80">
                                                     {sameDayRange
                                                       ? timeLabel
                                                       : format(
@@ -1437,10 +1407,6 @@ export default function HomePage() {
                                 {weekInfo.segments
                                   .filter((segment) => segment.lane < visiblePeriodRows)
                                   .map((segment) => {
-                                    const textColor = getContrastTextColor(
-                                      segment.color,
-                                    );
-
                                     return (
                                       <div
                                         key={segment.id}
@@ -1453,8 +1419,7 @@ export default function HomePage() {
                                       >
                                         {segment.isStart ? (
                                           <span
-                                            className="truncate font-poppins text-[14px] leading-none font-semibold"
-                                            style={{ color: textColor }}
+                                            className="truncate font-poppins text-[14px] leading-none font-semibold text-white"
                                           >
                                             {segment.title}
                                           </span>
@@ -1657,15 +1622,21 @@ export default function HomePage() {
               </div>
             </div>
 
-            <EventBrickSelector
-              bricks={bricks}
-              selectedBrickId={newEventBrick}
-              onSelectBrick={(brickId) => {
-                setNewEventBrick(brickId);
-                setPreferredCreateEventBrickId(brickId);
-              }}
-              badgeClassName="!text-[22px]"
-            />
+            <div className="space-y-2 rounded-[22px] border border-[var(--border)] bg-[var(--surface-1)]/60 p-3">
+              <EventBrickSelector
+                bricks={bricks}
+                selectedBrickId={newEventBrick}
+                onSelectBrick={setNewEventBrick}
+                allowNoBrick
+                onCreateBrick={() => setCreateBrickOpen(true)}
+                badgeClassName="!text-[22px]"
+              />
+              {!bricks.length ? (
+                <p className="font-poppins text-[13px] text-[var(--text-muted)]">
+                  No bricks yet. You can create this event without one, or add a brick now.
+                </p>
+              ) : null}
+            </div>
           </div>
           <DialogFooter>
             <Button

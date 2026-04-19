@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ImagePlus, Pencil, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -74,15 +74,22 @@ export default function EventMessagesPage() {
   const { preferences } = useAppState();
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const id = params.id;
+  const targetMessageId = searchParams.get("messageId");
 
   const [messageText, setMessageText] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
   const [activeFilter, setActiveFilter] = useState<MessageFilter>("all");
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(
+    null,
+  );
   const hasMarkedMessageNotificationsReadRef = React.useRef(false);
+  const hasScrolledToMessageRef = React.useRef<string | null>(null);
+  const messageRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
   useEventMessagesSocket(id);
 
@@ -287,6 +294,34 @@ export default function EventMessagesPage() {
     setEditingText("");
   }, [activeFilter]);
 
+  React.useEffect(() => {
+    if (!targetMessageId) {
+      hasScrolledToMessageRef.current = null;
+      setHighlightedMessageId(null);
+      return;
+    }
+
+    if (hasScrolledToMessageRef.current === targetMessageId) {
+      return;
+    }
+
+    const targetNode = messageRefs.current[targetMessageId];
+    if (!targetNode) {
+      return;
+    }
+
+    hasScrolledToMessageRef.current = targetMessageId;
+    requestAnimationFrame(() => {
+      targetNode.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(targetMessageId);
+      window.setTimeout(() => {
+        setHighlightedMessageId((current) =>
+          current === targetMessageId ? null : current,
+        );
+      }, 2400);
+    });
+  }, [filteredMessages, targetMessageId]);
+
   if (eventQuery.isLoading || messagesQuery.isLoading) {
     return <SectionLoading rows={8} />;
   }
@@ -382,7 +417,16 @@ export default function EventMessagesPage() {
                 return (
                   <div
                     key={message._id}
-                    className={`flex items-end gap-2 ${isMe ? "justify-end" : ""}`}
+                    ref={(node) => {
+                      messageRefs.current[message._id] = node;
+                    }}
+                    className={`flex items-end gap-2 rounded-[18px] transition ${
+                      isMe ? "justify-end" : ""
+                    } ${
+                      highlightedMessageId === message._id
+                        ? "bg-[#EEF6FF] px-2 py-1"
+                        : ""
+                    }`}
                   >
                     {!isMe ? (
                       <Avatar className="size-10 border border-[var(--border)]">
@@ -543,4 +587,3 @@ export default function EventMessagesPage() {
     </div>
   );
 }
-

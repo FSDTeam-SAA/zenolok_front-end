@@ -134,6 +134,7 @@ export interface EventData {
   reminder?: string;
   recurrence: "once" | "daily" | "weekly" | "monthly" | "yearly";
   notes?: string;
+  personalNotes?: string;
   todos?: EventTodo[];
   createdAt: string;
   updatedAt: string;
@@ -189,6 +190,7 @@ export interface NotificationData {
   type?: string;
   eventId?: string;
   messageId?: string;
+  todoId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -402,6 +404,8 @@ export const eventApi = {
   ) => unwrap<EventData>(apiClient.patch(`/events/${id}`, payload)),
   updateNotes: (id: string, payload: { notes: string }) =>
     unwrap<EventData>(apiClient.patch(`/events/${id}/notes`, payload)),
+  updatePersonalNotes: (id: string, payload: { notes: string }) =>
+    unwrap<EventData>(apiClient.patch(`/events/${id}/personal-notes`, payload)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/events/${id}`)),
 };
 

@@ -14,6 +14,51 @@ export function isMessageNotification(notification: Pick<NotificationData, "type
   return /(message|chat)/i.test(notification.type ?? "");
 }
 
+export function getNotificationHref(
+  notification: Pick<
+    NotificationData,
+    "type" | "eventId" | "messageId" | "todoId"
+  >,
+) {
+  switch (notification.type) {
+    case "message_received":
+    case "tagged_message":
+      if (notification.eventId && notification.messageId) {
+        return `/events/${notification.eventId}/messages?messageId=${notification.messageId}`;
+      }
+
+      if (notification.eventId) {
+        return `/events/${notification.eventId}/messages`;
+      }
+
+      return "/events";
+
+    case "todo_upcoming":
+      return notification.todoId
+        ? `/todos?todoId=${notification.todoId}`
+        : "/todos";
+
+    case "event_upcoming":
+    case "participant_added":
+      return notification.eventId ? `/events/${notification.eventId}` : "/events";
+
+    default:
+      if (notification.eventId && notification.messageId) {
+        return `/events/${notification.eventId}/messages?messageId=${notification.messageId}`;
+      }
+
+      if (notification.eventId) {
+        return `/events/${notification.eventId}`;
+      }
+
+      if (notification.todoId) {
+        return `/todos?todoId=${notification.todoId}`;
+      }
+
+      return null;
+  }
+}
+
 export function notificationMatchesEvent(
   notification: Pick<NotificationData, "eventId" | "title">,
   event: NotificationEventMatchTarget,
