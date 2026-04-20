@@ -8,6 +8,7 @@ import {
   Bell,
   CalendarClock,
   Check,
+  GripVertical,
   ListFilter,
   Pencil,
   Plus,
@@ -226,6 +227,7 @@ function CategoryCard({
   onInlineUpdateTodo,
   onEditCategoryRequest,
   onDeleteCategoryRequest,
+  onDragHandleMouseDown,
 }: {
   category: CategoryWithItems;
   pendingDeleteMap: Record<string, true>;
@@ -236,6 +238,7 @@ function CategoryCard({
   onInlineUpdateTodo: (categoryId: string, todoId: string, text: string) => void;
   onEditCategoryRequest: (category: CategoryWithItems) => void;
   onDeleteCategoryRequest: (categoryId: string) => void;
+  onDragHandleMouseDown: () => void;
 }) {
   const items = category.items || [];
   const [newTodoText, setNewTodoText] = React.useState("");
@@ -263,29 +266,38 @@ function CategoryCard({
         >
           {category.name}
         </h3>
-        <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
-          <button
-            type="button"
-            aria-label={`Edit ${category.name}`}
-            className="inline-flex size-5 items-center justify-center text-[var(--todo-action-icon)] transition hover:text-[var(--text-default)]"
-            onClick={(event) => {
-              event.stopPropagation();
-              onEditCategoryRequest(category);
-            }}
+        <div className="flex items-center gap-1.5">
+          <span
+            aria-label="Drag to reorder"
+            onMouseDown={(e) => { e.stopPropagation(); onDragHandleMouseDown(); }}
+            className="inline-flex size-5 cursor-grab items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 text-(--todo-action-icon)"
           >
-            <Pencil className="size-3.5" strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            aria-label={`Delete ${category.name}`}
-            className="inline-flex size-5 items-center justify-center text-[var(--todo-action-icon)] transition hover:text-red-500"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDeleteCategoryRequest(category._id);
-            }}
-          >
-            <Trash2 className="size-3.5" strokeWidth={2} />
-          </button>
+            <GripVertical className="size-3.5" strokeWidth={2} />
+          </span>
+          <div className="flex items-center gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+            <button
+              type="button"
+              aria-label={`Edit ${category.name}`}
+              className="inline-flex size-5 items-center justify-center text-(--todo-action-icon) transition hover:text-[var(--text-default)]"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEditCategoryRequest(category);
+              }}
+            >
+              <Pencil className="size-3.5" strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              aria-label={`Delete ${category.name}`}
+              className="inline-flex size-5 items-center justify-center text-(--todo-action-icon) transition hover:text-red-500"
+              onClick={(event) => {
+                event.stopPropagation();
+                onDeleteCategoryRequest(category._id);
+              }}
+            >
+              <Trash2 className="size-3.5" strokeWidth={2} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -490,6 +502,10 @@ function TodosPageContent() {
   const [repeatValue, setRepeatValue] = React.useState<RepeatValue>("daily");
   const [newCategoryName, setNewCategoryName] = React.useState("");
   const [newCategoryColor, setNewCategoryColor] = React.useState("#F7C700");
+  const [newCategoryParticipantIds, setNewCategoryParticipantIds] =
+    React.useState<string[]>([]);
+  const [editCategoryParticipantIds, setEditCategoryParticipantIds] =
+    React.useState<string[]>([]);
   const [scheduledStatusTab, setScheduledStatusTab] =
     React.useState<ScheduledStatusTab>("unfinished");
   const [selectedScheduledCategoryIds, setSelectedScheduledCategoryIds] =
@@ -523,6 +539,20 @@ function TodosPageContent() {
   const profileQuery = useQuery({
     queryKey: queryKeys.profile,
     queryFn: userApi.getProfile,
+  });
+  const usersQuery = useQuery({
+    queryKey: ["users-for-category-share"],
+    queryFn: async () => {
+      const firstPage = await userApi.getAll({ page: 1, limit: 200 });
+      const totalUsers = firstPage.meta.total;
+
+      if (totalUsers > firstPage.users.length) {
+        return userApi.getAll({ page: 1, limit: totalUsers });
+      }
+
+      return firstPage;
+    },
+    enabled: addOpen || editCategoryOpen,
   });
   const alarmPresetOptions = React.useMemo(
     () =>
@@ -619,6 +649,7 @@ function TodosPageContent() {
       await todoCategoryApi.create({
         name: categoryName,
         color: newCategoryColor,
+        participants: newCategoryParticipantIds,
       });
     },
     onSuccess: () => {
@@ -626,6 +657,7 @@ function TodosPageContent() {
       setAddOpen(false);
       setNewCategoryName("");
       setNewCategoryColor("#F7C700");
+      setNewCategoryParticipantIds(profileQuery.data?._id ? [profileQuery.data._id] : []);
       queryClient.invalidateQueries({
         queryKey: queryKeys.categoriesWithItems,
       });
@@ -648,12 +680,14 @@ function TodosPageContent() {
       await todoCategoryApi.update(editCategoryId, {
         name: categoryName,
         color: editCategoryColor,
+        participants: editCategoryParticipantIds,
       });
     },
     onSuccess: () => {
       toast.success("Category updated");
       setEditCategoryOpen(false);
       setEditCategoryId(null);
+      setEditCategoryParticipantIds([]);
       queryClient.invalidateQueries({
         queryKey: queryKeys.categoriesWithItems,
       });
@@ -683,18 +717,53 @@ function TodosPageContent() {
       toast.error(error.message || "Failed to delete category"),
   });
 
+  const [localCategoryOrder, setLocalCategoryOrder] = React.useState<
+    string[] | null
+  >(null);
+  const [dragFromIndex, setDragFromIndex] = React.useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = React.useState<number | null>(null);
+  const dragHandleActiveIndexRef = React.useRef<number | null>(null);
+
+  const reorderCategoriesMutation = useMutation({
+    mutationFn: (orders: { id: string; sortOrder: number }[]) =>
+      todoCategoryApi.reorder(orders),
+    onSuccess: () => {
+      setLocalCategoryOrder(null);
+      queryClient.invalidateQueries({ queryKey: queryKeys.categoriesWithItems });
+      queryClient.invalidateQueries({ queryKey: queryKeys.categories });
+    },
+    onError: () => {
+      setLocalCategoryOrder(null);
+      toast.error("Failed to reorder categories");
+    },
+  });
+
   const categories = React.useMemo(() => {
     const source = (categoriesQuery.data || []) as CategoryWithItems[];
-    if (!Object.keys(scheduledAutoDeleteHiddenMap).length) {
-      return source;
-    }
-    return source.map((category) => ({
-      ...category,
-      items: (category.items || []).filter(
-        (item) => !scheduledAutoDeleteHiddenMap[item._id],
-      ),
-    }));
-  }, [categoriesQuery.data, scheduledAutoDeleteHiddenMap]);
+    const filtered = Object.keys(scheduledAutoDeleteHiddenMap).length
+      ? source.map((category) => ({
+          ...category,
+          items: (category.items || []).filter(
+            (item) => !scheduledAutoDeleteHiddenMap[item._id],
+          ),
+        }))
+      : source;
+
+    if (!localCategoryOrder) return filtered;
+
+    const orderMap = new Map(
+      localCategoryOrder.map((id, idx) => [id, idx]),
+    );
+    return [...filtered].sort((a, b) => {
+      const ai = orderMap.has(a._id)
+        ? orderMap.get(a._id)!
+        : Number.MAX_SAFE_INTEGER;
+      const bi = orderMap.has(b._id)
+        ? orderMap.get(b._id)!
+        : Number.MAX_SAFE_INTEGER;
+      return ai - bi;
+    });
+  }, [categoriesQuery.data, scheduledAutoDeleteHiddenMap, localCategoryOrder]);
   const categoryMetaLookup = React.useMemo(
     () =>
       categories.reduce((acc, category) => {
@@ -709,6 +778,10 @@ function TodosPageContent() {
   const selectedCategory = React.useMemo(
     () => categories.find((item) => item._id === selectedCategoryId) || null,
     [categories, selectedCategoryId],
+  );
+  const editingCategory = React.useMemo(
+    () => categories.find((item) => item._id === editCategoryId) || null,
+    [categories, editCategoryId],
   );
   const selectedCategoryItems = React.useMemo(() => {
     if (!selectedCategory) {
@@ -726,6 +799,48 @@ function TodosPageContent() {
       ) || null
     );
   }, [selectedCategory, selectedTodoId]);
+  const allUsers = usersQuery.data?.users || [];
+  const currentEditCategoryParticipantIds = React.useMemo(
+    () => new Set((editingCategory?.participants || []).map((id) => id.toString())),
+    [editingCategory?.participants],
+  );
+
+  const toggleNewCategoryParticipant = React.useCallback(
+    (userId: string, checked: boolean) => {
+      setNewCategoryParticipantIds((previous) => {
+        if (checked) {
+          return previous.includes(userId) ? previous : [...previous, userId];
+        }
+        return previous.filter((idValue) => idValue !== userId);
+      });
+    },
+    [],
+  );
+
+  const toggleEditCategoryParticipant = React.useCallback(
+    (userId: string, checked: boolean) => {
+      setEditCategoryParticipantIds((previous) => {
+        if (checked) {
+          return previous.includes(userId) ? previous : [...previous, userId];
+        }
+        return previous.filter((idValue) => idValue !== userId);
+      });
+    },
+    [],
+  );
+
+  React.useEffect(() => {
+    if (!addOpen) {
+      return;
+    }
+
+    setNewCategoryParticipantIds((previous) => {
+      if (previous.length || !profileQuery.data?._id) {
+        return previous;
+      }
+      return [profileQuery.data._id];
+    });
+  }, [addOpen, profileQuery.data?._id]);
 
   React.useEffect(() => {
     if (!targetTodoId) {
@@ -1108,11 +1223,30 @@ function TodosPageContent() {
     [updateTodoMutation],
   );
 
+  const handleCategoryReorder = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return;
+      const reordered = [...categories];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      setLocalCategoryOrder(reordered.map((c) => c._id));
+      reorderCategoriesMutation.mutate(
+        reordered.map((c, idx) => ({ id: c._id, sortOrder: idx })),
+      );
+    },
+    [categories, reorderCategoriesMutation],
+  );
+
   const openEditCategoryDialog = React.useCallback(
     (category: CategoryWithItems) => {
       setEditCategoryId(category._id);
       setEditCategoryName(category.name || "");
       setEditCategoryColor(category.color || "#F7C700");
+      setEditCategoryParticipantIds(
+        (category.participants || []).map((participantId) =>
+          participantId.toString(),
+        ),
+      );
       setEditCategoryOpen(true);
     },
     [],
@@ -1218,6 +1352,7 @@ function TodosPageContent() {
             setEditCategoryOpen(open);
             if (!open) {
               setEditCategoryId(null);
+              setEditCategoryParticipantIds([]);
             }
           }}
           newCategoryName={editCategoryName}
@@ -1230,6 +1365,12 @@ function TodosPageContent() {
           submitLabel="Save"
           pendingLabel="Saving..."
           showDefaultTrigger={false}
+          allUsers={allUsers}
+          selectedParticipantIds={editCategoryParticipantIds}
+          currentParticipantIds={currentEditCategoryParticipantIds}
+          onToggleParticipant={toggleEditCategoryParticipant}
+          isUsersLoading={usersQuery.isLoading}
+          isUsersError={usersQuery.isError}
         />
 
         <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -1480,26 +1621,93 @@ function TodosPageContent() {
             ) : (
               <>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {paged.items.map((category) => (
-                    <CategoryCard
-                      key={category._id}
-                      category={category}
-                      pendingDeleteMap={scheduledAutoDeleteMap}
-                      onOpen={(categoryId) => {
-                        setSelectedCategoryId(categoryId);
-                        setCategoryDetailOpen(true);
-                      }}
-                      onEditTodoRequest={openEditTodoEditor}
-                      onQuickAddTodo={handleQuickAddTodo}
-                      onInlineUpdateTodo={handleInlineUpdateTodo}
-                      onTodoClick={handleTodoClickDelete}
-                      onEditCategoryRequest={openEditCategoryDialog}
-                      onDeleteCategoryRequest={(categoryId) => {
-                        setDeleteTargetCategoryId(categoryId);
-                        setDeleteCategoryConfirmOpen(true);
-                      }}
-                    />
-                  ))}
+                  {paged.items.map((category, pagedIdx) => {
+                    const globalIdx = (page - 1) * 6 + pagedIdx;
+                    const isDragging = dragFromIndex === globalIdx;
+                    const isDropTarget =
+                      dragOverIndex === globalIdx &&
+                      dragFromIndex !== null &&
+                      dragFromIndex !== globalIdx;
+
+                    return (
+                      <div
+                        key={category._id}
+                        draggable
+                        onDragStart={(e) => {
+                          if (dragHandleActiveIndexRef.current !== globalIdx) {
+                            e.preventDefault();
+                            return;
+                          }
+                          setDragFromIndex(globalIdx);
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", String(globalIdx));
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = "move";
+                          if (dragOverIndex !== globalIdx) {
+                            setDragOverIndex(globalIdx);
+                          }
+                        }}
+                        onDragLeave={(e) => {
+                          if (
+                            !e.currentTarget.contains(
+                              e.relatedTarget as Node,
+                            )
+                          ) {
+                            setDragOverIndex((prev) =>
+                              prev === globalIdx ? null : prev,
+                            );
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (
+                            dragFromIndex !== null &&
+                            dragFromIndex !== globalIdx
+                          ) {
+                            handleCategoryReorder(dragFromIndex, globalIdx);
+                          }
+                          setDragFromIndex(null);
+                          setDragOverIndex(null);
+                          dragHandleActiveIndexRef.current = null;
+                        }}
+                        onDragEnd={() => {
+                          setDragFromIndex(null);
+                          setDragOverIndex(null);
+                          dragHandleActiveIndexRef.current = null;
+                        }}
+                        className={[
+                          "transition-all duration-150",
+                          isDragging ? "opacity-40 scale-[0.97]" : "",
+                          isDropTarget
+                            ? "ring-2 ring-(--text-default) ring-offset-2 rounded-[20px]"
+                            : "",
+                        ].join(" ")}
+                      >
+                        <CategoryCard
+                          category={category}
+                          pendingDeleteMap={scheduledAutoDeleteMap}
+                          onOpen={(categoryId) => {
+                            setSelectedCategoryId(categoryId);
+                            setCategoryDetailOpen(true);
+                          }}
+                          onEditTodoRequest={openEditTodoEditor}
+                          onQuickAddTodo={handleQuickAddTodo}
+                          onInlineUpdateTodo={handleInlineUpdateTodo}
+                          onTodoClick={handleTodoClickDelete}
+                          onEditCategoryRequest={openEditCategoryDialog}
+                          onDeleteCategoryRequest={(categoryId) => {
+                            setDeleteTargetCategoryId(categoryId);
+                            setDeleteCategoryConfirmOpen(true);
+                          }}
+                          onDragHandleMouseDown={() => {
+                            dragHandleActiveIndexRef.current = globalIdx;
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
 
                   <div className="flex h-full flex-col">
                     <h3 className="mb-1.5 text-[16px] leading-[120%] opacity-0">
@@ -1507,13 +1715,28 @@ function TodosPageContent() {
                     </h3>
                     <AddCategoryDialog
                       open={addOpen}
-                      onOpenChange={setAddOpen}
+                      onOpenChange={(open) => {
+                        setAddOpen(open);
+                        if (!open) {
+                          setNewCategoryName("");
+                          setNewCategoryColor("#F7C700");
+                          setNewCategoryParticipantIds(
+                            profileQuery.data?._id ? [profileQuery.data._id] : [],
+                          );
+                        }
+                      }}
                       newCategoryName={newCategoryName}
                       onNewCategoryNameChange={setNewCategoryName}
                       newCategoryColor={newCategoryColor}
                       onNewCategoryColorChange={setNewCategoryColor}
                       onCreate={() => createCategoryMutation.mutate()}
                       isCreating={createCategoryMutation.isPending}
+                      allUsers={allUsers}
+                      selectedParticipantIds={newCategoryParticipantIds}
+                      currentParticipantIds={new Set()}
+                      onToggleParticipant={toggleNewCategoryParticipant}
+                      isUsersLoading={usersQuery.isLoading}
+                      isUsersError={usersQuery.isError}
                       trigger={
                         <button
                           type="button"

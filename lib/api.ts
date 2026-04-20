@@ -381,11 +381,13 @@ export const brickApi = {
 export const todoCategoryApi = {
   getAll: () => unwrap<TodoCategory[]>(apiClient.get("/todo-categories")),
   getById: (id: string) => unwrap<TodoCategory>(apiClient.get(`/todo-categories/${id}`)),
-  create: (payload: Pick<TodoCategory, "name" | "color">) =>
+  create: (payload: Pick<TodoCategory, "name" | "color"> & { participants?: string[] }) =>
     unwrap<TodoCategory>(apiClient.post("/todo-categories", payload)),
-  update: (id: string, payload: Partial<Pick<TodoCategory, "name" | "color">>) =>
+  update: (id: string, payload: Partial<Pick<TodoCategory, "name" | "color" | "participants">>) =>
     unwrap<TodoCategory>(apiClient.patch(`/todo-categories/${id}`, payload)),
   delete: (id: string) => unwrap<null>(apiClient.delete(`/todo-categories/${id}`)),
+  reorder: (orders: { id: string; sortOrder: number }[]) =>
+    unwrap<null>(apiClient.patch("/todo-categories/reorder", { orders })),
 };
 
 export const todoItemApi = {

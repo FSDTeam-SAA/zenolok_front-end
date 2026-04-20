@@ -638,6 +638,9 @@ export default function HomePage() {
     [router],
   );
   const hasEventDateRange = Boolean(eventStartDate && eventEndDate);
+  const isEventSingleDayEvent = Boolean(
+    eventStartDate && eventEndDate && eventStartDate === eventEndDate,
+  );
 
   const openCreateEventDialog = React.useCallback(() => {
     const defaultStartDate = format(selectedDateRange.start, "yyyy-MM-dd");

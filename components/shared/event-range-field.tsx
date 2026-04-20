@@ -137,7 +137,7 @@ export function EventRangeField({
             meta={kind === "date" ? startColumn.meta : undefined}
             label={startColumn.label}
             placeholder={startColumn.placeholder}
-            showMetaIcon={kind === "time"}
+            showMetaIcon={false}
           />
         </span>
       ) : (
@@ -146,7 +146,7 @@ export function EventRangeField({
             meta={kind === "date" ? startColumn.meta : undefined}
             label={startColumn.label}
             placeholder={startColumn.placeholder}
-            showMetaIcon={kind === "time"}
+            showMetaIcon={kind === "time" && !startColumn.placeholder && !endColumn.placeholder}
           />
           <span className="text-center text-[20px] leading-none text-[var(--text-muted)]">
             -
@@ -155,7 +155,7 @@ export function EventRangeField({
             meta={kind === "date" ? endColumn.meta : undefined}
             label={endColumn.label}
             placeholder={endColumn.placeholder}
-            showMetaIcon={kind === "time"}
+            showMetaIcon={kind === "time" && !startColumn.placeholder && !endColumn.placeholder}
           />
         </span>
       )}
