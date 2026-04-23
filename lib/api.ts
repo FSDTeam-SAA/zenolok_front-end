@@ -167,6 +167,7 @@ export interface EventData {
   location?: string;
   participants: Array<string | UserProfile>;
   reminder?: string | null;
+  alarmPreset?: AlarmPresetKey | null;
   recurrence: "once" | "daily" | "weekly" | "monthly" | "yearly";
   notes?: string;
   personalNotes?: string;
@@ -436,6 +437,7 @@ export const eventApi = {
     isAllDay?: boolean;
     location?: string;
     reminder?: string;
+    alarmPreset?: AlarmPresetKey;
     recurrence?: EventData["recurrence"];
     notes?: string;
     todos?: Array<{ text: string; isShared?: boolean; sortOrder?: number }>;

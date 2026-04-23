@@ -618,7 +618,10 @@ export default function EventsPage() {
                                 label={`${event.title} alerts`}
                                 badgeCount={alertCount}
                                 active={Boolean(
-                                  event.reminder || alertCount > 0,
+                                  (event.alarmPreset &&
+                                    event.alarmPreset !== "none") ||
+                                    event.reminder ||
+                                    alertCount > 0,
                                 )}
                               />
                               <EventStatusIcon

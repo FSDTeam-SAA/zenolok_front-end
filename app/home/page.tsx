@@ -60,7 +60,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { brickApi, eventApi, notificationApi, type EventData } from "@/lib/api";
+import {
+  brickApi,
+  eventApi,
+  eventTodoApi,
+  notificationApi,
+  type EventData,
+  type EventTodo,
+} from "@/lib/api";
 import {
   isMessageNotification,
   notificationMatchesEvent,
@@ -90,6 +97,7 @@ type CalendarEvent = {
   icon?: string;
   isAllDay: boolean;
   reminder?: string;
+  alarmPreset?: EventData["alarmPreset"];
   recurrence: EventData["recurrence"];
   todos: Array<{
     id: string;
@@ -116,17 +124,85 @@ const CALENDAR_SEGMENT_TOP_OFFSET = 40;
 const CALENDAR_CELL_HORIZONTAL_PADDING = 0;
 const CALENDAR_SEGMENT_STACK_CLEARANCE = 4;
 
+function updateEventTodoInList(
+  events: EventData[] | undefined,
+  eventId: string,
+  todoId: string,
+  isCompleted: boolean,
+) {
+  if (!events) {
+    return events;
+  }
+
+  return events.map((event) => {
+    if (event._id !== eventId || !event.todos) {
+      return event;
+    }
+
+    return {
+      ...event,
+      todos: event.todos.map((todo) =>
+        todo._id === todoId ? { ...todo, isCompleted } : todo,
+      ),
+    };
+  });
+}
+
+function updateSingleEventTodo(
+  event: EventData | undefined,
+  todoId: string,
+  isCompleted: boolean,
+) {
+  if (!event?.todos) {
+    return event;
+  }
+
+  return {
+    ...event,
+    todos: event.todos.map((todo) =>
+      todo._id === todoId ? { ...todo, isCompleted } : todo,
+    ),
+  };
+}
+
+function updateEventTodoCollection(
+  todos: EventTodo[] | undefined,
+  todoId: string,
+  isCompleted: boolean,
+) {
+  if (!todos) {
+    return todos;
+  }
+
+  return todos.map((todo) =>
+    todo._id === todoId ? { ...todo, isCompleted } : todo,
+  );
+}
+
 function HomeEventTodoRow({
   text,
   completed,
   color,
+  onToggle,
+  disabled = false,
 }: {
   text: string;
   completed: boolean;
   color: string;
+  onToggle?: () => void;
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle?.();
+      }}
+      disabled={disabled || !onToggle}
+      className="flex w-full items-center gap-2 rounded-md text-left transition hover:bg-[var(--surface-1)] disabled:cursor-not-allowed disabled:opacity-60"
+      aria-label={completed ? `Mark ${text} incomplete` : `Mark ${text} complete`}
+    >
       <TodoStatusCircle
         checked={completed}
         checkedColor={color}
@@ -139,7 +215,7 @@ function HomeEventTodoRow({
       >
         {text}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -481,6 +557,7 @@ export default function HomePage() {
           icon: event.brick?.icon,
           isAllDay: event.isAllDay,
           reminder: event.reminder ?? "none",
+          alarmPreset: event.alarmPreset ?? "none",
           recurrence: event.recurrence ?? "once",
           todos: (event.todos || [])
             .filter((todo) => {
@@ -752,6 +829,81 @@ export default function HomePage() {
     onError: (error: Error) =>
       toast.error(error.message || "Failed to create event"),
   });
+  const toggleEventTodoMutation = useMutation({
+    mutationFn: ({
+      todoId,
+      isCompleted,
+    }: {
+      eventId: string;
+      todoId: string;
+      isCompleted: boolean;
+    }) => eventTodoApi.update(todoId, { isCompleted }),
+    onMutate: async ({ eventId, todoId, isCompleted }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["events"] }),
+        queryClient.cancelQueries({ queryKey: queryKeys.event(eventId) }),
+        queryClient.cancelQueries({ queryKey: queryKeys.eventTodos(eventId) }),
+      ]);
+
+      const previousEventLists = queryClient.getQueriesData<EventData[]>({
+        queryKey: ["events"],
+      });
+      const previousEvent = queryClient.getQueryData<EventData>(
+        queryKeys.event(eventId),
+      );
+      const previousEventTodos = queryClient.getQueryData<EventTodo[]>(
+        queryKeys.eventTodos(eventId),
+      );
+
+      queryClient.setQueriesData<EventData[]>(
+        { queryKey: ["events"] },
+        (current) =>
+          updateEventTodoInList(current, eventId, todoId, isCompleted),
+      );
+      queryClient.setQueryData<EventData>(queryKeys.event(eventId), (current) =>
+        updateSingleEventTodo(current, todoId, isCompleted),
+      );
+      queryClient.setQueryData<EventTodo[]>(
+        queryKeys.eventTodos(eventId),
+        (current) => updateEventTodoCollection(current, todoId, isCompleted),
+      );
+
+      return {
+        eventId,
+        previousEventLists,
+        previousEvent,
+        previousEventTodos,
+      };
+    },
+    onError: (error: Error, _variables, context) => {
+      context?.previousEventLists.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+
+      if (context?.previousEvent) {
+        queryClient.setQueryData(
+          queryKeys.event(context.eventId),
+          context.previousEvent,
+        );
+      }
+
+      if (context?.previousEventTodos) {
+        queryClient.setQueryData(
+          queryKeys.eventTodos(context.eventId),
+          context.previousEventTodos,
+        );
+      }
+
+      toast.error(error.message || "Failed to update todo");
+    },
+    onSettled: (_data, _error, { eventId }) => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId) });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.eventTodos(eventId),
+      });
+    },
+  });
 
   React.useEffect(() => {
     setSelectedBrickIds((previous) => {
@@ -831,8 +983,7 @@ export default function HomePage() {
               const incompleteTodoCount = event.todos.filter(
                 (todo) => !todo.isCompleted,
               ).length;
-              const hasAlarm =
-                Boolean(event.reminder) && event.reminder !== "none";
+              const hasAlarm = event.alarmPreset !== "none";
               const hasRepeat = event.recurrence !== "once";
               const messageCount = unreadMessageCountByEventId[event.id] ?? 0;
               const alertCount = unreadAlertCountByEventId[event.id] ?? 0;
@@ -1017,6 +1168,17 @@ export default function HomePage() {
                           text={todo.text}
                           completed={todo.isCompleted}
                           color={event.color}
+                          onToggle={() =>
+                            toggleEventTodoMutation.mutate({
+                              eventId: event.id,
+                              todoId: todo.id,
+                              isCompleted: !todo.isCompleted,
+                            })
+                          }
+                          disabled={
+                            toggleEventTodoMutation.isPending &&
+                            toggleEventTodoMutation.variables?.todoId === todo.id
+                          }
                         />
                       ))}
                       <p className="pl-7 font-poppins text-sm text-[var(--text-muted)]">

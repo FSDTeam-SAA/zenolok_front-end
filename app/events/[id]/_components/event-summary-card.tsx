@@ -7,7 +7,6 @@ import {
   Clock3,
   MapPin,
   RefreshCw,
-  SlidersHorizontal,
 } from "lucide-react";
 import { format, isSameDay } from "date-fns";
 
@@ -84,11 +83,10 @@ export function EventSummaryCard({
     !event.isAllDay && hasValidSchedule
       ? formatTimeByPreference(endsAt, use24Hour)
       : "";
-  const hasAlarm = Boolean(event.reminder);
+  const hasAlarm =
+    (event.alarmPreset && event.alarmPreset !== "none") ||
+    Boolean(event.reminder);
   const hasRepeat = event.recurrence !== "once";
-  const todoCount = event.todos?.length ?? 0;
-  const incompleteTodoCount =
-    event.todos?.filter((todo) => !todo.isCompleted).length ?? 0;
 
   return (
     <div className="event-details-card rounded-[18px] border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
@@ -275,19 +273,6 @@ export function EventSummaryCard({
                 >
                   <RefreshCw className="size-4" />
                 </button>
-                {todoCount > 0 ? (
-                  <div
-                    className="relative flex size-9 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text-muted)] transition hover:bg-[var(--surface-3)]"
-                    aria-label="Todo progress"
-                  >
-                    <SlidersHorizontal className="size-4" />
-                    {incompleteTodoCount > 0 ? (
-                      <span className="absolute -right-1 -top-2 inline-flex size-[18px] items-center justify-center rounded-full bg-[#FF4D42] text-[9px] font-semibold leading-none text-white shadow-[0_2px_6px_rgba(255,77,66,0.28)]">
-                        {incompleteTodoCount}
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>

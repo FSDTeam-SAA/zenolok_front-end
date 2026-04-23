@@ -17,6 +17,7 @@ import type { AlarmPresetOption } from "@/lib/api";
 import {
   editorValueToOffset,
   formatAlarmOffset,
+  formatAlarmPresetSummary,
   offsetToEditorValue,
   type AlarmOffsetUnit,
   type EditableAlarmPresetKey,
@@ -164,11 +165,15 @@ export function AlarmPresetSection({
     }
   }, [errorMessage]);
 
+  const settingsOptions = options.filter(
+    (opt) => opt.key === "preset_1" || opt.key === "preset_2" || opt.key === "preset_3",
+  );
+
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Alarm preset"
-        description="Pick a default reminder style, edit the built-in presets, or create your own custom reminder."
+        description="Select and customize your three reusable reminder presets. These control when notifications fire before your todos and events."
       />
 
       <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
@@ -179,10 +184,9 @@ export function AlarmPresetSection({
         </div>
 
         <div className="space-y-3">
-          {options.map((item) => {
+          {settingsOptions.map((item) => {
             const active = value === item.key;
-            const hasOffset = item.offsetsInMinutes.length > 0;
-            const isSelectable = item.key !== "custom" || hasOffset || active;
+            const summary = formatAlarmPresetSummary(item.key, options);
 
             return (
               <div
@@ -197,47 +201,21 @@ export function AlarmPresetSection({
                 <div className="flex items-start justify-between gap-4 px-4 py-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      if (!isSelectable && item.key === "custom") {
-                        openEditor("custom");
-                        return;
-                      }
-
-                      onChange(item.key);
-                    }}
+                    onClick={() => onChange(item.key)}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
-                          {item.label}
-                        </span>
-                        {!isSelectable && item.key === "custom" ? (
-                          <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-muted)]">
-                            Set up first
-                          </span>
-                        ) : null}
-                      </div>
+                    <div className="space-y-1.5">
+                      <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
+                        {item.label}
+                      </span>
                       <p className="max-w-[640px] text-[14px] leading-[140%] text-[var(--text-muted)]">
                         {item.description}
                       </p>
-                      <div className="flex flex-wrap gap-2">
-                        {hasOffset ? (
-                          item.offsetsInMinutes.map((offset) => (
-                            <span
-                              key={`${item.key}-${offset}`}
-                              className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-medium text-[var(--text-default)]"
-                            >
-                              <Clock3 className="size-3.5 text-[var(--text-muted)]" />
-                              {formatAlarmOffset(offset)}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="inline-flex rounded-full bg-[var(--surface-2)] px-3 py-1 text-[12px] font-medium text-[var(--text-muted)]">
-                            Not configured yet
-                          </span>
-                        )}
-                      </div>
+                      {summary ? (
+                        <p className="text-[13px] font-medium text-[var(--text-default)]">
+                          {summary}
+                        </p>
+                      ) : null}
                     </div>
                   </button>
                   <div className="flex items-center gap-2">
@@ -253,7 +231,7 @@ export function AlarmPresetSection({
                         disabled={savingKey === item.key}
                       >
                         <Pencil className="size-3.5" />
-                        {item.key === "custom" && !hasOffset ? "Create custom" : "Edit"}
+                        Edit
                       </Button>
                     ) : null}
                     {active ? (

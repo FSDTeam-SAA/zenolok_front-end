@@ -17,7 +17,6 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   formatAlarmPresetSummary,
-  getPrimaryAlarmOffset,
   resolveAlarmPresetOptions,
 } from "@/lib/alarm-presets";
 import { useAppState } from "@/components/providers/app-state-provider";
@@ -213,6 +212,9 @@ export default function EventDetailsPage() {
       ),
     [profileQuery.data?.preferences?.alarmPresetOptions],
   );
+  const activeAlarmPreset =
+    eventQuery.data?.alarmPreset ??
+    (eventQuery.data?.reminder ? "preset_1" : "none");
   const [alarmModalOpen, setAlarmModalOpen] = useState(false);
   const [repeatModalOpen, setRepeatModalOpen] = useState(false);
   const editHasDateRange = Boolean(editStartDate && editEndDate);
@@ -223,15 +225,7 @@ export default function EventDetailsPage() {
   const refreshEverything = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.event(id) });
     queryClient.invalidateQueries({ queryKey: queryKeys.eventTodos(id) });
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.events({ filter: "upcoming" }),
-    });
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.events({ filter: "past" }),
-    });
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.events({ filter: "all" }),
-    });
+    queryClient.invalidateQueries({ queryKey: ["events"] });
   };
 
   const deleteEventMutation = useMutation({
@@ -970,13 +964,11 @@ export default function EventDetailsPage() {
 
             <div className="space-y-2 rounded-[22px] bg-[var(--surface-2)] p-3">
               {alarmPresetOptions.map((option) => {
-                const active =
-                  option.key === "none"
-                    ? !event.reminder
-                    : false;
+                const active = activeAlarmPreset === option.key;
                 const isSelectable =
-                  option.key === "none" ||
-                  option.offsetsInMinutes.length > 0;
+                  option.key !== "custom" ||
+                  option.offsetsInMinutes.length > 0 ||
+                  active;
 
                 return (
                   <button
@@ -987,31 +979,8 @@ export default function EventDetailsPage() {
                         return;
                       }
 
-                      if (option.key === "none") {
-                        updateEventMutation.mutate({ reminder: null });
-                        setAlarmModalOpen(false);
-                        return;
-                      }
-
-                      const offsetMinutes = getPrimaryAlarmOffset(
-                        option.key,
-                        alarmPresetOptions,
-                      );
-                      const startAt = new Date(event.startTime);
-
-                      if (
-                        offsetMinutes === null ||
-                        Number.isNaN(startAt.getTime())
-                      ) {
-                        toast.error("Unable to compute reminder time");
-                        return;
-                      }
-
-                      const reminderAt = new Date(
-                        startAt.getTime() - offsetMinutes * 60 * 1000,
-                      );
                       updateEventMutation.mutate({
-                        reminder: reminderAt.toISOString(),
+                        alarmPreset: option.key,
                       });
                       setAlarmModalOpen(false);
                     }}

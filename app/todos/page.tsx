@@ -440,7 +440,7 @@ function CategoryCard({
                     aria-label={`Edit text for ${item.text}`}
                     className={`w-full min-w-0 truncate font-poppins border-none bg-transparent focus:outline-none ${
                       isChecked
-                        ? "text-[var(--text-muted)] line-through"
+                        ? "text-[var(--text-muted)]"
                         : isDateOnlyOverdue
                           ? "font-medium text-red-500"
                           : "text-[var(--text-default)]"
@@ -566,7 +566,7 @@ function TodosPageContent() {
   const [todoText, setTodoText] = React.useState("");
   const [dateEnabled, setDateEnabled] = React.useState(false);
   const [timeEnabled, setTimeEnabled] = React.useState(false);
-  const [alarmPreset, setAlarmPreset] = React.useState<TodoAlarmPreset>("none");
+  const [alarmPreset, setAlarmPreset] = React.useState<TodoAlarmPreset>("preset_1");
   const [repeatEnabled, setRepeatEnabled] = React.useState(false);
   const [scheduledDateInput, setScheduledDateInput] = React.useState("");
   const [scheduledTimeInput, setScheduledTimeInput] = React.useState("");
@@ -632,8 +632,9 @@ function TodosPageContent() {
       ),
     [profileQuery.data?.preferences?.alarmPresetOptions],
   );
+  const storedAlarmPreset = profileQuery.data?.preferences?.alarmPreset;
   const defaultAlarmPreset =
-    profileQuery.data?.preferences?.alarmPreset ?? "none";
+    storedAlarmPreset && storedAlarmPreset !== "none" ? storedAlarmPreset : "preset_1";
 
   const createTodoMutation = useMutation({
     mutationFn: todoItemApi.create,
@@ -1249,7 +1250,9 @@ function TodosPageContent() {
     setDateEnabled(Boolean(selectedTodo.scheduledDate));
     setTimeEnabled(Boolean(selectedTodo.scheduledTime));
     setAlarmPreset(
-      selectedTodo.alarmPreset ?? (selectedTodo.alarm ? "preset_1" : "none"),
+      selectedTodo.alarmPreset && selectedTodo.alarmPreset !== "none"
+        ? selectedTodo.alarmPreset
+        : "preset_1",
     );
     setRepeatEnabled(Boolean(selectedTodo.repeat));
     setScheduledDateInput(toDateInputValue(selectedTodo.scheduledDate));
@@ -1272,7 +1275,7 @@ function TodosPageContent() {
         scheduledDate: null,
         scheduledTime: null,
         alarm: null,
-        alarmPreset: "none",
+        alarmPreset: "preset_1",
         repeat: null,
       });
     },
