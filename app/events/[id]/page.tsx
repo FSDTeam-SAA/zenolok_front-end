@@ -8,7 +8,9 @@ import {
   ArrowLeft,
   CheckCircle2,
   ChevronLeft,
+  Clock3,
   Pencil,
+  Plus,
   Trash2,
 } from "lucide-react";
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
@@ -16,8 +18,13 @@ import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import {
+  editorValueToOffset,
+  formatAlarmOffset,
   formatAlarmPresetSummary,
+  formatOffsetsSummary,
+  offsetToEditorValue,
   resolveAlarmPresetOptions,
+  type AlarmOffsetUnit,
 } from "@/lib/alarm-presets";
 import { useAppState } from "@/components/providers/app-state-provider";
 import {
@@ -216,7 +223,28 @@ export default function EventDetailsPage() {
     eventQuery.data?.alarmPreset ??
     (eventQuery.data?.reminder ? "preset_1" : "none");
   const [alarmModalOpen, setAlarmModalOpen] = useState(false);
+  const [alarmModalView, setAlarmModalView] = useState<"list" | "custom">("list");
+  const [customEditorRows, setCustomEditorRows] = useState<Array<{ id: string; amount: string; unit: AlarmOffsetUnit }>>([]);
+  const [customEditorError, setCustomEditorError] = useState("");
+  const customEditorRowIdRef = React.useRef(0);
   const [repeatModalOpen, setRepeatModalOpen] = useState(false);
+
+  const createCustomEditorRow = React.useCallback((offset?: number | null) => {
+    customEditorRowIdRef.current += 1;
+    const { amount, unit } = offsetToEditorValue(offset);
+    return { id: `custom-row-${customEditorRowIdRef.current}`, amount, unit };
+  }, []);
+
+  const openCustomAlarmEditor = React.useCallback(() => {
+    const existingOffsets = eventQuery.data?.customAlarmOffsets;
+    const rows = existingOffsets?.length
+      ? existingOffsets.map((o) => createCustomEditorRow(o))
+      : [createCustomEditorRow()];
+    setCustomEditorRows(rows);
+    setCustomEditorError("");
+    setAlarmModalView("custom");
+  }, [createCustomEditorRow, eventQuery.data?.customAlarmOffsets]);
+
   const editHasDateRange = Boolean(editStartDate && editEndDate);
   const editIsSingleDayEvent = Boolean(
     editStartDate && editEndDate && editStartDate === editEndDate,
@@ -249,6 +277,24 @@ export default function EventDetailsPage() {
     onError: (error: Error) =>
       toast.error(error.message || "Failed to update event"),
   });
+  const handleCustomAlarmSave = React.useCallback(() => {
+    const nextOffsets = Array.from(
+      new Set(
+        customEditorRows
+          .map((row) => editorValueToOffset(row.amount, row.unit))
+          .filter((o): o is number => o !== null),
+      ),
+    ).sort((a, b) => a - b);
+
+    if (!nextOffsets.length) {
+      setCustomEditorError("Add at least one valid reminder time.");
+      return;
+    }
+
+    updateEventMutation.mutate({ alarmPreset: "custom", customAlarmOffsets: nextOffsets });
+    setAlarmModalView("list");
+  }, [customEditorRows, updateEventMutation]);
+
   const saveSharedNotesMutation = useMutation({
     mutationFn: (payload: { notes: string }) =>
       eventApi.updateNotes(id, payload),
@@ -950,71 +996,202 @@ export default function EventDetailsPage() {
         </div>
       </section>
 
-      <Dialog open={alarmModalOpen} onOpenChange={setAlarmModalOpen}>
+      <Dialog
+        open={alarmModalOpen}
+        onOpenChange={(open) => {
+          setAlarmModalOpen(open);
+          if (!open) {
+            setAlarmModalView("list");
+            setCustomEditorRows([]);
+            setCustomEditorError("");
+          }
+        }}
+      >
         <DialogContent className="max-w-[380px] rounded-[26px] border-[var(--ui-popover-border)] bg-[var(--ui-popover-bg)] p-4 text-[var(--text-default)]">
-          <div className="space-y-3">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 text-[var(--text-default)]"
-              onClick={() => setAlarmModalOpen(false)}
-            >
-              <ChevronLeft className="size-4" />
-              <span className="text-[24px] leading-[120%]">Select Alarm</span>
-            </button>
+          {alarmModalView === "list" ? (
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-[var(--text-default)]"
+                onClick={() => setAlarmModalOpen(false)}
+              >
+                <ChevronLeft className="size-4" />
+                <span className="text-[24px] leading-[120%]">Select Alarm</span>
+              </button>
 
-            <div className="space-y-2 rounded-[22px] bg-[var(--surface-2)] p-3">
-              {alarmPresetOptions.map((option) => {
-                const active = activeAlarmPreset === option.key;
-                const isSelectable =
-                  option.key !== "custom" ||
-                  option.offsetsInMinutes.length > 0 ||
-                  active;
+              <div className="space-y-2 rounded-[22px] bg-[var(--surface-2)] p-3">
+                {alarmPresetOptions.map((option) => {
+                  const active = activeAlarmPreset === option.key;
 
-                return (
-                  <button
-                    key={option.key}
-                    type="button"
-                    onClick={() => {
-                      if (!isSelectable) {
-                        return;
-                      }
-
-                      updateEventMutation.mutate({
-                        alarmPreset: option.key,
-                      });
-                      setAlarmModalOpen(false);
-                    }}
-                    className={cn(
-                      "flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition",
-                      active
-                        ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.10)]"
-                        : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]",
-                      !isSelectable && "opacity-60",
-                    )}
-                    disabled={!isSelectable}
-                  >
-                    <div className="min-w-0">
-                      <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
-                        {option.label}
-                      </span>
-                      <p className="mt-1 text-[12px] leading-[140%] text-[var(--text-muted)]">
-                        {option.description}
-                      </p>
-                      <p className="mt-2 text-[12px] font-medium text-[var(--text-default)]">
-                        {formatAlarmPresetSummary(
-                          option.key,
-                          alarmPresetOptions,
+                  if (option.key === "custom") {
+                    const customOffsets = eventQuery.data?.customAlarmOffsets || [];
+                    const customSummary = formatOffsetsSummary(customOffsets);
+                    return (
+                      <button
+                        key="custom"
+                        type="button"
+                        onClick={openCustomAlarmEditor}
+                        className={cn(
+                          "flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition",
+                          active
+                            ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.10)]"
+                            : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]",
                         )}
-                      </p>
-                    </div>
-                    {active ? (
-                      <CheckCircle2 className="size-5 text-[#31C65B]" />
-                    ) : null}
-                  </button>
-                );
-              })}
+                      >
+                        <div className="min-w-0">
+                          <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
+                            {option.label}
+                          </span>
+                          <p className="mt-1 text-[12px] leading-[140%] text-[var(--text-muted)]">
+                            Build your own reminder schedule for this event.
+                          </p>
+                          <p className="mt-2 text-[12px] font-medium text-[var(--text-default)]">
+                            {customSummary}
+                          </p>
+                        </div>
+                        {active ? (
+                          <CheckCircle2 className="size-5 shrink-0 text-[#31C65B]" />
+                        ) : null}
+                      </button>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => {
+                        updateEventMutation.mutate({ alarmPreset: option.key });
+                      }}
+                      className={cn(
+                        "flex w-full items-start justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition",
+                        active
+                          ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.10)]"
+                          : "border-transparent bg-[var(--surface-2)] hover:border-[var(--border)]",
+                      )}
+                    >
+                      <div className="min-w-0">
+                        <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
+                          {option.label}
+                        </span>
+                        <p className="mt-1 text-[12px] leading-[140%] text-[var(--text-muted)]">
+                          {option.description}
+                        </p>
+                        <p className="mt-2 text-[12px] font-medium text-[var(--text-default)]">
+                          {formatAlarmPresetSummary(option.key, alarmPresetOptions)}
+                        </p>
+                      </div>
+                      {active ? (
+                        <CheckCircle2 className="size-5 shrink-0 text-[#31C65B]" />
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 text-[var(--text-default)]"
+                onClick={() => { setAlarmModalView("list"); setCustomEditorError(""); }}
+              >
+                <ChevronLeft className="size-4" />
+                <span className="text-[24px] leading-[120%]">Custom settings</span>
+              </button>
+
+              <div className="rounded-[22px] bg-[var(--surface-2)] p-3 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[12px] font-medium tracking-[0.02em] text-[var(--text-muted)] uppercase">
+                    Reminder timing
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCustomEditorRows((rows) => [...rows, createCustomEditorRow()])}
+                    className="inline-flex items-center gap-1 h-8 rounded-full border border-[var(--border)] bg-[var(--surface-1)] px-3 text-[12px] font-medium text-[var(--text-default)] hover:bg-[var(--surface-3)]"
+                  >
+                    <Plus className="size-3" />
+                    Add reminder
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {customEditorRows.map((row) => (
+                    <div key={row.id} className="flex items-center gap-2">
+                      <Input
+                        value={row.amount}
+                        onChange={(e) => setCustomEditorRows((rows) => rows.map((r) => r.id === row.id ? { ...r, amount: e.target.value } : r))}
+                        inputMode="numeric"
+                        className="h-10 rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] !text-[16px] text-[var(--ui-input-text)]"
+                      />
+                      <select
+                        value={row.unit}
+                        onChange={(e) => setCustomEditorRows((rows) => rows.map((r) => r.id === row.id ? { ...r, unit: e.target.value as AlarmOffsetUnit } : r))}
+                        className="h-10 rounded-xl border border-[var(--ui-input-border)] bg-[var(--ui-input-bg)] px-2 text-[14px] text-[var(--ui-input-text)]"
+                      >
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                        <option value="weeks">Weeks</option>
+                        <option value="months">Months</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setCustomEditorRows((rows) => rows.length > 1 ? rows.filter((r) => r.id !== row.id) : rows)}
+                        disabled={customEditorRows.length === 1}
+                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#F2C7CB] bg-[#FFF1F2] text-[#DB5562] hover:bg-[#FFE5E8] disabled:cursor-not-allowed disabled:border-[var(--border)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-muted)]"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {(() => {
+                  const preview = Array.from(
+                    new Set(
+                      customEditorRows
+                        .map((r) => editorValueToOffset(r.amount, r.unit))
+                        .filter((o): o is number => o !== null),
+                    ),
+                  ).sort((a, b) => a - b);
+                  return preview.length ? (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {preview.map((offset) => (
+                        <span key={offset} className="inline-flex items-center gap-1 rounded-full bg-[var(--surface-1)] px-2.5 py-1 text-[12px] font-medium text-[var(--text-default)]">
+                          <Clock3 className="size-3 text-[var(--text-muted)]" />
+                          {formatAlarmOffset(offset)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+
+                {customEditorError ? (
+                  <p className="text-[12px] text-[#B14E4E]">{customEditorError}</p>
+                ) : null}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="rounded-full px-4 text-[14px]"
+                  onClick={() => { setAlarmModalView("list"); setCustomEditorError(""); }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-full px-4 text-[14px]"
+                  onClick={handleCustomAlarmSave}
+                  disabled={updateEventMutation.isPending}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1049,7 +1226,6 @@ export default function EventDetailsPage() {
                       updateEventMutation.mutate({
                         recurrence: option.value,
                       });
-                      setRepeatModalOpen(false);
                     }}
                     className={cn(
                       "flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left transition",

@@ -23,6 +23,7 @@ import {
   resolveAlarmPresetOptions,
   type EditableAlarmPresetKey,
 } from "@/lib/alarm-presets";
+
 import { queryKeys } from "@/lib/query-keys";
 import { weekStartDayOptions, type WeekStartDay } from "@/lib/settings";
 import { getTimeChangedMessage } from "@/lib/time-format";
@@ -44,7 +45,6 @@ import {
 import {
   isSettingsSection,
   sections,
-  type AlarmPreset,
   type NotificationKey,
   type SettingsSection,
 } from "./_components/settings-types";
@@ -300,7 +300,6 @@ export default function SettingsPage() {
   const initialParamsHandled = React.useRef(false);
   const didSyncWeekStartFromProfile = React.useRef(false);
   const didSyncTimeFormatFromProfile = React.useRef(false);
-  const didSyncAlarmPresetFromProfile = React.useRef(false);
   const didSyncNotificationsFromProfile = React.useRef(false);
 
   const [activeSection, setActiveSection] =
@@ -314,7 +313,6 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
 
-  const [alarmPreset, setAlarmPreset] = React.useState<AlarmPreset>("none");
   const [savingAlarmPresetOptionKey, setSavingAlarmPresetOptionKey] =
     React.useState<EditableAlarmPresetKey | null>(null);
   const [feedbackMessage, setFeedbackMessage] = React.useState("");
@@ -384,25 +382,6 @@ export default function SettingsPage() {
       updatePreferences({ use24Hour: backendTimeFormat });
     }
   }, [profileQuery.data, updatePreferences]);
-
-  React.useEffect(() => {
-    if (!profileQuery.data || didSyncAlarmPresetFromProfile.current) {
-      return;
-    }
-
-    didSyncAlarmPresetFromProfile.current = true;
-    const backendAlarmPreset = profileQuery.data.preferences?.alarmPreset;
-
-    if (
-      backendAlarmPreset === "none" ||
-      backendAlarmPreset === "preset_1" ||
-      backendAlarmPreset === "preset_2" ||
-      backendAlarmPreset === "preset_3" ||
-      backendAlarmPreset === "custom"
-    ) {
-      setAlarmPreset(backendAlarmPreset);
-    }
-  }, [profileQuery.data]);
 
   React.useEffect(() => {
     if (!profileQuery.data || didSyncNotificationsFromProfile.current) {
@@ -557,41 +536,6 @@ export default function SettingsPage() {
       updatePreferences,
       updateTimeFormatMutation,
     ],
-  );
-
-  const updateAlarmPresetMutation = useMutation({
-    mutationFn: ({
-      alarmPreset,
-    }: {
-      alarmPreset: AlarmPreset;
-      previousAlarmPreset: AlarmPreset;
-    }) => userApi.updateAlarmPreset({ alarmPreset }),
-    onSuccess: (_data, variables) => {
-      toast.success(
-        `Changed to ${getAlarmPresetLabel(variables.alarmPreset, alarmPresetOptions)}`,
-      );
-      queryClient.invalidateQueries({ queryKey: queryKeys.profile });
-    },
-    onError: (error: Error, variables) => {
-      setAlarmPreset(variables.previousAlarmPreset);
-      toast.error(error.message || "Failed to update alarm preset");
-    },
-  });
-
-  const handleAlarmPresetChange = React.useCallback(
-    (nextPreset: AlarmPreset) => {
-      if (nextPreset === alarmPreset) {
-        return;
-      }
-
-      const previousAlarmPreset = alarmPreset;
-      setAlarmPreset(nextPreset);
-      updateAlarmPresetMutation.mutate({
-        alarmPreset: nextPreset,
-        previousAlarmPreset,
-      });
-    },
-    [alarmPreset, updateAlarmPresetMutation],
   );
 
   const updateAlarmPresetOptionMutation = useMutation({
@@ -979,9 +923,7 @@ export default function SettingsPage() {
       case "alarmPreset":
         return (
           <AlarmPresetSection
-            value={alarmPreset}
             options={alarmPresetOptions}
-            onChange={handleAlarmPresetChange}
             onSaveOption={handleAlarmPresetOptionSave}
             savingKey={savingAlarmPresetOptionKey}
           />

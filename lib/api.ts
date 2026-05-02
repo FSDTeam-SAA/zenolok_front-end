@@ -121,6 +121,7 @@ export interface TodoItem {
   scheduledTime?: string | null;
   alarm?: string | null;
   alarmPreset?: AlarmPresetKey | null;
+  customAlarmOffsets?: number[] | null;
   repeat?: "daily" | "weekly" | "monthly" | "yearly" | null;
   createdAt: string;
   updatedAt: string;
@@ -168,6 +169,7 @@ export interface EventData {
   participants: Array<string | UserProfile>;
   reminder?: string | null;
   alarmPreset?: AlarmPresetKey | null;
+  customAlarmOffsets?: number[] | null;
   recurrence: "once" | "daily" | "weekly" | "monthly" | "yearly";
   notes?: string;
   personalNotes?: string;
@@ -400,6 +402,7 @@ export const todoItemApi = {
     repeat?: TodoItem["repeat"] | null;
     alarm?: string | null;
     alarmPreset?: AlarmPresetKey;
+    customAlarmOffsets?: number[] | null;
     sortOrder?: number;
   }) => unwrap<TodoItem>(apiClient.post("/todo-items", payload)),
   getByCategory: (categoryId: string) => unwrap<TodoItem[]>(apiClient.get(`/todo-items/category/${categoryId}`)),
@@ -421,6 +424,7 @@ export const todoItemApi = {
       scheduledTime?: string | null;
       alarm?: string | null;
       alarmPreset?: AlarmPresetKey;
+      customAlarmOffsets?: number[] | null;
       repeat?: TodoItem["repeat"] | null;
       sortOrder?: number;
     }
@@ -438,6 +442,7 @@ export const eventApi = {
     location?: string;
     reminder?: string;
     alarmPreset?: AlarmPresetKey;
+    customAlarmOffsets?: number[] | null;
     recurrence?: EventData["recurrence"];
     notes?: string;
     todos?: Array<{ text: string; isShared?: boolean; sortOrder?: number }>;

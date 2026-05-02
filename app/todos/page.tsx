@@ -219,8 +219,6 @@ function getScheduledOffsetMeta(
   };
 }
 
-// Kept for potential reuse in detail surfaces; preview cards no longer render it.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getTodoScheduleLine(
   scheduledDate?: string | null,
   scheduledTime?: string | null,
@@ -375,13 +373,14 @@ function CategoryCard({
         className="todo-category-card flex h-full min-h-[180px] flex-col rounded-[18px] bg-[var(--todo-card-bg)] p-3 transition hover:bg-[var(--todo-card-hover-bg)]"
       >
         <div className="space-y-2">
-          {items.slice(0, 5).map((item) => {
+          {[...items].reverse().slice(0, 5).map((item) => {
             const isPendingDelete = Boolean(pendingDeleteMap[item._id]);
             const isChecked = item.isCompleted || isPendingDelete;
-            const { isDateOnlyOverdue } = getScheduledOffsetMeta(
+            const { isOverdue, isDateOnlyOverdue } = getScheduledOffsetMeta(
               item.scheduledDate,
               item.scheduledTime,
             );
+            const scheduleLine = getTodoScheduleLine(item.scheduledDate, item.scheduledTime);
             const hasSchedule = Boolean(
               item.scheduledDate || item.scheduledTime,
             );
@@ -446,6 +445,11 @@ function CategoryCard({
                           : "text-[var(--text-default)]"
                     }`}
                   />
+                  {hasSchedule && scheduleLine ? (
+                    <p className={`truncate text-[10px] leading-none mt-0.5 ${isOverdue ? "text-red-400" : "text-[var(--text-muted)]"}`}>
+                      {scheduleLine}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5 text-[var(--todo-muted-icon)]">
                   {isDirty(item) ? (
@@ -467,7 +471,7 @@ function CategoryCard({
                   ) : (
                     <>
                       {hasSchedule ? (
-                        <CalendarClock className="size-4" strokeWidth={1.8} />
+                        <CalendarClock className={`size-4 ${isOverdue ? "text-red-400" : ""}`} strokeWidth={1.8} />
                       ) : null}
                       {hasAlarm ? (
                         <Bell className="size-4" strokeWidth={1.8} />
@@ -566,7 +570,8 @@ function TodosPageContent() {
   const [todoText, setTodoText] = React.useState("");
   const [dateEnabled, setDateEnabled] = React.useState(false);
   const [timeEnabled, setTimeEnabled] = React.useState(false);
-  const [alarmPreset, setAlarmPreset] = React.useState<TodoAlarmPreset>("preset_1");
+  const [alarmPreset, setAlarmPreset] = React.useState<TodoAlarmPreset>("none");
+  const [customAlarmOffsets, setCustomAlarmOffsets] = React.useState<number[] | null>(null);
   const [repeatEnabled, setRepeatEnabled] = React.useState(false);
   const [scheduledDateInput, setScheduledDateInput] = React.useState("");
   const [scheduledTimeInput, setScheduledTimeInput] = React.useState("");
@@ -632,9 +637,6 @@ function TodosPageContent() {
       ),
     [profileQuery.data?.preferences?.alarmPresetOptions],
   );
-  const storedAlarmPreset = profileQuery.data?.preferences?.alarmPreset;
-  const defaultAlarmPreset =
-    storedAlarmPreset && storedAlarmPreset !== "none" ? storedAlarmPreset : "preset_1";
 
   const createTodoMutation = useMutation({
     mutationFn: todoItemApi.create,
@@ -1234,7 +1236,8 @@ function TodosPageContent() {
       setTodoText("");
       setDateEnabled(false);
       setTimeEnabled(false);
-      setAlarmPreset(defaultAlarmPreset);
+      setAlarmPreset("none");
+      setCustomAlarmOffsets(null);
       setRepeatEnabled(false);
       setScheduledDateInput("");
       setScheduledTimeInput("");
@@ -1249,16 +1252,13 @@ function TodosPageContent() {
     setTodoText(selectedTodo.text || "");
     setDateEnabled(Boolean(selectedTodo.scheduledDate));
     setTimeEnabled(Boolean(selectedTodo.scheduledTime));
-    setAlarmPreset(
-      selectedTodo.alarmPreset && selectedTodo.alarmPreset !== "none"
-        ? selectedTodo.alarmPreset
-        : "preset_1",
-    );
+    setAlarmPreset(selectedTodo.alarmPreset || "none");
+    setCustomAlarmOffsets(selectedTodo.customAlarmOffsets || null);
     setRepeatEnabled(Boolean(selectedTodo.repeat));
     setScheduledDateInput(toDateInputValue(selectedTodo.scheduledDate));
     setScheduledTimeInput(selectedTodo.scheduledTime || "");
     setRepeatValue((selectedTodo.repeat || "daily") as RepeatValue);
-  }, [defaultAlarmPreset, todoEditorMode, todoEditorOpen, selectedTodo]);
+  }, [todoEditorMode, todoEditorOpen, selectedTodo]);
 
   const openCreateTodoEditor = React.useCallback((categoryId: string) => {
     setSelectedCategoryId(categoryId);
@@ -1358,6 +1358,7 @@ function TodosPageContent() {
             timeEnabled && scheduledTimeInput ? scheduledTimeInput : null,
           alarm: alarmValue,
           alarmPreset,
+          customAlarmOffsets: alarmPreset === "custom" ? (customAlarmOffsets ?? null) : null,
           repeat: repeatEnabled ? repeatValue : null,
         },
         {
@@ -1384,6 +1385,7 @@ function TodosPageContent() {
         timeEnabled && scheduledTimeInput ? scheduledTimeInput : null,
       alarm: alarmValue,
       alarmPreset,
+      customAlarmOffsets: alarmPreset === "custom" ? (customAlarmOffsets ?? null) : null,
       repeat: repeatEnabled ? repeatValue : null,
     };
 
@@ -1391,6 +1393,7 @@ function TodosPageContent() {
   }, [
     alarmPreset,
     alarmPresetOptions,
+    customAlarmOffsets,
     createTodoMutation,
     dateEnabled,
     repeatEnabled,
@@ -1585,6 +1588,7 @@ function TodosPageContent() {
                         todo.scheduledDate,
                         todo.scheduledTime,
                       );
+                      const scheduleLine = getTodoScheduleLine(todo.scheduledDate, todo.scheduledTime);
                       const isAutoDeleting = Boolean(
                         scheduledAutoDeleteMap[todo._id],
                       );
@@ -1617,17 +1621,24 @@ function TodosPageContent() {
                             }
                           />
 
-                          <p
-                            className={`font-poppins min-w-0 flex-1 truncate text-[18px] leading-[120%] ${
-                              isChecked
-                                ? "text-[var(--text-muted)]"
-                                : isDateOnlyOverdue
-                                  ? "font-medium text-red-500"
-                                  : "text-[var(--text-default)]"
-                            }`}
-                          >
-                            {todo.text}
-                          </p>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`font-poppins truncate text-[18px] leading-[120%] ${
+                                isChecked
+                                  ? "text-[var(--text-muted)]"
+                                  : isDateOnlyOverdue
+                                    ? "font-medium text-red-500"
+                                    : "text-[var(--text-default)]"
+                              }`}
+                            >
+                              {todo.text}
+                            </p>
+                            {scheduleLine ? (
+                              <p className={`truncate text-[11px] leading-none mt-0.5 ${isOverdue ? "text-red-400" : "text-[var(--text-muted)]"}`}>
+                                {scheduleLine}
+                              </p>
+                            ) : null}
+                          </div>
 
                           {isChecked ? (
                             <button
@@ -1894,6 +1905,8 @@ function TodosPageContent() {
         alarmPreset={alarmPreset}
         alarmPresetOptions={alarmPresetOptions}
         onAlarmPresetChange={setAlarmPreset}
+        customAlarmOffsets={customAlarmOffsets}
+        onCustomAlarmOffsetsChange={setCustomAlarmOffsets}
         repeatEnabled={repeatEnabled}
         onRepeatEnabledChange={setRepeatEnabled}
         repeatValue={repeatValue}

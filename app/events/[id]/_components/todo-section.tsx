@@ -1,12 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TodoStatusCircleButton } from "@/components/shared/todo-status-circle";
 import type { EventTodo } from "@/lib/api";
+
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 type TodoSectionProps = {
   todos: EventTodo[];
@@ -24,6 +26,9 @@ type TodoSectionProps = {
   checkedColor?: string;
   bare?: boolean;
 };
+
+const DEBOUNCE_MS = 1000;
+const SAVED_DISPLAY_MS = 1500;
 
 const iconButtonClass =
   "inline-flex size-7 items-center justify-center rounded-full text-[var(--text-muted)] transition hover:bg-[var(--surface-1)] hover:text-[var(--text-strong)]";
@@ -70,6 +75,11 @@ export function TodoSection({
   const [draftTexts, setDraftTexts] = React.useState<Record<string, string>>(
     {},
   );
+  const [saveStates, setSaveStates] = React.useState<Record<string, SaveState>>({});
+
+  // Holds debounce timer ids and "saved" clear timers per todo
+  const debounceTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const savedTimers = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   React.useEffect(() => {
     setOrderedIds(sortedTodos.map((todo) => todo._id));
@@ -90,6 +100,16 @@ export function TodoSection({
       return nextDrafts;
     });
   }, [sortedTodos]);
+
+  // Cleanup timers on unmount
+  React.useEffect(() => {
+    const dTimers = debounceTimers.current;
+    const sTimers = savedTimers.current;
+    return () => {
+      Object.values(dTimers).forEach(clearTimeout);
+      Object.values(sTimers).forEach(clearTimeout);
+    };
+  }, []);
 
   const orderedTodos = React.useMemo(
     () =>
@@ -150,38 +170,65 @@ export function TodoSection({
     await onReorder(nextIds);
   };
 
-  const handleDraftChange = (todoId: string, value: string) => {
-    setDraftTexts((previous) => ({
-      ...previous,
-      [todoId]: value,
-    }));
+  const setSaveState = (todoId: string, state: SaveState) => {
+    setSaveStates((prev) => ({ ...prev, [todoId]: state }));
   };
+
+  const executeSave = React.useCallback(
+    async (todo: EventTodo, text: string) => {
+      const trimmed = text.trim();
+
+      if (!trimmed) {
+        // Revert to original on empty
+        setDraftTexts((prev) => ({ ...prev, [todo._id]: todo.text }));
+        setSaveState(todo._id, "idle");
+        return;
+      }
+
+      if (trimmed === todo.text) {
+        setSaveState(todo._id, "idle");
+        return;
+      }
+
+      setSaveState(todo._id, "saving");
+      try {
+        await onSaveText(todo._id, trimmed);
+        setSaveState(todo._id, "saved");
+
+        // Clear the "saved" indicator after a short delay
+        clearTimeout(savedTimers.current[todo._id]);
+        savedTimers.current[todo._id] = setTimeout(() => {
+          setSaveState(todo._id, "idle");
+        }, SAVED_DISPLAY_MS);
+      } catch {
+        setSaveState(todo._id, "error");
+        // Revert draft to last known good text
+        setDraftTexts((prev) => ({ ...prev, [todo._id]: todo.text }));
+      }
+    },
+    [onSaveText],
+  );
+
+  const handleDraftChange = React.useCallback(
+    (todo: EventTodo, value: string) => {
+      setDraftTexts((previous) => ({ ...previous, [todo._id]: value }));
+
+      // Reset any "saved"/"error" state while typing
+      setSaveState(todo._id, "idle");
+
+      // Debounce: clear existing timer and set a new one
+      clearTimeout(debounceTimers.current[todo._id]);
+      debounceTimers.current[todo._id] = setTimeout(() => {
+        void executeSave(todo, value);
+      }, DEBOUNCE_MS);
+    },
+    [executeSave],
+  );
 
   const resetDraft = (todo: EventTodo) => {
-    setDraftTexts((previous) => ({
-      ...previous,
-      [todo._id]: todo.text,
-    }));
-  };
-
-  const handleSaveTodo = async (todo: EventTodo) => {
-    const nextText = (draftTexts[todo._id] ?? todo.text).trim();
-
-    if (!nextText) {
-      resetDraft(todo);
-      return;
-    }
-
-    if (nextText === todo.text) {
-      return;
-    }
-
-    setDraftTexts((previous) => ({
-      ...previous,
-      [todo._id]: nextText,
-    }));
-
-    await onSaveText(todo._id, nextText);
+    clearTimeout(debounceTimers.current[todo._id]);
+    setDraftTexts((previous) => ({ ...previous, [todo._id]: todo.text }));
+    setSaveState(todo._id, "idle");
   };
 
   const Wrapper: React.ElementType = bare ? "div" : Card;
@@ -195,6 +242,7 @@ export function TodoSection({
         {visibleTodos.map((todo) => {
           const draftValue = draftTexts[todo._id] ?? todo.text;
           const isChecked = Boolean(todo.isCompleted);
+          const saveState = saveStates[todo._id] ?? "idle";
 
           return (
             <div
@@ -225,14 +273,9 @@ export function TodoSection({
               <Input
                 value={draftValue}
                 onChange={(event) =>
-                  handleDraftChange(todo._id, event.target.value)
+                  handleDraftChange(todo, event.target.value)
                 }
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void handleSaveTodo(todo);
-                  }
-
                   if (event.key === "Escape") {
                     event.preventDefault();
                     resetDraft(todo);
@@ -240,19 +283,25 @@ export function TodoSection({
                 }}
                 placeholder={todo.text}
                 aria-label={`Edit ${todo.text}`}
-                className={`h-8 rounded-none border-none bg-transparent px-0 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0`}
+                className="h-8 flex-1 rounded-none border-none bg-transparent px-0 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0"
               />
 
-              <div className="flex items-center gap-2">
-                <div
-                  className="flex size-8 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface-1)] cursor-pointer transition hover:bg-[var(--surface-3)]"
-                  onClick={() => {
-                    void handleSaveTodo(todo);
-                  }}
-                  aria-label={`Save ${todo.text}`}
-                >
-                  <Check className="size-5 text-[#92b497]" />
-                </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {saveState === "saving" && (
+                  <span className="text-[11px] text-[var(--text-muted)] leading-none">
+                    Saving…
+                  </span>
+                )}
+                {saveState === "saved" && (
+                  <span className="text-[11px] text-green-500 leading-none">
+                    Saved
+                  </span>
+                )}
+                {saveState === "error" && (
+                  <span className="text-[11px] text-red-500 leading-none">
+                    Failed
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => onDelete(todo._id)}
@@ -285,7 +334,7 @@ export function TodoSection({
                 }
               }}
               placeholder={title}
-              className="h-8 rounded-none border-none bg-transparent px-2 text-[14px] shadow-none placeholder:text-[var(--text-muted)] focus-visible:ring-0"
+              className="h-8 rounded-none border-none bg-transparent px-2 text-[14px] shadow-none placeholder:text-(--text-muted) focus-visible:ring-0"
             />
             <button
               type="button"
@@ -294,7 +343,7 @@ export function TodoSection({
                 void handleAddTodo();
               }}
               disabled={!inputValue.trim()}
-              className={`${iconButtonClass} text-[var(--text-muted)] disabled:opacity-35`}
+              className={`${iconButtonClass} text-(--text-muted) disabled:opacity-35`}
               aria-label="Add todo"
             >
               <Plus className="size-4 stroke-[3px]" />

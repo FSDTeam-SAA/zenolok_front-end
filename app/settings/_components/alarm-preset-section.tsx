@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CheckCircle2, Clock3, Pencil, Plus, Trash2 } from "lucide-react";
+import { Clock3, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { SectionHeader } from "./section-header";
-import type { AlarmPreset } from "./settings-types";
 
 type ReminderEditorRow = {
   id: string;
@@ -34,9 +33,7 @@ type ReminderEditorRow = {
 };
 
 interface AlarmPresetSectionProps {
-  value: AlarmPreset;
   options: AlarmPresetOption[];
-  onChange: (preset: AlarmPreset) => void;
   onSaveOption: (payload: {
     key: EditableAlarmPresetKey;
     offsetsInMinutes: number[];
@@ -45,9 +42,7 @@ interface AlarmPresetSectionProps {
 }
 
 export function AlarmPresetSection({
-  value,
   options,
-  onChange,
   onSaveOption,
   savingKey = null,
 }: AlarmPresetSectionProps) {
@@ -185,25 +180,15 @@ export function AlarmPresetSection({
 
         <div className="space-y-3">
           {settingsOptions.map((item) => {
-            const active = value === item.key;
             const summary = formatAlarmPresetSummary(item.key, options);
 
             return (
               <div
                 key={item.key}
-                className={cn(
-                  "rounded-[24px] border transition",
-                  active
-                    ? "border-[#31C65B] bg-[color:rgba(49,198,91,0.14)]"
-                    : "border-[var(--border)] bg-[var(--surface-1)]",
-                )}
+                className="rounded-[24px] border border-[var(--border)] bg-[var(--surface-1)] transition"
               >
                 <div className="flex items-start justify-between gap-4 px-4 py-4">
-                  <button
-                    type="button"
-                    onClick={() => onChange(item.key)}
-                    className="min-w-0 flex-1 text-left"
-                  >
+                  <div className="min-w-0 flex-1">
                     <div className="space-y-1.5">
                       <span className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
                         {item.label}
@@ -217,25 +202,19 @@ export function AlarmPresetSection({
                         </p>
                       ) : null}
                     </div>
-                  </button>
+                  </div>
                   <div className="flex items-center gap-2">
                     {item.editable ? (
                       <Button
                         type="button"
                         variant="ghost"
                         className="h-9 rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3 text-[13px] font-medium text-[var(--text-default)] shadow-[0_1px_2px_rgba(21,32,54,0.08)] hover:border-[var(--ring)] hover:bg-[var(--surface-3)] disabled:border-[var(--border)] disabled:bg-[var(--surface-1)] disabled:text-[var(--text-muted)] disabled:opacity-80"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditor(item.key as EditableAlarmPresetKey);
-                        }}
+                        onClick={() => openEditor(item.key as EditableAlarmPresetKey)}
                         disabled={savingKey === item.key}
                       >
                         <Pencil className="size-3.5" />
                         Edit
                       </Button>
-                    ) : null}
-                    {active ? (
-                      <CheckCircle2 className="size-5 shrink-0 text-[#31C65B]" />
                     ) : null}
                   </div>
                 </div>

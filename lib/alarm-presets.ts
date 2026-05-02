@@ -225,6 +225,17 @@ export function formatAlarmOffset(offsetInMinutes: number) {
   return `${offsetInMinutes} minute${offsetInMinutes === 1 ? "" : "s"} before`;
 }
 
+export function formatOffsetsSummary(offsetsInMinutes: number[]): string {
+  const sorted = [...offsetsInMinutes].sort((a, b) => a - b);
+  if (!sorted.length) {
+    return "Not configured yet";
+  }
+  if (sorted.length === 1) {
+    return formatAlarmOffset(sorted[0]);
+  }
+  return `${formatAlarmOffset(sorted[0])} +${sorted.length - 1} more`;
+}
+
 export function formatAlarmPresetSummary(
   key: AlarmPresetKey,
   options?: AlarmPresetOption[] | null,
