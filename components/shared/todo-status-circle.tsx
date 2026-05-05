@@ -55,6 +55,7 @@ function TodoStatusCircleFill({
         width: "100%",
         height: "100%",
         backgroundColor: checkedColor || DEFAULT_CHECKED_COLOR,
+        opacity: 0.4,
       }}
     />
   );

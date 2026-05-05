@@ -500,7 +500,37 @@ export default function EventDetailsPage() {
   );
   const linkMessages = messages.filter((message) => isLinkMessage(message));
   const jamPreviewMessages = messages.slice(-2);
-  const allUsers = usersQuery.data?.users || [];
+  const eventBrickId = event.brick?._id;
+  const fullBrick = eventBrickId
+    ? bricks.find((brick) => brick._id === eventBrickId)
+    : undefined;
+  const brickCollaboratorIds = new Set<string>([
+    ...(fullBrick?.createdBy ? [fullBrick.createdBy] : []),
+    ...(fullBrick?.participants || []),
+    ...(fullBrick?.members || []),
+    ...((fullBrick?.participantUsers || []).map((user) => user._id)),
+  ]);
+  const allUsersRaw = usersQuery.data?.users || [];
+  const collaboratorUsersFromBrick: UserProfile[] = (
+    fullBrick?.participantUsers || []
+  ).map((user) => {
+    const matched = allUsersRaw.find((candidate) => candidate._id === user._id);
+    if (matched) {
+      return matched;
+    }
+    return {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      username: user.username,
+      avatar: user.avatar,
+    } as UserProfile;
+  });
+  const allUsers = eventBrickId
+    ? collaboratorUsersFromBrick.length
+      ? collaboratorUsersFromBrick
+      : allUsersRaw.filter((user) => brickCollaboratorIds.has(user._id))
+    : [];
   const isEventOwner = viewerId === event.createdBy;
 
   const toggleShareUser = (userId: string, checked: boolean) => {

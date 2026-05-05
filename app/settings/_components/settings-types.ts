@@ -9,6 +9,7 @@ import {
   LogOut,
   MessageSquare,
   Moon,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ export type SettingsSection =
   | "profile"
   | "password"
   | "bricksManage"
+  | "categoryManage"
   | "weekStartDay"
   | "switchTimeFormat"
   | "alarmPreset"
@@ -37,6 +39,7 @@ export interface SidebarSection {
 
 export const sections: SidebarSection[] = [
   { id: "bricksManage", label: "Bricks Manage", icon: BadgeCheck },
+  { id: "categoryManage", label: "Category Manage", icon: Tags },
   { id: "weekStartDay", label: "Manage weeks start day", icon: Bell },
   { id: "switchTimeFormat", label: "Switch time format", icon: Clock3 },
   { id: "alarmPreset", label: "Alarm preset", icon: Bell },

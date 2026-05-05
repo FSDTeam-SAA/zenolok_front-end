@@ -102,11 +102,46 @@ export interface MyBrickInvitation {
   };
 }
 
+export interface MyTodoCategoryInvitation {
+  _id: string;
+  token: string;
+  invitedAt: string;
+  expiresAt: string;
+  category: {
+    _id: string;
+    name: string;
+    color: string;
+    createdBy: {
+      _id: string;
+      name?: string;
+      email?: string;
+      avatar?: { url?: string };
+    } | string;
+  };
+}
+
+export interface TodoCategoryInvitation {
+  _id: string;
+  email: string;
+  invitedBy: string;
+  invitedAt: string;
+  expiresAt: string;
+}
+
 export interface TodoCategory {
   _id: string;
   name: string;
   color: string;
   participants: string[];
+  members?: string[];
+  participantUsers?: Array<{
+    _id: string;
+    name?: string;
+    email?: string;
+    username?: string;
+    avatar?: { url?: string };
+  }>;
+  pendingInvitations?: TodoCategoryInvitation[];
   createdBy?: string;
 }
 
@@ -391,6 +426,32 @@ export const todoCategoryApi = {
   delete: (id: string) => unwrap<null>(apiClient.delete(`/todo-categories/${id}`)),
   reorder: (orders: { id: string; sortOrder: number }[]) =>
     unwrap<null>(apiClient.patch("/todo-categories/reorder", { orders })),
+  inviteCollaborator: (categoryId: string, email: string) =>
+    unwrap<TodoCategory>(
+      apiClient.post(`/todo-categories/${categoryId}/invitations`, { email }),
+    ),
+  revokeInvitation: (categoryId: string, invitationId: string) =>
+    unwrap<TodoCategory>(
+      apiClient.delete(
+        `/todo-categories/${categoryId}/invitations/${invitationId}`,
+      ),
+    ),
+  removeCollaborator: (categoryId: string, userId: string) =>
+    unwrap<TodoCategory>(
+      apiClient.delete(`/todo-categories/${categoryId}/collaborators/${userId}`),
+    ),
+  listMyInvitations: () =>
+    unwrap<MyTodoCategoryInvitation[]>(
+      apiClient.get("/todo-categories/invitations/mine"),
+    ),
+  acceptInvitation: (token: string) =>
+    unwrap<TodoCategory>(
+      apiClient.post("/todo-categories/invitations/accept", { token }),
+    ),
+  declineInvitation: (token: string) =>
+    unwrap<null>(
+      apiClient.post("/todo-categories/invitations/decline", { token }),
+    ),
 };
 
 export const todoItemApi = {

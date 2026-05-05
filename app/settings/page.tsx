@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
 import { BricksManagePanel } from "@/components/settings/bricks-manage-panel";
+import { CategoryManagePanel } from "@/components/settings/category-manage-panel";
 import { WeekStartDayPanel } from "@/components/settings/week-start-day-panel";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import { getTimeChangedMessage } from "@/lib/time-format";
 
 import { AlarmPresetSection } from "./_components/alarm-preset-section";
 import { BricksManageSection } from "./_components/bricks-manage-section";
+import { CategoryManageSection } from "./_components/category-manage-section";
 import { CalendarSection } from "./_components/calendar-section";
 import { DarkModeSection } from "./_components/dark-mode-section";
 import { FeedbackSection } from "./_components/feedback-section";
@@ -322,6 +324,8 @@ export default function SettingsPage() {
   const [logoutModalOpen, setLogoutModalOpen] = React.useState(false);
   const [bricksManageModalOpen, setBricksManageModalOpen] =
     React.useState(false);
+  const [categoryManageModalOpen, setCategoryManageModalOpen] =
+    React.useState(false);
   const [weekStartModalOpen, setWeekStartModalOpen] = React.useState(false);
   const [notificationPrefs, setNotificationPrefs] = React.useState<
     Record<NotificationKey, boolean>
@@ -432,6 +436,9 @@ export default function SettingsPage() {
     const modal = params.get("modal");
     if (modal === "bricks-manage") {
       setBricksManageModalOpen(true);
+    }
+    if (modal === "category-manage") {
+      setCategoryManageModalOpen(true);
     }
     if (modal === "week-start-day") {
       setWeekStartModalOpen(true);
@@ -906,6 +913,12 @@ export default function SettingsPage() {
             onOpenModal={() => setBricksManageModalOpen(true)}
           />
         );
+      case "categoryManage":
+        return (
+          <CategoryManageSection
+            onOpenModal={() => setCategoryManageModalOpen(true)}
+          />
+        );
       case "weekStartDay":
         return (
           <WeekStartDaySection
@@ -1040,6 +1053,23 @@ export default function SettingsPage() {
             </DialogDescription>
           </DialogHeader>
           <BricksManagePanel />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={categoryManageModalOpen}
+        onOpenChange={setCategoryManageModalOpen}
+      >
+        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[18px] lg:text-[24px]">
+              Category Manage
+            </DialogTitle>
+            <DialogDescription className="text-[16px]">
+              Manage todo category name and color from this modal.
+            </DialogDescription>
+          </DialogHeader>
+          <CategoryManagePanel />
         </DialogContent>
       </Dialog>
 

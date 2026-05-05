@@ -881,6 +881,13 @@ function TodosPageContent() {
       new Set((editingCategory?.participants || []).map((id) => id.toString())),
     [editingCategory?.participants],
   );
+  const editCategoryCollaboratorUsers = React.useMemo(
+    () =>
+      allUsers.filter((user) =>
+        currentEditCategoryParticipantIds.has(user._id),
+      ),
+    [allUsers, currentEditCategoryParticipantIds],
+  );
 
   const toggleNewCategoryParticipant = React.useCallback(
     (userId: string, checked: boolean) => {
@@ -1445,7 +1452,7 @@ function TodosPageContent() {
           submitLabel="Save"
           pendingLabel="Saving..."
           showDefaultTrigger={false}
-          allUsers={allUsers}
+          allUsers={editCategoryCollaboratorUsers}
           selectedParticipantIds={editCategoryParticipantIds}
           currentParticipantIds={currentEditCategoryParticipantIds}
           onToggleParticipant={toggleEditCategoryParticipant}
@@ -1824,7 +1831,7 @@ function TodosPageContent() {
                       onNewCategoryColorChange={setNewCategoryColor}
                       onCreate={() => createCategoryMutation.mutate()}
                       isCreating={createCategoryMutation.isPending}
-                      allUsers={allUsers}
+                      allUsers={[]}
                       selectedParticipantIds={newCategoryParticipantIds}
                       currentParticipantIds={new Set()}
                       onToggleParticipant={toggleNewCategoryParticipant}

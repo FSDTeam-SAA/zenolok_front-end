@@ -48,6 +48,12 @@ export function getNotificationHref(
     case "brick_invitation_accepted":
       return "/settings";
 
+    case "category_invitation_received":
+      return "/categories/invitations";
+
+    case "category_invitation_accepted":
+      return "/settings";
+
     default:
       if (notification.eventId && notification.messageId) {
         return `/events/${notification.eventId}/messages?messageId=${notification.messageId}`;
