@@ -1,36 +1,27 @@
-import { Button } from "@/components/ui/button";
+import { WeekStartDayPanel } from "@/components/settings/week-start-day-panel";
+import type { WeekStartDay } from "@/lib/settings";
 
 import { SectionHeader } from "./section-header";
 
 interface WeekStartDaySectionProps {
   currentWeekStartLabel: string;
-  onOpenModal: () => void;
+  selectedDay: WeekStartDay;
+  onSelect: (day: WeekStartDay) => void;
 }
 
 export function WeekStartDaySection({
   currentWeekStartLabel,
-  onOpenModal,
+  selectedDay,
+  onSelect,
 }: WeekStartDaySectionProps) {
   return (
     <section className="space-y-5">
       <SectionHeader
         title="Manage Week Start Day"
-        description="Choose the first day of your week."
+        description={`Choose the first day of your week. Currently: ${currentWeekStartLabel}.`}
       />
 
-      <div className="w-full settings-action-card rounded-3xl border border-[var(--border)] bg-[var(--surface-2)] p-4 sm:p-5">
-        <p className="font-poppins text-[20px] leading-[120%] font-medium text-[var(--text-default)]">
-          Current week starts on: {currentWeekStartLabel}
-        </p>
-        <Button
-          type="button"
-          className="font-poppins mt-4 h-11 rounded-xl px-5 !text-[18px] leading-[120%] font-medium"
-          onClick={onOpenModal}
-        >
-          Choose Week Start Day
-        </Button>
-      </div>
+      <WeekStartDayPanel selectedDay={selectedDay} onSelect={onSelect} />
     </section>
   );
 }
-

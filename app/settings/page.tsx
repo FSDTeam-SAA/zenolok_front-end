@@ -7,17 +7,7 @@ import { Menu } from "lucide-react";
 import { toast } from "sonner";
 
 import { useAppState } from "@/components/providers/app-state-provider";
-import { BricksManagePanel } from "@/components/settings/bricks-manage-panel";
-import { CategoryManagePanel } from "@/components/settings/category-manage-panel";
-import { WeekStartDayPanel } from "@/components/settings/week-start-day-panel";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { authApi, eventApi, feedbackApi, userApi } from "@/lib/api";
 import {
   getAlarmPresetLabel,
@@ -322,11 +312,6 @@ export default function SettingsPage() {
   const [feedbackVideos, setFeedbackVideos] = React.useState<File[]>([]);
   const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [logoutModalOpen, setLogoutModalOpen] = React.useState(false);
-  const [bricksManageModalOpen, setBricksManageModalOpen] =
-    React.useState(false);
-  const [categoryManageModalOpen, setCategoryManageModalOpen] =
-    React.useState(false);
-  const [weekStartModalOpen, setWeekStartModalOpen] = React.useState(false);
   const [notificationPrefs, setNotificationPrefs] = React.useState<
     Record<NotificationKey, boolean>
   >({
@@ -435,13 +420,13 @@ export default function SettingsPage() {
 
     const modal = params.get("modal");
     if (modal === "bricks-manage") {
-      setBricksManageModalOpen(true);
+      setActiveSection("bricksManage");
     }
     if (modal === "category-manage") {
-      setCategoryManageModalOpen(true);
+      setActiveSection("categoryManage");
     }
     if (modal === "week-start-day") {
-      setWeekStartModalOpen(true);
+      setActiveSection("weekStartDay");
     }
   }, []);
 
@@ -908,22 +893,15 @@ export default function SettingsPage() {
           />
         );
       case "bricksManage":
-        return (
-          <BricksManageSection
-            onOpenModal={() => setBricksManageModalOpen(true)}
-          />
-        );
+        return <BricksManageSection />;
       case "categoryManage":
-        return (
-          <CategoryManageSection
-            onOpenModal={() => setCategoryManageModalOpen(true)}
-          />
-        );
+        return <CategoryManageSection />;
       case "weekStartDay":
         return (
           <WeekStartDaySection
             currentWeekStartLabel={currentWeekStartLabel}
-            onOpenModal={() => setWeekStartModalOpen(true)}
+            selectedDay={preferences.weekStartDay}
+            onSelect={handleWeekStartDayChange}
           />
         );
       case "switchTimeFormat":
@@ -1038,57 +1016,6 @@ export default function SettingsPage() {
         onSectionSelect={handleSectionSelect}
         onClose={() => setMobileSidebarOpen(false)}
       />
-
-      <Dialog
-        open={bricksManageModalOpen}
-        onOpenChange={setBricksManageModalOpen}
-      >
-        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[18px] lg:text-[24px]">
-              Bricks Manage
-            </DialogTitle>
-            <DialogDescription className="text-[16px]">
-              Manage brick name, icon, and color from this modal.
-            </DialogDescription>
-          </DialogHeader>
-          <BricksManagePanel />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={categoryManageModalOpen}
-        onOpenChange={setCategoryManageModalOpen}
-      >
-        <DialogContent className="max-h-[88vh] max-w-[1100px] overflow-y-auto rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle className="font-poppins text-[30px] leading-[120%] font-semibold text-[var(--text-strong)] sm:text-[18px] lg:text-[24px]">
-              Category Manage
-            </DialogTitle>
-            <DialogDescription className="text-[16px]">
-              Manage todo category name and color from this modal.
-            </DialogDescription>
-          </DialogHeader>
-          <CategoryManagePanel />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={weekStartModalOpen} onOpenChange={setWeekStartModalOpen}>
-        <DialogContent className="max-w-3xl rounded-[30px] border border-[var(--border)] bg-[var(--surface-1)] p-4 sm:p-6 space-y-2">
-          <DialogHeader>
-            <DialogTitle className="font-poppins leading-[120%] font-semibold text-[var(--text-strong)] sm:!text-[18px] lg:!text-[36px]">
-              Manage Week Start Day
-            </DialogTitle>
-            <DialogDescription>
-              Choose the first day of your week.
-            </DialogDescription>
-          </DialogHeader>
-          <WeekStartDayPanel
-            selectedDay={preferences.weekStartDay}
-            onSelect={handleWeekStartDayChange}
-          />
-        </DialogContent>
-      </Dialog>
 
       <LogoutConfirmDialog
         open={logoutModalOpen}
